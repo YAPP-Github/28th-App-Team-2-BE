@@ -1,0 +1,84 @@
+# 기술 스택 단일 버전 소스. 모듈은 `libs.*`로 참조한다.
+# Spring Boot BOM이 관리하는 라이브러리는 version 없이 선언한다(스타터 등).
+# 미참조(아직 모듈에서 안 쓰는) 항목은 실제 사용 시점까지 resolve되지 않는다 — 미리 선언만 해 둔다.
+
+[versions]
+# 빌드 툴링(buildSrc 컨벤션 플러그인 클래스패스 + 컨벤션 플러그인 BOM 공통 소스).
+kotlin = "2.3.21"
+ktlint = "12.1.1"
+springBoot = "4.1.0"
+springdocOpenapi = "2.8.3"
+konsist = "0.17.3"
+kotest = "5.9.1"
+mockk = "1.13.13"
+springmockk = "4.0.2"
+jjwt = "0.12.6"
+springAi = "1.1.0"
+
+[libraries]
+# --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-allopen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
+spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
+ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin", version.ref = "ktlint" }
+
+# --- 문서화 / Swagger (adapter-in) ---
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdocOpenapi" }
+
+# --- Spring Boot BOM (platform import용: 컨벤션 플러그인 + buildSrc 공통) ---
+spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
+
+# --- Spring Boot 스타터 (버전은 Boot BOM이 관리) ---
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-oauth2-client = { module = "org.springframework.boot:spring-boot-starter-oauth2-client" }
+
+# --- Spring Framework 경량 모듈 (common/common-web, Boot BOM 관리) ---
+spring-context = { module = "org.springframework:spring-context" }
+spring-tx = { module = "org.springframework:spring-tx" }
+
+# --- 로깅 / 서블릿 API (common-web, Boot BOM 관리) ---
+slf4j-api = { module = "org.slf4j:slf4j-api" }
+jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api" }
+
+# --- 직렬화 / Kotlin (Boot BOM 관리) ---
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+
+# --- 영속성 (adapter-out, Boot BOM 관리) ---
+postgresql = { module = "org.postgresql:postgresql" }
+
+# --- JWT (auth adapter-out) ---
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+# --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
+spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
+spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
+spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
+
+# --- 아키텍처 테스트 ---
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
+
+# --- 테스트 (Boot BOM이 testcontainers 버전 관리) ---
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
+kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+
+[bundles]
+# 모든 모듈 공통 테스트(Kotest). MockK는 필요 모듈에서 개별 추가.
+kotest = ["kotest-runner-junit5", "kotest-assertions-core"]
+# adapter-out 통합 테스트 인프라.
+testcontainers = ["testcontainers-postgresql", "testcontainers-junit-jupiter"]
+# JWT (auth adapter-out): api는 implementation, impl/jackson은 runtimeOnly 권장.
+jjwt = ["jjwt-api", "jjwt-impl", "jjwt-jackson"]

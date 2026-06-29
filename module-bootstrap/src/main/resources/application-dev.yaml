@@ -1,0 +1,19 @@
+# dev: 개발 환경 (개발 서버 배포 · 통합 테스트/QA)
+# 환경마다 달라지는 값(연결 정보·시크릿 포함)은 이 파일에 둔다. 시크릿은 .env로 주입.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    root: INFO
+    com.yapp.todakun: DEBUG
