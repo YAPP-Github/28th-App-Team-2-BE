@@ -3,6 +3,8 @@ name: new-feature
 description: Add a new feature (UseCase → Service → Api → Controller) to an existing domain
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 Add a new feature to an existing domain.
 
 Feature description: $ARGUMENTS

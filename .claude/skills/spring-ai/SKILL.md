@@ -3,6 +3,8 @@ name: spring-ai
 description: Load when integrating Spring AI / Vertex AI (Gemini). Hexagonal placement (*AiPort/adapter), structured output, pgvector VectorStore, config & env vars, testing, Konsist verification.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Spring AI Rules
 
 Use Spring AI to integrate Google Vertex AI (Gemini). The core use cases are **structured output** (mapping LLM responses to domain types) and **pgvector-based RAG/embeddings**.

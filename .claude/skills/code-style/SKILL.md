@@ -3,6 +3,8 @@ name: code-style
 description: Load when writing or modifying Kotlin code. Naming conventions, package structure, formatting, modifier order, idioms, ktlint rules.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Code Style Rules
 
 Passing Ktlint is required: `./gradlew ktlintCheck` / auto-fix: `./gradlew ktlintFormat`

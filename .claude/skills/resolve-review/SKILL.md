@@ -3,6 +3,8 @@ name: resolve-review
 description: Load when reading a GitHub PR's code-review comments, applying the feedback, and replying to each comment in Korean. PR review-resolution workflow.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Applying PR Reviews
 
 Read the review comments of the current branch (or a specified PR), apply them, and reply to each comment.

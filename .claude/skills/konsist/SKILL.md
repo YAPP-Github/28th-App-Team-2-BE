@@ -3,6 +3,8 @@ name: konsist
 description: Load when adding/modifying architecture rules (Konsist tests) or verifying layer boundaries. Konsist API reference, project rules, how to add rules.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Konsist Architecture-Verification Rules
 
 Run tests: `./gradlew :architecture-test:test`

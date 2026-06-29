@@ -3,6 +3,8 @@ name: git-workflow
 description: Load when branching/committing/creating PRs. Branch strategy, commit message format (Korean), PR rules, Claude Code Git rules.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Git Workflow Rules
 
 ## Branch Strategy

@@ -3,6 +3,8 @@ name: architecture
 description: Load when designing hexagonal architecture. Module roles/dependency direction, ports & adapters, domain vs JPA entities, OSIV, transaction boundaries, DTO↔domain mapping, response format, request validation, Swagger patterns.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Architecture Rules
 
 ## Module Structure and Dependency Direction
@@ -16,6 +18,8 @@ bootstrap     ──→  integrates all modules
 ```
 
 Never add dependencies in the reverse direction. `*-domain` does not depend on any external framework.
+
+> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …) so module folders stay grouped at the repo root instead of dispersing among config dirs. For a **nested domain**, only the outer wrapper dir is prefixed (`module-{domain}/`); inner layer modules keep plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **logical project name** stays unprefixed (`:common`, `:{domain}-domain`); `settings.gradle.kts` maps it via `project(":name").projectDir = file("module-name")`. Tables/paths below use the unprefixed logical names.
 
 ## Role of Each Module
 

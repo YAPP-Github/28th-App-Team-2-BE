@@ -3,6 +3,8 @@ name: testing
 description: Load when writing or modifying tests. Kotest/MockK/TestContainer, DescribeSpec style, per-layer test strategy, fixtures, isolation mode, Konsist verification.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Test Rules
 
 ## Test Libraries

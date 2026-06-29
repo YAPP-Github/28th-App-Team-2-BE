@@ -3,6 +3,8 @@ name: new-domain
 description: Scaffold a new domain across the 4 modules of the nested hexagonal architecture
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 Scaffold the new domain '$ARGUMENTS' per the nested hexagonal architecture rules.
 
 > **The canonical code templates are in [`.claude/examples/domain-scaffold.md`](../examples/domain-scaffold.md).**
@@ -10,12 +12,16 @@ Scaffold the new domain '$ARGUMENTS' per the nested hexagonal architecture rules
 
 ## Procedure
 
-1. **Add the 4 modules to `settings.gradle.kts`** — include the nested path (`{domain}:`):
+1. **Add the 4 modules to `settings.gradle.kts`** — include the nested path (`{domain}:`), then map the outer wrapper to its `module-` prefixed directory (children resolve under it automatically):
    ```kotlin
-   "{domain}:{domain}-domain",
-   "{domain}:{domain}-application",
-   "{domain}:{domain}-adapter-in",
-   "{domain}:{domain}-adapter-out",
+   include(
+       "{domain}:{domain}-domain",
+       "{domain}:{domain}-application",
+       "{domain}:{domain}-adapter-in",
+       "{domain}:{domain}-adapter-out",
+   )
+   // 외부 래퍼 디렉터리에만 `module-` 접두사 → 내부 레이어 모듈은 module-{domain}/ 하위로 자동 해석
+   project(":{domain}").projectDir = file("module-{domain}")
    ```
 2. **Create each module's `build.gradle.kts`** — exactly as in the "build.gradle.kts (per module)" section of `domain-scaffold.md`.
 3. **Add `implementation` for the 4 modules to `bootstrap/build.gradle.kts`.**

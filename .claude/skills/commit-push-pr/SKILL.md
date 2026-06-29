@@ -3,6 +3,8 @@ name: commit-push-pr
 description: Load when committing per project conventions and (on request) pushing and creating a PR. Auto-applies commit message format, branch strategy, PR rules.
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 # Commit · Push · PR
 
 Perform commit → push → PR creation per the project conventions (`git-workflow`).

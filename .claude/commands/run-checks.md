@@ -3,6 +3,8 @@ name: run-checks
 description: Run the full pre-PR verification in order (ktlintFormat → ktlintCheck → architecture-test → test)
 ---
 
+> **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
+
 Run the full pre-PR verification in order. (Same order as `./.claude/scripts/check-all.sh`.)
 
 1. `./gradlew ktlintFormat` — auto-fix code style
