@@ -2,6 +2,8 @@
 
 Backend server for YAPP 28th App Team 2 (targeting AOS/iOS clients). Domain-oriented nested multi-module + hexagonal architecture, designed with a future MSA migration in mind. Base package: `com.yapp.todakun`
 
+> **Language**: All user-facing responses MUST be written in Korean, without exception (code, identifiers, logs, etc. are excluded).
+
 ## Per-Task Loading (Pre-Task)
 
 Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures in **commands** (`.claude/commands/`), and shared code templates in **examples** (`.claude/examples/`). When one of the tasks below is detected, the skill is **auto-loaded** (manual invocation: `/<name>`).
