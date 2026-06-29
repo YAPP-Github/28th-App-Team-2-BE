@@ -1,0 +1,36 @@
+enable:
+  issues: false
+  prs: true
+
+labels:
+  '✨ feature':
+    include:
+      - '\[Feature\]'
+
+  '🐛 bug':
+    include:
+      - '\[Bug\]'
+
+  '♻️ refactor':
+    include:
+      - '\[Refactor\]'
+
+  '📃 docs':
+    include:
+      - '\[Docs\]'
+
+  '⚙️ chore':
+    include:
+      - '\[Chore\]'
+
+  '✅ test':
+    include:
+      - '\[Test\]'
+
+  '🎨 style':
+    include:
+      - '\[Style\]'
+
+  '⚡️ performance':
+    include:
+      - '\[Performance\]'

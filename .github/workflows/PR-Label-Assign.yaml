@@ -1,0 +1,50 @@
+name: PR Title Labeler
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+jobs:
+  label-pr:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Label PR based on title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prTitle = context.payload.pull_request.title;
+
+            const labelMap = [
+              { pattern: /^\[Feature\]/i, label: '✨ feature' },
+              { pattern: /^\[Bug\]/i, label: '🐛 bug' },
+              { pattern: /^\[Chore\]/i, label: '⚙️ chore' },
+              { pattern: /^\[Docs\]/i, label: '📃 docs' },
+              { pattern: /^\[Refactor\]/i, label: '♻️ refactor' },
+              { pattern: /^\[Test\]/i, label: '✅ test' },
+              { pattern: /^\[Style\]/i, label: '🎨 style' }
+            ];
+
+            const labelsToAdd = Array.from(
+              new Set(
+                labelMap
+                  .filter(entry => entry.pattern.test(prTitle))
+                  .map(entry => entry.label)
+              )
+            );
+
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: labelsToAdd
+              });
+              core.info(`Added labels: ${labelsToAdd.join(', ')}`);
+            } else {
+              core.info('No matching labels found for PR title.');
+            }
