@@ -1,17 +1,14 @@
 package com.yapp.todakun.auth.port
 
+import com.yapp.todakun.auth.IssuedRefreshToken
 import java.util.UUID
 
 interface RefreshTokenPort {
-    fun save(
-        jti: String,
-        memberId: UUID,
-        ttlSeconds: Long,
-    )
+    fun issue(memberId: UUID): IssuedRefreshToken
 
-    fun existsByJti(jti: String): Boolean
+    fun findMemberId(token: String): UUID?
 
-    fun deleteByJti(jti: String)
+    fun revoke(token: String)
 
-    fun deleteAllByMemberId(memberId: UUID)
+    fun revokeAll(memberId: UUID)
 }
