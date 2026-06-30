@@ -22,6 +22,7 @@ class ArchitectureTest {
                     !clazz.resideInPackage("..common..") &&
                     !clazz.resideInPackage("..architecture..") &&
                     !clazz.resideInPackage("..web..") &&
+                    !clazz.resideInPackage("..config..") &&
                     clazz.annotations.none { it.name == "SpringBootApplication" }
             }
 

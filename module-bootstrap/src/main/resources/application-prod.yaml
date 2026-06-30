@@ -17,3 +17,9 @@ logging:
   level:
     root: WARN
     com.yapp.todakun: INFO
+
+springdoc:
+  swagger-ui:
+    path: /${SWAGGER_SECRET_PATH}/swagger-ui.html
+  api-docs:
+    path: /${SWAGGER_SECRET_PATH}/v3/api-docs
