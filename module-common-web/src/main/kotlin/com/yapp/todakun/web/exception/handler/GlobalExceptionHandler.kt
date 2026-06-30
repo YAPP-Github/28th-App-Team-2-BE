@@ -5,11 +5,13 @@ import com.yapp.todakun.web.code.CommonErrorCode
 import com.yapp.todakun.web.response.CommonResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 /**
  * 모든 예외를 공통 엔벨로프([CommonResponse])로 변환한다. common-web에 한 번만 두며
