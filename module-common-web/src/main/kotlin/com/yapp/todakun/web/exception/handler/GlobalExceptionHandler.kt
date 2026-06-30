@@ -47,6 +47,18 @@ class GlobalExceptionHandler {
         return CommonResponse.error(CommonErrorCode.TYPE_MISMATCH)
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleMessageNotReadable(e: HttpMessageNotReadableException): ResponseEntity<CommonResponse<Unit>> {
+        log.warn("요청 본문 파싱 실패: {}", e.message)
+        return CommonResponse.error(CommonErrorCode.MALFORMED_REQUEST)
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFound(e: NoResourceFoundException): ResponseEntity<CommonResponse<Unit>> {
+        log.warn("리소스를 찾을 수 없음: {}", e.message)
+        return CommonResponse.error(CommonErrorCode.NOT_FOUND)
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(e: Exception): ResponseEntity<CommonResponse<Unit>> {
         log.error("Unexpected error 발생: {}", e.message, e)
