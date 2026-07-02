@@ -158,9 +158,8 @@ class ArchitectureTest {
 
     @Test
     fun `레이어 의존성 방향을 지킨다`() {
-        // application/adapter 레이어 중 하나라도 비어 있으면 Konsist precondition이 실패하므로,
-        // 두 레이어에 모두 파일이 존재할 때만 검증한다. 아직 application 계층 파일이 없는 도메인이 추가되면
-        // 자동으로 건너뛰고, 채워지면 자동으로 활성화된다.
+        // application/adapter 레이어 중 하나라도 비어 있으면 Konsist precondition이 실패하므로, 두 레이어에 모두 파일이 존재할 때만 검증한다.
+        // 아직 application 계층 파일이 없는 도메인이 추가되면 자동으로 건너뛰고, 채워지면 자동으로 활성화된다.
         val hasApplicationClasses = scope.classes().any { it.resideInPackage("..application..") }
         val hasAdapterClasses = scope.classes().any { it.resideInPackage("..adapter..") }
         if (!hasApplicationClasses || !hasAdapterClasses) return
