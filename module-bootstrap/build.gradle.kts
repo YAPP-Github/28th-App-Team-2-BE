@@ -5,9 +5,13 @@ plugins {
 
 dependencies {
     implementation(project(":common-web"))
+    implementation(project(":auth-domain"))
+    implementation(project(":auth-adapter-in"))
+    implementation(project(":auth-adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.web)
+    implementation(libs.spring.boot.starter.security)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
 }
