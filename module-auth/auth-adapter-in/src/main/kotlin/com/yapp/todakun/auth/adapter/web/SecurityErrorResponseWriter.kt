@@ -18,4 +18,5 @@ internal fun HttpServletResponse.writeSecurityError(
     contentType = MediaType.APPLICATION_JSON_VALUE
     characterEncoding = Charsets.UTF_8.name()
     writer.write(objectMapper.writeValueAsString(CommonResponse.error(errorCode).body))
+    writer.flush()
 }

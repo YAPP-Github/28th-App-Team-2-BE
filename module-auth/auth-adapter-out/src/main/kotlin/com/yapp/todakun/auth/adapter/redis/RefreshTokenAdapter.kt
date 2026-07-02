@@ -1,18 +1,18 @@
 package com.yapp.todakun.auth.adapter.redis
 
 import com.yapp.todakun.auth.IssuedRefreshToken
-import com.yapp.todakun.auth.adapter.jwt.JwtProperties
+import com.yapp.todakun.auth.adapter.redis.config.RefreshTokenProperties
 import com.yapp.todakun.auth.port.RefreshTokenPort
-import org.springframework.stereotype.Repository
+import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
-@Repository
+@Component
 class RefreshTokenAdapter(
     private val refreshTokenRepository: RefreshTokenRepository,
-    private val jwtProperties: JwtProperties,
+    private val refreshTokenProperties: RefreshTokenProperties,
 ) : RefreshTokenPort {
     @OptIn(ExperimentalUuidApi::class)
     override fun issue(memberId: UUID): IssuedRefreshToken {
@@ -21,10 +21,10 @@ class RefreshTokenAdapter(
             RefreshToken(
                 jti = token,
                 memberId = memberId.toString(),
-                ttl = jwtProperties.refreshTokenExpirySeconds,
+                ttl = refreshTokenProperties.expirySeconds,
             ),
         )
-        return IssuedRefreshToken(value = token, expiresInSeconds = jwtProperties.refreshTokenExpirySeconds)
+        return IssuedRefreshToken(value = token, expiresInSeconds = refreshTokenProperties.expirySeconds)
     }
 
     override fun findMemberId(token: String): UUID? =

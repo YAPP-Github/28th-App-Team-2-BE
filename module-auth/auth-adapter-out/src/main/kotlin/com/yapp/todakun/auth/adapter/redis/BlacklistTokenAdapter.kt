@@ -1,9 +1,9 @@
 package com.yapp.todakun.auth.adapter.redis
 
 import com.yapp.todakun.auth.port.BlacklistTokenPort
-import org.springframework.stereotype.Repository
+import org.springframework.stereotype.Component
 
-@Repository
+@Component
 class BlacklistTokenAdapter(
     private val blacklistTokenRepository: BlacklistTokenRepository,
 ) : BlacklistTokenPort {

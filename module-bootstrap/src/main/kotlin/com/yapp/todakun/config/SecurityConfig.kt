@@ -14,13 +14,6 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import tools.jackson.databind.ObjectMapper
 
-private val PERMIT_ALL_PATHS =
-    arrayOf(
-        "/swagger-ui.html",
-        "/swagger-ui/**",
-        "/v3/api-docs/**",
-    )
-
 /** JWT 기반 무상태 인증 설정. 세션·CSRF는 사용하지 않는다. */
 @Configuration
 @EnableWebSecurity
@@ -47,9 +40,11 @@ class SecurityConfig {
     ): SecurityFilterChain {
         http
             .csrf { it.disable() }
+            .formLogin { it.disable() }
+            .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers(*PERMIT_ALL_PATHS).permitAll()
+                it.requestMatchers(*SecurityPaths.SWAGGER).permitAll()
                 it.anyRequest().authenticated()
             }.exceptionHandling {
                 it.authenticationEntryPoint(customAuthenticationEntryPoint)

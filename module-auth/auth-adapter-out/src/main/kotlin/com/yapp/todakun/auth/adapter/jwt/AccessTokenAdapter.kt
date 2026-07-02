@@ -2,6 +2,7 @@ package com.yapp.todakun.auth.adapter.jwt
 
 import com.yapp.todakun.auth.AccessTokenClaims
 import com.yapp.todakun.auth.IssuedAccessToken
+import com.yapp.todakun.auth.adapter.jwt.config.AccessTokenProperties
 import com.yapp.todakun.auth.code.AuthErrorCode
 import com.yapp.todakun.auth.port.AccessTokenPort
 import com.yapp.todakun.common.exception.UnauthorizedException
@@ -20,13 +21,13 @@ import kotlin.uuid.toJavaUuid
 
 @Component
 class AccessTokenAdapter(
-    private val jwtProperties: JwtProperties,
+    private val accessTokenProperties: AccessTokenProperties,
 ) : AccessTokenPort {
     @OptIn(ExperimentalUuidApi::class)
     override fun generate(memberId: UUID): IssuedAccessToken {
         val jti = Uuid.generateV7().toJavaUuid().toString()
-        val value = buildToken(subject = memberId.toString(), jti = jti, expiresInSeconds = jwtProperties.accessTokenExpirySeconds)
-        return IssuedAccessToken(value = value, jti = jti, expiresInSeconds = jwtProperties.accessTokenExpirySeconds)
+        val value = buildToken(subject = memberId.toString(), jti = jti, expiresInSeconds = accessTokenProperties.expirySeconds)
+        return IssuedAccessToken(value = value, jti = jti, expiresInSeconds = accessTokenProperties.expirySeconds)
     }
 
     override fun parse(token: String): AccessTokenClaims {
@@ -37,6 +38,8 @@ class AccessTokenAdapter(
             remainingSeconds = ((claims.expiration.time - System.currentTimeMillis()) / 1000).coerceAtLeast(0),
         )
     }
+
+    private val signingKey: SecretKey by lazy { Keys.hmacShaKeyFor(accessTokenProperties.secret.toByteArray(Charsets.UTF_8)) }
 
     private fun buildToken(
         subject: String,
@@ -50,14 +53,14 @@ class AccessTokenAdapter(
             .id(jti)
             .issuedAt(now)
             .expiration(Date(now.time + expiresInSeconds * 1000))
-            .signWith(signingKey())
+            .signWith(signingKey)
             .compact()
     }
 
     private fun parseClaims(token: String): Claims =
         try {
             Jwts.parser()
-                .verifyWith(signingKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .payload
@@ -66,6 +69,4 @@ class AccessTokenAdapter(
         } catch (e: JwtException) {
             throw UnauthorizedException(AuthErrorCode.TOKEN_INVALID)
         }
-
-    private fun signingKey(): SecretKey = Keys.hmacShaKeyFor(jwtProperties.secret.toByteArray(Charsets.UTF_8))
 }
