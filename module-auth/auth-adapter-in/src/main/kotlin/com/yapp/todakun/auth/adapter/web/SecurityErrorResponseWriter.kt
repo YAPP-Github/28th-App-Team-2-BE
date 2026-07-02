@@ -1,10 +1,10 @@
 package com.yapp.todakun.auth.adapter.web
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.yapp.todakun.common.code.ResponseCode
 import com.yapp.todakun.web.response.CommonResponse
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.MediaType
+import tools.jackson.databind.ObjectMapper
 
 /**
  * [CustomAuthenticationEntryPoint], [CustomAccessDeniedHandler]가 공통으로 사용하는 에러 응답 작성기.

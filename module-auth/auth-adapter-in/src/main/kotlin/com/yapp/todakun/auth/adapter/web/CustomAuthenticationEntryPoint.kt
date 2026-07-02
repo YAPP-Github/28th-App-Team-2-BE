@@ -1,11 +1,11 @@
 package com.yapp.todakun.auth.adapter.web
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.yapp.todakun.auth.code.AuthErrorCode
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.web.AuthenticationEntryPoint
+import tools.jackson.databind.ObjectMapper
 
 /**
  * 인증되지 않은 요청이 보호된 리소스에 접근할 때 호출된다.
