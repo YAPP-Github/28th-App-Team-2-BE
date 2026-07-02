@@ -9,7 +9,7 @@ import tools.jackson.databind.ObjectMapper
 
 /**
  * 인증되지 않은 요청이 보호된 리소스에 접근할 때 호출된다.
- * [JwtAuthenticationFilter]가 [AuthenticationFailureAttribute]에 남긴 실패 원인이 있으면 그 코드를,
+ * [JwtAuthenticationFilter]가 [AuthenticationFailureHolder]에 남긴 실패 원인이 있으면 그 코드를,
  * 없으면(토큰이 아예 없는 경우) 기본 401 코드로 응답한다.
  */
 class CustomAuthenticationEntryPoint(
@@ -20,7 +20,7 @@ class CustomAuthenticationEntryPoint(
         response: HttpServletResponse,
         authException: AuthenticationException,
     ) {
-        val errorCode = AuthenticationFailureAttribute.get(request)?.errorCode ?: AuthErrorCode.AUTHENTICATION_REQUIRED
+        val errorCode = AuthenticationFailureHolder.get(request)?.errorCode ?: AuthErrorCode.AUTHENTICATION_REQUIRED
         response.writeSecurityError(objectMapper, errorCode)
     }
 }

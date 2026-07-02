@@ -44,6 +44,7 @@ class AccessTokenAdapter(
         expiresInSeconds: Long,
     ): String {
         val now = Date()
+
         return Jwts.builder()
             .subject(subject)
             .id(jti)

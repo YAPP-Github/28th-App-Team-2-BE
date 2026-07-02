@@ -18,7 +18,7 @@ private const val BEARER_PREFIX = "Bearer "
 
 /**
  * `Authorization: Bearer {accessToken}` 헤더를 검증해 [SecurityContextHolder]에 인증 정보를 채워 넣는다.
- * 토큰이 없거나 검증에 실패해도 체인은 그대로 진행시키고, 실패 원인만 [AuthenticationFailureAttribute]에 남긴다.
+ * 토큰이 없거나 검증에 실패해도 체인은 그대로 진행시키고, 실패 원인만 [AuthenticationFailureHolder]에 남긴다.
  * 실제 인가 거부와 실패 응답 작성은 [CustomAuthenticationEntryPoint]에 위임한다(인증 로직과 응답 포맷팅 책임 분리).
  */
 class JwtAuthenticationFilter(
@@ -37,7 +37,7 @@ class JwtAuthenticationFilter(
                 authenticate(parseClaims(token))
             } catch (e: BusinessException) {
                 SecurityContextHolder.clearContext()
-                AuthenticationFailureAttribute.set(request, e)
+                AuthenticationFailureHolder.set(request, e)
             }
         }
 
