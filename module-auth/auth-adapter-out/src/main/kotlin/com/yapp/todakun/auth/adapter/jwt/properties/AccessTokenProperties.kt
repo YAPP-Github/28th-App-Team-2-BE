@@ -1,4 +1,4 @@
-package com.yapp.todakun.auth.adapter.jwt.config
+package com.yapp.todakun.auth.adapter.jwt.properties
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

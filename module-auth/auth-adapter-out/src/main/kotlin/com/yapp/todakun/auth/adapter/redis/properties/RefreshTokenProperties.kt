@@ -1,4 +1,4 @@
-package com.yapp.todakun.auth.adapter.redis.config
+package com.yapp.todakun.auth.adapter.redis.properties
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

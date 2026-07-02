@@ -1,7 +1,7 @@
 package com.yapp.todakun.auth.adapter.redis
 
 import com.yapp.todakun.auth.IssuedRefreshToken
-import com.yapp.todakun.auth.adapter.redis.config.RefreshTokenProperties
+import com.yapp.todakun.auth.adapter.redis.properties.RefreshTokenProperties
 import com.yapp.todakun.auth.port.RefreshTokenPort
 import org.springframework.stereotype.Component
 import java.util.UUID

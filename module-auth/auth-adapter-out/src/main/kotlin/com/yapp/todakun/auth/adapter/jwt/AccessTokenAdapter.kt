@@ -2,7 +2,7 @@ package com.yapp.todakun.auth.adapter.jwt
 
 import com.yapp.todakun.auth.AccessTokenClaims
 import com.yapp.todakun.auth.IssuedAccessToken
-import com.yapp.todakun.auth.adapter.jwt.config.AccessTokenProperties
+import com.yapp.todakun.auth.adapter.jwt.properties.AccessTokenProperties
 import com.yapp.todakun.auth.code.AuthErrorCode
 import com.yapp.todakun.auth.port.AccessTokenPort
 import com.yapp.todakun.common.exception.UnauthorizedException
