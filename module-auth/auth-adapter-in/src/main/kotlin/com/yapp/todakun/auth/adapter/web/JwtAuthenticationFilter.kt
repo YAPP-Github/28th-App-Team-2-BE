@@ -1,18 +1,15 @@
 package com.yapp.todakun.auth.adapter.web
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.yapp.todakun.auth.AccessTokenClaims
 import com.yapp.todakun.auth.code.AuthErrorCode
 import com.yapp.todakun.auth.port.AccessTokenPort
 import com.yapp.todakun.auth.port.BlacklistTokenPort
 import com.yapp.todakun.common.exception.BusinessException
 import com.yapp.todakun.common.exception.UnauthorizedException
-import com.yapp.todakun.web.response.CommonResponse
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
@@ -21,12 +18,12 @@ private const val BEARER_PREFIX = "Bearer "
 
 /**
  * `Authorization: Bearer {accessToken}` 헤더를 검증해 [SecurityContextHolder]에 인증 정보를 채워 넣는다.
- * 토큰이 없으면 그냥 통과시킨다(인가 여부는 SecurityConfig가 판단).
+ * 토큰이 없거나 검증에 실패해도 체인은 그대로 진행시키고, 실패 원인만 [AuthenticationFailureAttribute]에 남긴다.
+ * 실제 인가 거부와 실패 응답 작성은 [CustomAuthenticationEntryPoint]에 위임한다(인증 로직과 응답 포맷팅 책임 분리).
  */
 class JwtAuthenticationFilter(
     private val accessTokenPort: AccessTokenPort,
     private val blacklistTokenPort: BlacklistTokenPort,
-    private val objectMapper: ObjectMapper,
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -35,18 +32,16 @@ class JwtAuthenticationFilter(
     ) {
         val token = resolveToken(request)
 
-        if (token == null) {
-            filterChain.doFilter(request, response)
-            return
+        if (token != null) {
+            try {
+                authenticate(parseClaims(token))
+            } catch (e: BusinessException) {
+                SecurityContextHolder.clearContext()
+                AuthenticationFailureAttribute.set(request, e)
+            }
         }
 
-        try {
-            authenticate(parseClaims(token))
-            filterChain.doFilter(request, response)
-        } catch (e: BusinessException) {
-            SecurityContextHolder.clearContext()
-            writeErrorResponse(response, e)
-        }
+        filterChain.doFilter(request, response)
     }
 
     private fun resolveToken(request: HttpServletRequest): String? {
@@ -65,16 +60,7 @@ class JwtAuthenticationFilter(
     }
 
     private fun authenticate(claims: AccessTokenClaims) {
-        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken(claims.memberId, null, emptyList())
-    }
-
-    private fun writeErrorResponse(
-        response: HttpServletResponse,
-        e: BusinessException,
-    ) {
-        response.status = e.errorCode.status
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.characterEncoding = Charsets.UTF_8.name()
-        response.writer.write(objectMapper.writeValueAsString(CommonResponse.error(e.errorCode).body))
+        SecurityContextHolder.getContext().authentication =
+            UsernamePasswordAuthenticationToken(claims.memberId, null, emptyList())
     }
 }
