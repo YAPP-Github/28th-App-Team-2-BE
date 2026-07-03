@@ -23,7 +23,7 @@ import kotlin.uuid.toJavaUuid
 class AccessTokenAdapter(
     private val accessTokenProperties: AccessTokenProperties,
 ) : AccessTokenPort {
-    @OptIn(ExperimentalUuidApi::class)
+    @ExperimentalUuidApi
     override fun generate(memberId: UUID): IssuedAccessToken {
         val jti = Uuid.generateV7().toJavaUuid().toString()
         val value =

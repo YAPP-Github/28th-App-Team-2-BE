@@ -14,7 +14,7 @@ class RefreshTokenAdapter(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val refreshTokenProperties: RefreshTokenProperties,
 ) : RefreshTokenPort {
-    @OptIn(ExperimentalUuidApi::class)
+    @ExperimentalUuidApi
     override fun issue(memberId: UUID): IssuedRefreshToken {
         val token = Uuid.generateV7().toJavaUuid().toString()
         refreshTokenRepository.save(
