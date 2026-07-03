@@ -9,6 +9,11 @@ repositories {
 }
 
 dependencies {
+    // :common은 모든 모듈이 공통으로 쓰는 전역 모듈 → 여기서 일괄 주입(자기 자신은 제외).
+    if (path != ":common") {
+        implementation(project(":common"))
+    }
+
     // Spring Boot BOM은 카탈로그를 단일 소스로 사용(좌표·버전 하드코딩 금지).
     implementation(platform(libs.findLibrary("spring-boot-dependencies").get()))
 
