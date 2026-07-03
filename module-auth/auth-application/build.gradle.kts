@@ -3,6 +3,5 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":common"))
-    implementation(project(":auth-domain"))
+    implementation(project(":auth:domain"))
 }

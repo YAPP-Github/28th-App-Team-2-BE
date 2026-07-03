@@ -4,8 +4,6 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":common"))
-
     implementation(libs.jackson.annotations)
     implementation(libs.slf4j.api)
     implementation(libs.spring.context) // GlobalExceptionHandler: validation.BindException supertype

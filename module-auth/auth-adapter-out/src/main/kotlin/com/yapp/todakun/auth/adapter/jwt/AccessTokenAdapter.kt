@@ -26,8 +26,17 @@ class AccessTokenAdapter(
     @OptIn(ExperimentalUuidApi::class)
     override fun generate(memberId: UUID): IssuedAccessToken {
         val jti = Uuid.generateV7().toJavaUuid().toString()
-        val value = buildToken(subject = memberId.toString(), jti = jti, expiresInSeconds = accessTokenProperties.expirySeconds)
-        return IssuedAccessToken(value = value, jti = jti, expiresInSeconds = accessTokenProperties.expirySeconds)
+        val value =
+            buildToken(
+                subject = memberId.toString(),
+                jti = jti,
+                expiresInSeconds = accessTokenProperties.expirySeconds,
+            )
+        return IssuedAccessToken(
+            value = value,
+            jti = jti,
+            expiresInSeconds = accessTokenProperties.expirySeconds,
+        )
     }
 
     override fun parse(token: String): AccessTokenClaims {
