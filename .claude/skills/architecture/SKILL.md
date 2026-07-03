@@ -19,7 +19,7 @@ bootstrap     ──→  integrates all modules
 
 Never add dependencies in the reverse direction. `*-domain` does not depend on any external framework.
 
-> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …) so module folders stay grouped at the repo root instead of dispersing among config dirs. For a **nested domain**, only the outer wrapper dir is prefixed (`module-{domain}/`); inner layer modules keep plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **logical project name** stays unprefixed (`:common`, `:{domain}-domain`); `settings.gradle.kts` maps it via `project(":name").projectDir = file("module-name")`. Tables/paths below use the unprefixed logical names.
+> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …) so module folders stay grouped at the repo root instead of dispersing among config dirs. For a **nested domain**, only the outer wrapper dir is prefixed (`module-{domain}/`); inner layer modules keep plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **project path** drops the `module-` prefix: top-level modules stay flat (`:common`), but a domain's layer modules are **nested** under a source-less `:{domain}` container with just the layer name as leaf (`:auth:domain`, `:auth:adapter-in`). `settings.gradle.kts` maps each path via `project(":path").projectDir = file("module-...")` (leaf `:auth:domain` → dir `module-auth/auth-domain`). Tables/paths below use these Gradle project paths.
 
 ## Role of Each Module
 
@@ -61,12 +61,12 @@ Shared module config (Kotlin/JVM, ktlint, JDK 25 toolchain, Spring BOM, tests) i
 ```kotlin
 // e.g. {domain}-application/build.gradle.kts
 plugins {
-    id("todakun.spring")
+  id("todakun.spring")
 }
 dependencies {
-    implementation(project(":common"))
-    implementation(project(":shared"))
-    implementation(project(":{domain}:{domain}-domain"))
+  // :common is auto-injected by the todakun.kotlin-common convention plugin (no per-module declaration needed).
+  implementation(project(":shared"))
+  implementation(project(":{domain}:domain"))
 }
 ```
 
@@ -131,31 +131,31 @@ Structure the docs so that **① the API description and ② the parameters** ar
 // *-adapter-in module (com.yapp.todakun.{domain}.adapter.web)
 @Tag(name = "User", description = "User API")
 interface UserApi {
-    @Operation(
-        summary = "Get my info",
-        description = "Returns the authenticated user's own profile.",
-    )
-    @GetMapping("/me")
-    fun getMe(
-        @Parameter(hidden = true) userId: UserId,
-    ): ResponseEntity<CommonResponse<UserResponse>>
+  @Operation(
+    summary = "Get my info",
+    description = "Returns the authenticated user's own profile.",
+  )
+  @GetMapping("/me")
+  fun getMe(
+    @Parameter(hidden = true) userId: UserId,
+  ): ResponseEntity<CommonResponse<UserResponse>>
 
-    @Operation(summary = "Check nickname availability", description = "A public API callable without authentication.")
-    @DisableSwaggerSecurity // API requiring no auth → removes the lock icon from the Swagger docs
-    @GetMapping("/nickname/check")
-    fun checkNickname(
-        @Parameter(description = "Nickname to check", example = "todak")
-        @RequestParam nickname: String,
-    ): ResponseEntity<CommonResponse<Boolean>>
+  @Operation(summary = "Check nickname availability", description = "A public API callable without authentication.")
+  @DisableSwaggerSecurity // API requiring no auth → removes the lock icon from the Swagger docs
+  @GetMapping("/nickname/check")
+  fun checkNickname(
+    @Parameter(description = "Nickname to check", example = "todak")
+    @RequestParam nickname: String,
+  ): ResponseEntity<CommonResponse<Boolean>>
 }
 
 @RestController
 @RequestMapping("/users")
 class UserController(
-    private val getUserUseCase: GetUserUseCase,
+  private val getUserUseCase: GetUserUseCase,
 ) : UserApi {
-    override fun getMe(userId: UserId): ResponseEntity<CommonResponse<UserResponse>> =
-        CommonResponse.retrieved(UserResponse.from(getUserUseCase.getUser(userId)))
+  override fun getMe(userId: UserId): ResponseEntity<CommonResponse<UserResponse>> =
+    CommonResponse.retrieved(UserResponse.from(getUserUseCase.getUser(userId)))
 }
 ```
 
@@ -209,9 +209,9 @@ class GetUserService(...) : GetUserUseCase { ... }
 
 ```kotlin
 data class UserResponse(val id: UUID, val nickname: String) {
-    companion object {
-        fun from(user: User) = UserResponse(id = user.id, nickname = user.nickname)
-    }
+  companion object {
+    fun from(user: User) = UserResponse(id = user.id, nickname = user.nickname)
+  }
 }
 ```
 

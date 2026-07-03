@@ -12,16 +12,20 @@ Scaffold the new domain '$ARGUMENTS' per the nested hexagonal architecture rules
 
 ## Procedure
 
-1. **Add the 4 modules to `settings.gradle.kts`** — include the nested path (`{domain}:`), then map the outer wrapper to its `module-` prefixed directory (children resolve under it automatically):
+1. **Add the 4 modules to `settings.gradle.kts`** — include the nested path with the layer name as leaf (`{domain}:domain`), then map the container and each child to its `{domain}-{layer}` directory (the leaf drops the `{domain}-` prefix, so each child needs an explicit `projectDir`):
    ```kotlin
    include(
-       "{domain}:{domain}-domain",
-       "{domain}:{domain}-application",
-       "{domain}:{domain}-adapter-in",
-       "{domain}:{domain}-adapter-out",
+       "{domain}:domain",
+       "{domain}:application",
+       "{domain}:adapter-in",
+       "{domain}:adapter-out",
    )
-   // 외부 래퍼 디렉터리에만 `module-` 접두사 → 내부 레이어 모듈은 module-{domain}/ 하위로 자동 해석
+   // Only the outer wrapper dir carries the `module-` prefix. The Gradle leaf uses just the layer name while the directory keeps `{domain}-{layer}` → map each child explicitly.
    project(":{domain}").projectDir = file("module-{domain}")
+   project(":{domain}:domain").projectDir = file("module-{domain}/{domain}-domain")
+   project(":{domain}:application").projectDir = file("module-{domain}/{domain}-application")
+   project(":{domain}:adapter-in").projectDir = file("module-{domain}/{domain}-adapter-in")
+   project(":{domain}:adapter-out").projectDir = file("module-{domain}/{domain}-adapter-out")
    ```
 2. **Create each module's `build.gradle.kts`** — exactly as in the "build.gradle.kts (per module)" section of `domain-scaffold.md`.
 3. **Add `implementation` for the 4 modules to `bootstrap/build.gradle.kts`.**
