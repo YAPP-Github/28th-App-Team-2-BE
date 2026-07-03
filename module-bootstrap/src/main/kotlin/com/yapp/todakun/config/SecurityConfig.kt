@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
@@ -38,18 +39,21 @@ class SecurityConfig {
         customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
         customAccessDeniedHandler: CustomAccessDeniedHandler,
     ): SecurityFilterChain {
-        http
-            .csrf { it.disable() }
-            .formLogin { it.disable() }
-            .httpBasic { it.disable() }
-            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .authorizeHttpRequests {
-                it.requestMatchers(*SecurityPaths.SWAGGER).permitAll()
-                it.anyRequest().authenticated()
-            }.exceptionHandling {
-                it.authenticationEntryPoint(customAuthenticationEntryPoint)
-                it.accessDeniedHandler(customAccessDeniedHandler)
-            }.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
+        http {
+            csrf { disable() }
+            formLogin { disable() }
+            httpBasic { disable() }
+            sessionManagement { sessionCreationPolicy = SessionCreationPolicy.STATELESS }
+            authorizeHttpRequests {
+                SecurityPaths.SWAGGER.forEach { pattern -> authorize(pattern, permitAll) }
+                authorize(anyRequest, authenticated)
+            }
+            exceptionHandling {
+                authenticationEntryPoint = customAuthenticationEntryPoint
+                accessDeniedHandler = customAccessDeniedHandler
+            }
+            addFilterBefore<UsernamePasswordAuthenticationFilter>(jwtAuthenticationFilter)
+        }
 
         return http.build()
     }
