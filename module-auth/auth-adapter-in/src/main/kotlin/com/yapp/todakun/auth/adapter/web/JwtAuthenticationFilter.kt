@@ -30,14 +30,15 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val token = resolveToken(request)
-
-        if (token != null) {
+        resolveToken(request)?.let {
             try {
-                authenticate(parseClaims(token))
+                authenticate(parseClaims(it))
             } catch (e: BusinessException) {
                 SecurityContextHolder.clearContext()
                 AuthenticationFailureHolder.set(request, e)
+            } catch (e: Exception) {
+                SecurityContextHolder.clearContext()
+                AuthenticationFailureHolder.set(request, UnauthorizedException(AuthErrorCode.TOKEN_INVALID))
             }
         }
 
