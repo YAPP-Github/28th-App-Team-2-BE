@@ -1,0 +1,9 @@
+---
+# Ansible 컬렉션 의존성. 설치:  ansible-galaxy collection install -r collections/requirements.yml
+collections:
+  # docker_container/docker_network/docker_volume 모듈(멱등적 컨테이너 관리).
+  - name: community.docker
+    version: ">=4.8.1,<5.0.0"
+  # (선택) SOPS 암호화 시크릿 vars 플러그인 — secrets.sops.yml 도입 시 활성화.
+  - name: community.sops
+    version: ">=2.2.0,<3.0.0"

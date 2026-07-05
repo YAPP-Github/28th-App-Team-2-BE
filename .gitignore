@@ -42,3 +42,19 @@ out/
 
 ### Oh My Claude Code ###
 .omc/
+
+### Deploy (VM 로컬 산출물 — 커밋 금지) ###
+deploy/ansible/inventory/hosts.ini
+deploy/caddy/Caddyfile
+
+### Cloudflare Origin Certificate (개인키 포함 — 절대 커밋 금지) ###
+deploy/caddy/certs/*.pem
+deploy/caddy/certs/*.key
+
+### SOPS age 개인키 — 절대 커밋 금지 (암호화된 secrets.sops.yaml은 커밋 O) ###
+**/*.agekey
+**/age-keys.txt
+**/keys.txt
+
+### Ansible group_vars all secret 파일 (개인키 포함 — 절대 커밋 금지) ###
+deploy/ansible/inventory/group_vars/all/secrets.sops.*.yaml

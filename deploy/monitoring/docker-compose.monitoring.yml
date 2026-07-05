@@ -1,0 +1,35 @@
+# 관측: Grafana Alloy 엣지 에이전트 1개만 VM에 둔다.
+# metrics(remote_write)·logs를 Grafana Cloud(관리형 Prometheus/Loki)로 전송 → VM 메모리 절약.
+# Prometheus/Loki/Grafana는 자가호스팅하지 않는다(Grafana Cloud 관리형 사용).
+# 실행:  docker compose -f docker-compose.monitoring.yml --env-file ../.env up -d
+services:
+  alloy:
+    image: grafana/alloy:v1.16.1
+    container_name: todakun-alloy
+    restart: unless-stopped
+    # Grafana Cloud 자격증명(GC_TOKEN/GC_*_URL/GC_*_USER)을 config.alloy의 sys.env()로 주입.
+    env_file:
+      - ../.env
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - --stability.level=generally-available
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      # Docker 로그 수집 + host 메트릭(node_exporter 대체)용 read-only 마운트.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/rootfs:ro,rslave
+    networks:
+      - todakun-net
+
+volumes:
+  alloy-data:
+
+networks:
+  todakun-net:
+    external: true
