@@ -19,6 +19,11 @@ gcp:
   storage:
     bucket: ${GCS_BUCKET}
 
+# FCM 푸시 알림(Firebase Admin SDK). VM 서비스 계정 ADC로 인증 → 키 파일 불필요.
+fcm:
+  enabled: ${FCM_ENABLED:true}    # false면 Firebase 빈 미생성(no-op)
+  project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
+
 # Sentry(APM/에러 추적). DSN 미설정 시 비활성(no-op).
 sentry:
   dsn: ${SENTRY_DSN:}

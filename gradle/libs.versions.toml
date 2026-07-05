@@ -18,6 +18,8 @@ springAi = "1.1.0"
 googleCloudLibrariesBom = "26.50.0"
 # Sentry (APM/에러 추적). Spring Boot 4 전용 스타터(sentry-spring-boot-4-starter) 사용.
 sentry = "8.47.0"
+# Firebase Admin SDK (FCM 푸시 발송). Boot BOM 미관리 → 자체 버전. VM은 ADC로 인증(키 파일 불필요).
+firebaseAdmin = "9.10.0"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
@@ -73,6 +75,11 @@ sentry-spring-boot4-starter = { module = "io.sentry:sentry-spring-boot-4-starter
 # VM에서는 서비스 계정 ADC로 인증 → 키 파일/시크릿 불필요.
 google-cloud-libraries-bom = { module = "com.google.cloud:libraries-bom", version.ref = "googleCloudLibrariesBom" }
 google-cloud-storage = { module = "com.google.cloud:google-cloud-storage" }
+
+# --- FCM 푸시 알림 (adapter-out: Firebase Admin SDK) ---
+# 외부 시스템 → outbound adapter로 격리. VM은 인스턴스 서비스 계정 ADC로 인증(키 파일 불필요).
+# fcm.enabled=false면 Firebase 빈 미생성(no-op).
+firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebaseAdmin" }
 
 # --- JWT (auth adapter-out) ---
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
