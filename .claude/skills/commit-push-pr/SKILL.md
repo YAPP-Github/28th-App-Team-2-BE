@@ -34,11 +34,11 @@ The type list and branch strategy follow the `git-workflow` skill.
 ## 4. Create PR
 
 ```bash
-gh pr create --base develop --title "[#issue-number] type: description" --body "..."
+gh pr create --base develop --title "[#issue-number] [Type] description" --body "..."
 ```
 
 - **The PR target is always `develop`** (not main).
-- Make the PR title identical to the commit message format.
+- PR title format: `[#issue-number] [Type] description` — the `[Type] description` part is the working branch's **issue title, verbatim** (just prepend `[#issue-number] `). This is **not** the commit message format — the type is a capitalized full word in brackets (`[Feature]`, `[Fix]`, `[Refactor]`, `[Chore]`, `[Docs]`, `[Test]`, `[Performance]`), not `type:`. See the `git-workflow` skill for the full tag→commit-type mapping. Example: issue `[Feature] JwtAuthenticationFilter 추가 및 Security 설정` → PR `[#4] [Feature] JwtAuthenticationFilter 추가 및 Security 설정`.
 - The body follows the `.github/PULL_REQUEST_TEMPLATE.md` structure: ✅ PR type / ✏️ work done / 🔗 related issue (`closes #issue-number`) / 💡 additional notes.
 - **Attaching screenshots or test results is required** (per the template). If you cannot attach them, at least leave a test-pass log in the body.
 - **Do not merge your own PR** — code review required. Only create it; do not merge.
