@@ -26,12 +26,17 @@ class AccessTokenAdapter(
     @ExperimentalUuidApi
     override fun generate(memberId: UUID): IssuedAccessToken {
         val jti = Uuid.generateV7().toJavaUuid().toString()
+        val now = Date()
+
         val value =
-            buildToken(
-                subject = memberId.toString(),
-                jti = jti,
-                expiresInSeconds = accessTokenProperties.expirySeconds,
-            )
+            Jwts.builder()
+                .subject(memberId.toString())
+                .id(jti)
+                .issuedAt(now)
+                .expiration(Date(now.time + accessTokenProperties.expirySeconds * 1000))
+                .signWith(signingKey)
+                .compact()
+
         return IssuedAccessToken(
             value = value,
             jti = jti,
@@ -41,6 +46,7 @@ class AccessTokenAdapter(
 
     override fun parse(token: String): AccessTokenClaims {
         val claims = parseClaims(token)
+
         return AccessTokenClaims(
             memberId = UUID.fromString(claims.subject),
             jti = requireNotNull(claims.id),
@@ -49,22 +55,6 @@ class AccessTokenAdapter(
     }
 
     private val signingKey: SecretKey by lazy { Keys.hmacShaKeyFor(accessTokenProperties.secret.toByteArray(Charsets.UTF_8)) }
-
-    private fun buildToken(
-        subject: String,
-        jti: String,
-        expiresInSeconds: Long,
-    ): String {
-        val now = Date()
-
-        return Jwts.builder()
-            .subject(subject)
-            .id(jti)
-            .issuedAt(now)
-            .expiration(Date(now.time + expiresInSeconds * 1000))
-            .signWith(signingKey)
-            .compact()
-    }
 
     private fun parseClaims(token: String): Claims =
         try {

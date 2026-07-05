@@ -19,11 +19,12 @@ class RefreshTokenAdapter(
         val token = Uuid.generateV7().toJavaUuid().toString()
         refreshTokenRepository.save(
             RefreshToken(
-                jti = token,
+                value = token,
                 memberId = memberId.toString(),
                 ttl = refreshTokenProperties.expirySeconds,
             ),
         )
+
         return IssuedRefreshToken(value = token, expiresInSeconds = refreshTokenProperties.expirySeconds)
     }
 
