@@ -3,6 +3,7 @@ rootProject.name = "todakun"
 include("bootstrap")
 include("common")
 include("common-web")
+include("shared")
 include("architecture-test")
 
 // auth 도메인 (:auth 하위에 nested된 4개 모듈, leaf는 레이어명만)
@@ -15,6 +16,7 @@ include("auth:adapter-out")
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
 project(":common-web").projectDir = file("module-common-web")
+project(":shared").projectDir = file("module-shared")
 project(":architecture-test").projectDir = file("module-architecture-test")
 
 // 도메인 컨테이너(:auth)는 소스가 없는 그룹 프로젝트이며, 하위 레이어 모듈을 nested로 둔다.
