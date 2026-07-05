@@ -44,7 +44,8 @@ out/
 .omc/
 
 ### Deploy (VM 로컬 산출물 — 커밋 금지) ###
-deploy/ansible/inventory/hosts.ini
+deploy/ansible/inventory/dev/hosts.ini
+deploy/ansible/inventory/prod/hosts.ini
 deploy/caddy/Caddyfile
 
 ### Cloudflare Origin Certificate (개인키 포함 — 절대 커밋 금지) ###
@@ -56,5 +57,7 @@ deploy/caddy/certs/*.key
 **/age-keys.txt
 **/keys.txt
 
-### Ansible group_vars all secret 파일 (개인키 포함 — 절대 커밋 금지) ###
-deploy/ansible/inventory/group_vars/all/secrets.sops.*.yaml
+### Ansible SOPS 시크릿 — 암호화 후에만 커밋 (평문 절대 커밋 금지) ###
+# sops -e -i 암호화 완료 후 git add 로 추가. 평문 상태로 커밋 시 즉시 전 시크릿 회전.
+# secrets.sops.dev.yaml, secrets.sops.prod.yaml 는 암호화 상태로만 커밋
+secrets.sops.*.origin.yaml

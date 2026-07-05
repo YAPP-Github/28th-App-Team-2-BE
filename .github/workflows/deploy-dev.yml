@@ -83,8 +83,8 @@ jobs:
       - name: Render Ansible inventory
         working-directory: deploy/ansible
         run: |
-          mkdir -p inventory
-          cat > inventory/hosts.ini <<EOF
+          mkdir -p inventory/dev
+          cat > inventory/dev/hosts.ini <<EOF
           [todakun_dev]
           ${{ secrets.VM_HOST }} ansible_user=${{ secrets.VM_USER }}
 
@@ -107,7 +107,7 @@ jobs:
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/hosts.ini playbook.yml
+        run: ansible-playbook -i inventory/dev playbook.yml
 
       - name: Deploy (Blue/Green switch)
         working-directory: deploy/ansible
@@ -115,7 +115,7 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING: "False"
           APP_IMAGE: ${{ needs.build.outputs.image }}
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/hosts.ini deploy.yml
+        run: ansible-playbook -i inventory/dev deploy.yml
 
       - name: Notify Discord (result)
         if: always() && env.HAS_DISCORD == 'true'

@@ -3,7 +3,7 @@
 #   - deploy 산출물(compose/caddy/switch.sh) 배치
 #   - todakun-net 네트워크 + 공용 인프라(Caddy/Redis) 기동
 # 배포(Blue/Green 전환) 자체는 이 playbook이 아니라 VM 위 switch.sh를 CI가 트리거한다.
-#   실행:  ansible-playbook -i inventory/hosts.ini playbook.yml
+#   실행:  ansible-playbook -i inventory/dev playbook.yml
 - name: Provision todakun dev VM
   hosts: todakun_dev
   become: true
