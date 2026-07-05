@@ -109,6 +109,9 @@
     - name: SOPS 시크릿 → /opt/todakun/.env 렌더링
       ansible.builtin.import_tasks: tasks/render_env.yml
 
+    - name: SOPS 시크릿 → Cloudflare Origin 인증서 렌더링
+      ansible.builtin.import_tasks: tasks/render_certs.yml
+
     - name: 공용 인프라(Caddy/Redis) 기동
       ansible.builtin.command: docker compose -f compose/docker-compose.infra.yml up -d
       args:

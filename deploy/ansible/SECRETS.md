@@ -48,6 +48,8 @@ git add inventory/dev/group_vars/all/secrets.sops.dev.yaml
 
 - 이후 수정은 `sops inventory/dev/group_vars/all/secrets.sops.dev.yaml` (에디터에서 평문 편집 → 저장 시 재암호화).
 - prod도 동일 절차 (`secrets.sops.prod.yaml`).
+- **Cloudflare Origin 인증서**(`cloudflare_origin_cert`/`cloudflare_origin_key`)도 이 시크릿에 PEM으로 넣으면
+  Ansible(`tasks/render_certs.yml`)이 VM `/opt/todakun/caddy/certs/`로 렌더링한다 — **수동 배치 불필요**.
 
 ## 4. CI(GitHub Actions) 연결
 

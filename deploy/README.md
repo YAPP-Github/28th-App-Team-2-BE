@@ -37,7 +37,7 @@ deploy/
 ## 역할 분리
 
 - **CI (GitHub Actions)**: jar 빌드 → 이미지 빌드/푸시(Artifact Registry) → Ansible 실행.
-- **프로비저닝 (Ansible `playbook.yml`, 멱등)**: Docker·compose 설치, 파일 배치, `todakun-net` 생성, AR 인증, 공용 인프라 기동.
+- **프로비저닝 (Ansible `playbook.yml`, 멱등)**: Docker·compose 설치, 파일 배치, `todakun-net` 생성, GHCR 로그인, `.env`·인증서 렌더링, 공용 인프라 기동.
 - **배포 (Ansible `deploy.yml` → `switch.sh`, 매 릴리스)**: 최신 산출물 동기화 후 Blue/Green 전환.
 
 ## 헬스 체크 (curl은 컨테이너 밖)
@@ -111,12 +111,12 @@ Discord 웹훅은 Grafana Cloud Alerting의 Contact point에 직접 등록한다
 
 - 사이트 주소는 `Caddyfile.template`에 하드코딩하지 않고 **VM `.env`의 `DOMAIN`으로 주입**한다 — 도메인명을 git에 남기지 않기 위함.
 - **Cloudflare 프록시(orange)** + **Full (Strict)**. 클라이언트↔Cloudflare, Cloudflare↔origin 모두 암호화, origin IP 은닉.
-- origin(Caddy)에는 **와일드카드 Origin Certificate**(`*.todakun.com`, `caddy/certs/`, [가이드](./caddy/certs/README.md)). Caddy는 ACME를 쓰지 않는다.
+- origin(Caddy)에는 **와일드카드 Origin Certificate**(`*.todakun.com`)를 쓴다. **SOPS에 넣으면 Ansible이 VM `caddy/certs/`로 렌더링**(수동 배치 X, [가이드](./caddy/certs/README.md)). Caddy는 ACME를 쓰지 않는다.
 - 엣지는 **Universal SSL 와일드카드**라 특정 서브도메인이 **CT 로그에 남지 않는다** → 비밀 이름 + 와일드카드 인증서 조합이 은닉의 핵심.
 
 **전제 조건**
 1. **Cloudflare DNS**: 랜덤 서브도메인 레코드 → VM IP, **프록시 ON(orange)**.
-2. VM `.env`에 `DOMAIN` 설정(추측 불가 랜덤), 와일드카드 Origin Certificate를 `caddy/certs/`에 배치.
+2. SOPS 시크릿에 `domain`(랜덤) + 와일드카드 Origin 인증서(`cloudflare_origin_cert`/`key`) 등록 → Ansible이 렌더링.
 3. 그 특정 서브도메인 앞으로 **dedicated/advanced 인증서를 발급하지 말 것**(발급하면 CT 로그에 이름이 찍힘).
 
 ## ⚠️ 개발 서버 노출 정책 — 은닉의 한계
