@@ -14,6 +14,10 @@ mockk = "1.13.13"
 springmockk = "4.0.2"
 jjwt = "0.12.6"
 springAi = "1.1.0"
+# GCP 라이브러리 BOM (google-cloud-storage 등 버전 관리). 최신 26.x 라인으로 필요 시 갱신.
+googleCloudLibrariesBom = "26.50.0"
+# Sentry (APM/에러 추적). Spring Boot 4 호환 여부 확인 후 필요 시 갱신.
+sentry = "7.18.0"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
@@ -34,11 +38,17 @@ spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-oauth2-client = { module = "org.springframework.boot:spring-boot-starter-oauth2-client" }
 
 # --- Spring Framework 경량 모듈 (common/common-web, Boot BOM 관리) ---
 spring-context = { module = "org.springframework:spring-context" }
 spring-tx = { module = "org.springframework:spring-tx" }
+
+# --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
+spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
+spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
+spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
 
 # --- 로깅 / 서블릿 API (common-web, Boot BOM 관리) ---
 slf4j-api = { module = "org.slf4j:slf4j-api" }
@@ -52,15 +62,22 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 # --- 영속성 (adapter-out, Boot BOM 관리) ---
 postgresql = { module = "org.postgresql:postgresql" }
 
+# --- 모니터링 / APM (bootstrap) ---
+# Prometheus 메트릭 노출(/actuator/prometheus). 버전은 Boot BOM(Micrometer)이 관리.
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+# Sentry: DSN 미설정 시 자동 비활성(no-op).
+sentry-spring-boot-starter-jakarta = { module = "io.sentry:sentry-spring-boot-starter-jakarta", version.ref = "sentry" }
+
+# --- Cloud Storage (adapter-out: GCS raw 클라이언트) ---
+# Spring Cloud GCP 대신 raw 클라이언트 사용(Boot 4 호환 안전 + 헥사고날 어댑터로 격리).
+# VM에서는 서비스 계정 ADC로 인증 → 키 파일/시크릿 불필요.
+google-cloud-libraries-bom = { module = "com.google.cloud:libraries-bom", version.ref = "googleCloudLibrariesBom" }
+google-cloud-storage = { module = "com.google.cloud:google-cloud-storage" }
+
 # --- JWT (auth adapter-out) ---
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
-
-# --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
-spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
-spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
-spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
 
 # --- 아키텍처 테스트 ---
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }

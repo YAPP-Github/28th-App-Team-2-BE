@@ -16,6 +16,12 @@ spring:
       hibernate:
         format_sql: true
 
+# GCP Cloud Storage (raw 클라이언트). 로컬은 gcloud ADC(gcloud auth application-default login) 또는 키 파일로 인증.
+gcp:
+  project-id: ${GCP_PROJECT_ID}
+  storage:
+    bucket: ${GCS_BUCKET}
+
 token:
   jwt:
     secret: ${JWT_SECRET}
