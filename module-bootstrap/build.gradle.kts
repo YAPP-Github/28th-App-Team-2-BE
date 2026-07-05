@@ -16,5 +16,6 @@ dependencies {
     implementation(libs.micrometer.registry.prometheus)
     implementation(libs.sentry.spring.boot.starter.jakarta)
     implementation(libs.spring.boot.starter.security)
+    implementation(libs.sentry.spring.boot4.starter)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
 }

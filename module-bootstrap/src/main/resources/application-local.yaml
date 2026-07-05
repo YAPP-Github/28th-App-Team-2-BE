@@ -22,6 +22,13 @@ gcp:
   storage:
     bucket: ${GCS_BUCKET}
 
+# Sentry — DSN 미설정 시 자동 비활성(no-op). debug는 로컬 연동 점검용(전송 로그 출력).
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: local
+  traces-sample-rate: 0
+  debug: true
+
 token:
   jwt:
     secret: ${JWT_SECRET}

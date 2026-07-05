@@ -16,8 +16,8 @@ jjwt = "0.12.6"
 springAi = "1.1.0"
 # GCP 라이브러리 BOM (google-cloud-storage 등 버전 관리). 최신 26.x 라인으로 필요 시 갱신.
 googleCloudLibrariesBom = "26.50.0"
-# Sentry (APM/에러 추적). Spring Boot 4 호환 여부 확인 후 필요 시 갱신.
-sentry = "7.18.0"
+# Sentry (APM/에러 추적). Spring Boot 4 전용 스타터(sentry-spring-boot-4-starter) 사용.
+sentry = "8.47.0"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
@@ -66,7 +66,7 @@ postgresql = { module = "org.postgresql:postgresql" }
 # Prometheus 메트릭 노출(/actuator/prometheus). 버전은 Boot BOM(Micrometer)이 관리.
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 # Sentry: DSN 미설정 시 자동 비활성(no-op).
-sentry-spring-boot-starter-jakarta = { module = "io.sentry:sentry-spring-boot-starter-jakarta", version.ref = "sentry" }
+sentry-spring-boot4-starter = { module = "io.sentry:sentry-spring-boot-4-starter", version.ref = "sentry" }
 
 # --- Cloud Storage (adapter-out: GCS raw 클라이언트) ---
 # Spring Cloud GCP 대신 raw 클라이언트 사용(Boot 4 호환 안전 + 헥사고날 어댑터로 격리).
