@@ -1,6 +1,6 @@
 package com.yapp.todakun.auth.adapter.web
 
-import com.yapp.todakun.auth.AccessTokenClaims
+import com.yapp.todakun.auth.claims.AccessTokenClaims
 import com.yapp.todakun.auth.code.AuthErrorCode
 import com.yapp.todakun.auth.port.AccessTokenPort
 import com.yapp.todakun.auth.port.BlacklistTokenPort

@@ -1,4 +1,4 @@
-package com.yapp.todakun.auth
+package com.yapp.todakun.auth.claims
 
 import java.util.UUID
 

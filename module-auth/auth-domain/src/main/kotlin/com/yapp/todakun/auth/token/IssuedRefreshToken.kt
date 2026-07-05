@@ -1,4 +1,4 @@
-package com.yapp.todakun.auth
+package com.yapp.todakun.auth.token
 
 data class IssuedRefreshToken(
     val value: String,

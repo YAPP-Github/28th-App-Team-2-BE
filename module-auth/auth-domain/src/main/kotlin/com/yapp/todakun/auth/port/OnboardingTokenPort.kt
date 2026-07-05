@@ -1,7 +1,7 @@
 package com.yapp.todakun.auth.port
 
-import com.yapp.todakun.auth.IssuedOnboardingToken
-import com.yapp.todakun.auth.OnboardingTokenClaims
+import com.yapp.todakun.auth.claims.OnboardingTokenClaims
+import com.yapp.todakun.auth.token.IssuedOnboardingToken
 import com.yapp.todakun.shared.OAuthProvider
 
 interface OnboardingTokenPort {

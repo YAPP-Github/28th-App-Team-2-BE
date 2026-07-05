@@ -1,7 +1,7 @@
 package com.yapp.todakun.auth.port
 
-import com.yapp.todakun.auth.AccessTokenClaims
-import com.yapp.todakun.auth.IssuedAccessToken
+import com.yapp.todakun.auth.claims.AccessTokenClaims
+import com.yapp.todakun.auth.token.IssuedAccessToken
 import java.util.UUID
 
 interface AccessTokenPort {

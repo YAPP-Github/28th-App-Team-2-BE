@@ -1,6 +1,6 @@
 package com.yapp.todakun.auth.port
 
-import com.yapp.todakun.auth.IssuedRefreshToken
+import com.yapp.todakun.auth.token.IssuedRefreshToken
 import java.util.UUID
 
 interface RefreshTokenPort {
