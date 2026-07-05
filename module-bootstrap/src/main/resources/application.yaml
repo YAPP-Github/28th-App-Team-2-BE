@@ -26,3 +26,13 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+# 카카오/구글이 정한 고정 API 규격 — 환경(local/dev/prod) 무관하게 동일한 값.
+oauth:
+  kakao:
+    user-me-uri: https://kapi.kakao.com/v2/user/me
+  google:
+    jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+    issuers:
+      - https://accounts.google.com
+      - accounts.google.com

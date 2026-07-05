@@ -41,6 +41,10 @@ token:
   redis:
     expiry-seconds: 2592000  # 30일(리프레시 토큰 만료시간)
 
+oauth:
+  google:
+    client-ids: ${GOOGLE_OAUTH_CLIENT_IDS}  # 콤마 구분(Android/iOS 등 플랫폼별 클라이언트 ID)
+
 logging:
   level:
     com.yapp.todakun: DEBUG

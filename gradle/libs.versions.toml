@@ -20,6 +20,7 @@ googleCloudLibrariesBom = "26.50.0"
 sentry = "8.47.0"
 # Firebase Admin SDK (FCM 푸시 발송). Boot BOM 미관리 → 자체 버전. VM은 ADC로 인증(키 파일 불필요).
 firebaseAdmin = "9.10.0"
+nimbusJoseJwt = "10.9.1"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
@@ -46,6 +47,7 @@ spring-boot-starter-oauth2-client = { module = "org.springframework.boot:spring-
 # --- Spring Framework 경량 모듈 (common/common-web, Boot BOM 관리) ---
 spring-context = { module = "org.springframework:spring-context" }
 spring-tx = { module = "org.springframework:spring-tx" }
+spring-web = { module = "org.springframework:spring-web" }
 
 # --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
 spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
@@ -85,6 +87,14 @@ firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = 
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+# --- 구글 ID 토큰(JWKS) 검증 (auth adapter-out) ---
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
+
+# --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
+spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
+spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
+spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
 
 # --- 아키텍처 테스트 ---
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
