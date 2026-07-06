@@ -1,0 +1,41 @@
+# Blue/Green 배포 — GitHub Actions가 이미지 푸시 후 실행한다.
+# 최신 deploy 산출물을 VM에 동기화한 뒤 switch.sh로 전환한다(헬스 체크·롤백은 switch.sh가 수행).
+#   실행:  APP_IMAGE=<registry>/todakun/app:<tag> ansible-playbook -i inventory/dev deploy.yaml
+- name: Deploy todakun (Blue/Green switch)
+  hosts: todakun_dev
+  become: true
+  vars:
+    app_dir: /opt/todakun
+    app_image: "{{ lookup('ansible.builtin.env', 'APP_IMAGE') }}"
+
+  tasks:
+    - name: APP_IMAGE 지정 확인
+      ansible.builtin.assert:
+        that: app_image | length > 0
+        fail_msg: "APP_IMAGE 환경변수가 필요합니다."
+
+    - name: 최신 deploy 산출물 동기화 (compose/caddy template/switch)
+      ansible.builtin.copy:
+        src: "../{{ item.src }}"
+        dest: "{{ app_dir }}/{{ item.dest }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: "compose/docker-compose.app.yaml", dest: "compose/docker-compose.app.yaml", mode: "0644" }
+        - { src: "caddy/Caddyfile.template", dest: "caddy/Caddyfile.template", mode: "0644" }
+        - { src: "switch.sh", dest: "switch.sh", mode: "0755" }
+
+    - name: SOPS 시크릿 → /opt/todakun/.env 갱신 (앱이 최신 시크릿으로 기동)
+      ansible.builtin.import_tasks: tasks/render_env.yaml
+
+    - name: Blue/Green 전환 실행
+      ansible.builtin.command: ./switch.sh
+      args:
+        chdir: "{{ app_dir }}"
+      environment:
+        APP_IMAGE: "{{ app_image }}"
+      register: switch_result
+      changed_when: true
+
+    - name: switch.sh 출력
+      ansible.builtin.debug:
+        var: switch_result.stdout_lines

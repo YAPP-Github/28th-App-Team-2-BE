@@ -1,0 +1,20 @@
+---
+# SOPS 복호화 vars(group_vars/all/secrets.sops.yaml)로 VM의 /opt/todakun/.env 를 렌더링.
+# 복호화는 컨트롤러(CI/로컬)에서 vars 플러그인이 수행 → VM엔 렌더 결과만 내려간다.
+- name: SOPS 시크릿 로드 확인
+  ansible.builtin.assert:
+    that:
+      - domain is defined
+      - db_password is defined
+      - jwt_secret is defined
+      - gc_token is defined
+    fail_msg: "SOPS 복호화 실패 또는 secrets.sops.yaml 누락 — sops 바이너리/SOPS_AGE_KEY/파일 존재를 확인하세요."
+  no_log: true
+
+- name: /opt/todakun/.env 렌더링 (0600, root only)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/env.j2"
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ ansible_user }}"
+    mode: "0600"
+  no_log: true

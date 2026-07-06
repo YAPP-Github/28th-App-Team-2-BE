@@ -1,0 +1,146 @@
+# todakun-instance 프로비저닝 — 멱등성.
+#   - Docker Engine + compose 플러그인 설치
+#   - deploy 산출물(compose/caddy/switch.sh) 배치
+#   - todakun-net 네트워크 + 공용 인프라(Caddy/Redis) 기동
+# 배포(Blue/Green 전환) 자체는 이 playbook이 아니라 VM 위 switch.sh를 CI가 트리거한다.
+#   실행:  ansible-playbook -i inventory/dev playbook.yaml
+- name: Provision todakun dev VM
+  hosts: todakun_dev
+  become: true
+  vars:
+    app_dir: /opt/todakun
+
+  tasks:
+    - name: APT 캐시 갱신 및 선행 패키지 설치
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: apt keyrings 디렉터리 생성
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    # apt_key는 deprecated(ansible-core에서 제거 예정)이며 Ubuntu 24.04+에서 실패할 수 있어
+    # get_url로 keyring에 직접 내려받고 apt_repository의 signed-by로 참조한다.
+    - name: Docker 공식 GPG 키 등록
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Docker APT 저장소 등록
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Docker Engine + compose 플러그인 설치
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: docker 서비스 활성화
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: SSH 유저를 docker 그룹에 추가
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: GHCR 로그인 (VM이 private 이미지 pull, root)
+      # switch.sh의 `docker compose ... --pull always`가 GHCR에서 이미지를 받도록 로그인.
+      # ghcr_user/ghcr_pat(read:packages PAT)은 SOPS 시크릿에서 온다.
+      ansible.builtin.command:
+        cmd: "docker login ghcr.io -u {{ ghcr_user }} --password-stdin"
+        stdin: "{{ ghcr_pat }}"
+      no_log: true
+      changed_when: false
+
+    - name: 앱 디렉터리 구조 생성
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: "0755"
+      loop:
+        - "{{ app_dir }}"
+        - "{{ app_dir }}/compose"
+        - "{{ app_dir }}/caddy"
+
+    - name: deploy 산출물 복사 (compose/caddy/switch)
+      ansible.builtin.copy:
+        src: "../{{ item.src }}"
+        dest: "{{ app_dir }}/{{ item.dest }}"
+        owner: "{{ ansible_user }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: "compose/docker-compose.infra.yaml", dest: "compose/docker-compose.infra.yaml", mode: "0644" }
+        - { src: "compose/docker-compose.app.yaml", dest: "compose/docker-compose.app.yaml", mode: "0644" }
+        - { src: "caddy/Caddyfile.template", dest: "caddy/Caddyfile.template", mode: "0644" }
+        - { src: "switch.sh", dest: "switch.sh", mode: "0755" }
+
+    - name: todakun-net 도커 네트워크 생성 (멱등)
+      ansible.builtin.command: docker network create todakun-net
+      register: net_create
+      changed_when: "'already exists' not in net_create.stderr"
+      failed_when: net_create.rc != 0 and 'already exists' not in net_create.stderr
+
+    - name: 초기 Caddyfile 렌더링 (첫 배포 전, blue 업스트림)
+      ansible.builtin.command: >
+        sed "s|__APP_UPSTREAM__|todakun-app-blue:8080|"
+        {{ app_dir }}/caddy/Caddyfile.template
+      register: caddy_rendered
+      changed_when: false
+
+    - name: Caddyfile 저장
+      ansible.builtin.copy:
+        content: "{{ caddy_rendered.stdout }}\n"
+        dest: "{{ app_dir }}/caddy/Caddyfile"
+        owner: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: SOPS 시크릿 → /opt/todakun/.env 렌더링
+      ansible.builtin.import_tasks: tasks/render_env.yaml
+
+    - name: SOPS 시크릿 → Cloudflare Origin 인증서 렌더링
+      ansible.builtin.import_tasks: tasks/render_certs.yaml
+
+    - name: 공용 인프라(Caddy/Redis) 기동
+      ansible.builtin.command: docker compose -f compose/docker-compose.infra.yaml up -d
+      args:
+        chdir: "{{ app_dir }}"
+      register: infra_up
+      changed_when: "'Started' in infra_up.stderr or 'Created' in infra_up.stderr"
+
+    - name: 모니터링 스택 산출물 동기화 (prometheus/loki/alloy/grafana)
+      ansible.builtin.copy:
+        src: "../monitoring/"
+        dest: "{{ app_dir }}/monitoring/"
+        owner: "{{ ansible_user }}"
+        mode: "0644"
+        directory_mode: "0755"
+
+    - name: 모니터링 스택(Prometheus/Loki/Alloy/Grafana) 기동
+      # secrets(DISCORD_WEBHOOK_URL 등)는 VM의 .env에서 주입.
+      ansible.builtin.command: >
+        docker compose -f monitoring/docker-compose.monitoring.yaml
+        --env-file .env up -d
+      args:
+        chdir: "{{ app_dir }}"
+      register: monitoring_up
+      changed_when: "'Started' in monitoring_up.stderr or 'Created' in monitoring_up.stderr"

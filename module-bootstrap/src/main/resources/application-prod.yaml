@@ -13,6 +13,23 @@ spring:
   jpa:
     show-sql: false
 
+# GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
+gcp:
+  project-id: ${GCP_PROJECT_ID}
+  storage:
+    bucket: ${GCS_BUCKET}
+
+# FCM 푸시 알림(Firebase Admin SDK). VM 서비스 계정 ADC로 인증 → 키 파일 불필요.
+fcm:
+  enabled: ${FCM_ENABLED:true}    # false면 Firebase 빈 미생성(no-op)
+  project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
+
+# Sentry(APM/에러 추적). DSN 미설정 시 비활성(no-op).
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: prod
+  traces-sample-rate: 0.1
+
 token:
   jwt:
     secret: ${JWT_SECRET}
@@ -21,6 +38,10 @@ token:
     expiry-seconds: 2592000  # 30일(리프레시 토큰 만료시간)
 
 logging:
+  # 구조화 로그(JSON) → stdout → Alloy가 level 파싱 → Loki. Discord ERROR 알림의 기반.
+  structured:
+    format:
+      console: logstash
   level:
     root: WARN
     com.yapp.todakun: INFO

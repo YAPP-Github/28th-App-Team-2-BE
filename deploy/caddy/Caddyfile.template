@@ -1,0 +1,49 @@
+# switch.sh가 아래 업스트림 플레이스홀더를 활성 color(todakun-app-blue:8080 등)로 치환해
+# caddy/Caddyfile로 렌더링한 뒤 `caddy reload` 한다.
+#
+# 사이트 주소는 {$DOMAIN} env로 주입한다(하드코딩 금지).
+#   이유: 도메인 은닉(obscurity)이 성립하려면 도메인명이 git에 커밋되면 안 된다.
+#   실제 값(추측 불가능한 랜덤 서브도메인 권장)은 VM의 .env에만 둔다.
+#
+# TLS: Cloudflare 프록시(orange) + Full(Strict). origin에는 Cloudflare Origin Certificate(와일드카드 *.todakun.com 권장) 사용
+#      → Caddy는 ACME를 쓰지 않고, 엣지는 Universal SSL 와일드카드라 특정 서브도메인이 공개 CT 로그에 남지 않는다.
+#      인증서 파일은 VM의 caddy/certs/에 배치(커밋 금지) → 컨테이너에 /etc/caddy/certs로 마운트.
+# 전제: (1) Cloudflare DNS에 랜덤 서브도메인 레코드 프록시 ON(orange), (2) 도메인명을 어디에도 노출/커밋하지 않음.
+{$DOMAIN} {
+	tls /etc/caddy/certs/cloudflare-origin.pem /etc/caddy/certs/cloudflare-origin.key
+
+	# SSE(text/event-stream)는 압축에서 제외한다.
+	#   이유: gzip은 응답을 버퍼링하므로 AI 토큰 스트리밍이 지연/뭉침(chunk 뭉개짐) 된다.
+	#   방법: encode 기본 match에서 광범위한 text/*를 세부 subtype으로 풀어쓰고 text/event-stream만 뺀다.
+	#         (Caddy encode의 match는 Content-Type OR 매칭 — 나열되지 않은 타입은 압축하지 않는다.)
+	encode {
+		gzip
+		match {
+			header Content-Type text/html*
+			header Content-Type text/plain*
+			header Content-Type text/css*
+			header Content-Type text/xml*
+			header Content-Type application/json*
+			header Content-Type application/javascript*
+			header Content-Type application/xhtml+xml*
+			header Content-Type application/atom+xml*
+			header Content-Type application/rss+xml*
+			header Content-Type image/svg+xml*
+			header Content-Type application/wasm*
+		}
+	}
+
+	# actuator는 외부 비공개(404). Prometheus 스크레이프/헬스체크는 todakun-net 내부로만 수행되므로 영향 없음.
+	handle /actuator/* {
+		respond 404
+	}
+
+	handle {
+		reverse_proxy __APP_UPSTREAM__ {
+			# 액티브 헬스 체크 — 업스트림이 죽으면 자동 배제.
+			health_uri /actuator/health
+			health_interval 5s
+			health_timeout 3s
+		}
+	}
+}

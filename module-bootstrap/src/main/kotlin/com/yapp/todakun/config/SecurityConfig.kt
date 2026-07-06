@@ -46,6 +46,7 @@ class SecurityConfig {
             sessionManagement { sessionCreationPolicy = SessionCreationPolicy.STATELESS }
             authorizeHttpRequests {
                 SecurityPaths.SWAGGER.forEach { pattern -> authorize(pattern, permitAll) }
+                SecurityPaths.ACTUATOR.forEach { pattern -> authorize(pattern, permitAll) }
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {

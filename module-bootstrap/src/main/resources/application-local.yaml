@@ -16,6 +16,24 @@ spring:
       hibernate:
         format_sql: true
 
+# GCP Cloud Storage (raw 클라이언트). 로컬은 gcloud ADC(gcloud auth application-default login) 또는 키 파일로 인증.
+gcp:
+  project-id: ${GCP_PROJECT_ID}
+  storage:
+    bucket: ${GCS_BUCKET}
+
+# FCM 푸시 알림(Firebase Admin SDK). ADC 인증(GCS와 공유). 로컬은 기본 비활성 → 필요 시 FCM_ENABLED=true.
+fcm:
+  enabled: ${FCM_ENABLED:false}   # false면 Firebase 빈 미생성(no-op) → 로컬 실행에 Firebase 불필요
+  project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
+
+# Sentry — DSN 미설정 시 자동 비활성(no-op). debug는 로컬 연동 점검용(전송 로그 출력).
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: local
+  traces-sample-rate: 0
+  debug: true
+
 token:
   jwt:
     secret: ${JWT_SECRET}

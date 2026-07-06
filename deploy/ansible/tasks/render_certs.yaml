@@ -1,0 +1,37 @@
+---
+# SOPS의 Cloudflare Origin 인증서/키를 VM /opt/todakun/caddy/certs/ 로 렌더링.
+# 복호화는 컨트롤러(CI/로컬)에서 vars 플러그인이 수행 → VM엔 렌더 결과만 내려간다.
+# 수동 scp·mkdir 불필요. Caddy(compose)가 이 경로를 :ro로 마운트한다.
+- name: 인증서 시크릿 로드 확인
+  ansible.builtin.assert:
+    that:
+      - cloudflare_origin_cert is defined
+      - cloudflare_origin_key is defined
+    fail_msg: "SOPS에 cloudflare_origin_cert/cloudflare_origin_key 누락 — secrets에 추가 후 재암호화하세요."
+  no_log: true
+
+- name: 인증서 디렉터리 생성 (0700, root)
+  ansible.builtin.file:
+    path: "{{ app_dir }}/caddy/certs"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Origin 인증서 렌더링 (0644)
+  ansible.builtin.copy:
+    content: "{{ cloudflare_origin_cert }}"
+    dest: "{{ app_dir }}/caddy/certs/cloudflare-origin.pem"
+    owner: root
+    group: root
+    mode: "0644"
+  no_log: true
+
+- name: Origin 개인키 렌더링 (0600, root only)
+  ansible.builtin.copy:
+    content: "{{ cloudflare_origin_key }}"
+    dest: "{{ app_dir }}/caddy/certs/cloudflare-origin.key"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true

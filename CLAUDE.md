@@ -16,6 +16,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | Exception/error handling | `error-handling` |
 | Adding/verifying architecture rules (Konsist) | `konsist` |
 | Spring AI / Vertex AI (Gemini) · pgvector | `spring-ai` |
+| FCM push notifications (Firebase Admin SDK) | `fcm` |
 | Branch/commit/PR conventions | `git-workflow` |
 | Commit · push · create PR | `commit-push-pr` |
 | Creating GitHub issues | `create-issue` |
@@ -63,6 +64,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | WAS | Spring Boot 4.1.0 / JDK 25 / Kotlin 2.3.21 / Gradle 9.5.1 |
 | DB / Cache | PostgreSQL 17.10 (JPA·Hibernate, pgvector extension) / Redis 7.2 |
 | AI | Spring AI / Google Vertex AI (Gemini) / pgvector |
+| Push | FCM (Firebase Cloud Messaging) / Firebase Admin SDK (ADC auth) |
 | Test & Lint | Kotest / MockK / TestContainer / Ktlint / Konsist |
 | Auth | OAuth 2.0 (Kakao/Google/Apple) + JWT / Refresh Token → Redis |
 

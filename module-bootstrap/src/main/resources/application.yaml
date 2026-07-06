@@ -12,3 +12,17 @@ springdoc:
     tags-sorter: alpha
   api-docs:
     path: /v3/api-docs
+
+# 헬스 체크(Blue/Green) + Prometheus 메트릭 노출(/actuator/prometheus).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

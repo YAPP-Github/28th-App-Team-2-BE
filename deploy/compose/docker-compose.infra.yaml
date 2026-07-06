@@ -1,0 +1,45 @@
+# 상시 기동되는 공용 인프라: Caddy(리버스 프록시) + Redis.
+# 앱 color(blue/green)는 docker-compose.app.yaml로 별도 기동하며 같은 외부 네트워크에 붙는다.
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: todakun-caddy
+    restart: unless-stopped
+    # Caddyfile {$DOMAIN} 치환용(비밀 서브도메인은 .env에만). DOMAIN 미설정 시 Caddy 기동 실패하니 반드시 채울 것.
+    # 인터넷에 노출되는 컨테이너이므로 전체 .env(앱 시크릿)를 상속하지 않고 DOMAIN만 전달한다.
+    # ${DOMAIN}은 compose가 CWD(/opt/todakun)의 .env에서 자동 보간한다.
+    environment:
+      - DOMAIN=${DOMAIN:?DOMAIN 환경변수가 필요합니다}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # switch.sh가 렌더링한 Caddyfile을 마운트. 전환 시 파일 교체 후 `caddy reload`.
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile
+      # Cloudflare Origin Certificate (VM에 수동 배치, 커밋 금지).
+      - ../caddy/certs:/etc/caddy/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - todakun-net
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: todakun-redis
+    restart: unless-stopped
+    # AOF 지속성 — VM 재시작 시 refresh token 유실 방지.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - todakun-net
+
+volumes:
+  caddy-data:
+  caddy-config:
+  redis-data:
+
+networks:
+  # `docker network create todakun-net`로 사전 생성(Ansible playbook이 처리).
+  todakun-net:
+    external: true

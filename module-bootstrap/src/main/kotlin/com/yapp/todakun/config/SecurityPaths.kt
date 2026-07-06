@@ -9,4 +9,12 @@ object SecurityPaths {
             "/swagger-ui/**",
             "/v3/api-docs/**",
         )
+
+    /** 내부 헬스체크(Blue/Green) · 메트릭 스크래핑(Alloy) 경로. */
+    val ACTUATOR =
+        arrayOf(
+            "/actuator/health",
+            "/actuator/health/**",
+            "/actuator/prometheus",
+        )
 }
