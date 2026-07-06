@@ -1,7 +1,7 @@
 # 관측: Grafana Alloy 엣지 에이전트 1개만 VM에 둔다.
 # metrics(remote_write)·logs를 Grafana Cloud(관리형 Prometheus/Loki)로 전송 → VM 메모리 절약.
 # Prometheus/Loki/Grafana는 자가호스팅하지 않는다(Grafana Cloud 관리형 사용).
-# 실행:  docker compose -f docker-compose.monitoring.yml --env-file ../.env up -d
+# 실행:  docker compose -f docker-compose.monitoring.yaml --env-file ../.env up -d
 services:
   alloy:
     image: grafana/alloy:v1.16.1

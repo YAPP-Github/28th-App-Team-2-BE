@@ -10,7 +10,7 @@ cd "$(dirname "$0")"
 
 : "${APP_IMAGE:?APP_IMAGE 환경변수가 필요합니다 (예: asia-northeast3-docker.pkg.dev/PROJECT/todakun/app:<tag>)}"
 
-APP_COMPOSE="compose/docker-compose.app.yml"
+APP_COMPOSE="compose/docker-compose.app.yaml"
 CADDY_TEMPLATE="caddy/Caddyfile.template"
 CADDY_RENDERED="caddy/Caddyfile"
 NETWORK="todakun-net"

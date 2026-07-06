@@ -1,5 +1,5 @@
 # 앱 color 1개를 기동한다. COLOR/APP_IMAGE 환경변수로 blue/green을 구분.
-#   COLOR=green APP_IMAGE=... docker compose -p todakun-green -f docker-compose.app.yml up -d
+#   COLOR=green APP_IMAGE=... docker compose -p todakun-green -f docker-compose.app.yaml up -d
 # container_name을 color로 고정 → Caddy가 컨테이너명(todakun-app-blue|green)으로 프록시.
 # 포트를 호스트에 노출하지 않는다 — 헬스 체크는 switch.sh가 일회성 curl 컨테이너로
 # todakun-net 안에서 컨테이너명(todakun-app-blue|green:8080)에 직접 수행한다.

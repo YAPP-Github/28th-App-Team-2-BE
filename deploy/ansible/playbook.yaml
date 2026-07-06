@@ -3,7 +3,7 @@
 #   - deploy 산출물(compose/caddy/switch.sh) 배치
 #   - todakun-net 네트워크 + 공용 인프라(Caddy/Redis) 기동
 # 배포(Blue/Green 전환) 자체는 이 playbook이 아니라 VM 위 switch.sh를 CI가 트리거한다.
-#   실행:  ansible-playbook -i inventory/dev playbook.yml
+#   실행:  ansible-playbook -i inventory/dev playbook.yaml
 - name: Provision todakun dev VM
   hosts: todakun_dev
   become: true
@@ -89,8 +89,8 @@
         owner: "{{ ansible_user }}"
         mode: "{{ item.mode }}"
       loop:
-        - { src: "compose/docker-compose.infra.yml", dest: "compose/docker-compose.infra.yml", mode: "0644" }
-        - { src: "compose/docker-compose.app.yml", dest: "compose/docker-compose.app.yml", mode: "0644" }
+        - { src: "compose/docker-compose.infra.yaml", dest: "compose/docker-compose.infra.yaml", mode: "0644" }
+        - { src: "compose/docker-compose.app.yaml", dest: "compose/docker-compose.app.yaml", mode: "0644" }
         - { src: "caddy/Caddyfile.template", dest: "caddy/Caddyfile.template", mode: "0644" }
         - { src: "switch.sh", dest: "switch.sh", mode: "0755" }
 
@@ -115,13 +115,13 @@
         mode: "0644"
 
     - name: SOPS 시크릿 → /opt/todakun/.env 렌더링
-      ansible.builtin.import_tasks: tasks/render_env.yml
+      ansible.builtin.import_tasks: tasks/render_env.yaml
 
     - name: SOPS 시크릿 → Cloudflare Origin 인증서 렌더링
-      ansible.builtin.import_tasks: tasks/render_certs.yml
+      ansible.builtin.import_tasks: tasks/render_certs.yaml
 
     - name: 공용 인프라(Caddy/Redis) 기동
-      ansible.builtin.command: docker compose -f compose/docker-compose.infra.yml up -d
+      ansible.builtin.command: docker compose -f compose/docker-compose.infra.yaml up -d
       args:
         chdir: "{{ app_dir }}"
       register: infra_up
@@ -138,7 +138,7 @@
     - name: 모니터링 스택(Prometheus/Loki/Alloy/Grafana) 기동
       # secrets(DISCORD_WEBHOOK_URL 등)는 VM의 .env에서 주입.
       ansible.builtin.command: >
-        docker compose -f monitoring/docker-compose.monitoring.yml
+        docker compose -f monitoring/docker-compose.monitoring.yaml
         --env-file .env up -d
       args:
         chdir: "{{ app_dir }}"

@@ -97,7 +97,7 @@ jobs:
         working-directory: deploy/ansible
         run: |
           pipx install --include-deps ansible
-          ansible-galaxy collection install -r collections/requirements.yml
+          ansible-galaxy collection install -r collections/requirements.yaml
           SOPS_VERSION=v3.9.1
           base="https://github.com/getsops/sops/releases/download/${SOPS_VERSION}"
           curl -fsSL -o sops "${base}/sops-${SOPS_VERSION}.linux.amd64"
@@ -113,7 +113,7 @@ jobs:
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/dev playbook.yml
+        run: ansible-playbook -i inventory/dev playbook.yaml
 
       - name: Deploy (Blue/Green switch)
         working-directory: deploy/ansible
@@ -121,7 +121,7 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING: "False"
           APP_IMAGE: ${{ needs.build.outputs.image }}
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/dev deploy.yml
+        run: ansible-playbook -i inventory/dev deploy.yaml
 
       - name: Notify Discord (result)
         if: always() && env.HAS_DISCORD == 'true'

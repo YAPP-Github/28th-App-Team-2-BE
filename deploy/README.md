@@ -9,8 +9,8 @@ DB는 Cloud SQL(`todakun-database`, 외부), 파일은 Cloud Storage(`todakun-bu
 deploy/
 ├── Dockerfile                       # 실행 jar 런타임 이미지 (curl 미포함, build 컨텍스트 = 리포 루트)
 ├── compose/
-│   ├── docker-compose.infra.yml     # 상시: Caddy + Redis (todakun-net)
-│   └── docker-compose.app.yml       # 앱 color 1개 (COLOR/APP_IMAGE 파라미터, 포트 비노출)
+│   ├── docker-compose.infra.yaml     # 상시: Caddy + Redis (todakun-net)
+│   └── docker-compose.app.yaml       # 앱 color 1개 (COLOR/APP_IMAGE 파라미터, 포트 비노출)
 ├── caddy/
 │   └── Caddyfile.template           # __APP_UPSTREAM__ → switch.sh가 active color로 치환
 ├── switch.sh                        # Blue/Green 전환 (일회성 curl 컨테이너로 헬스 체크)
@@ -18,27 +18,27 @@ deploy/
 │   ├── ansible.cfg                  # sops vars 플러그인 활성화
 │   ├── .sops.yaml                   # SOPS 암호화 규칙(age recipient)
 │   ├── SECRETS.md                   # 🔑 SOPS+age 시크릿 관리 런북
-│   ├── collections/requirements.yml # community.docker / community.sops
+│   ├── collections/requirements.yaml # community.docker / community.sops
 │   ├── inventory/hosts.ini.example  # VM 접속 정보 (hosts.ini로 복사, CI는 secrets로 렌더)
 │   ├── inventory/group_vars/all/secrets.sops.yaml  # 🔐 암호화 시크릿(커밋 O) — .env 소스
 │   ├── templates/env.j2             # secrets → /opt/todakun/.env 렌더 템플릿
-│   ├── tasks/render_env.yml         # .env 렌더 태스크
-│   ├── playbook.yml                 # VM 프로비저닝 (Docker/Caddy/Redis/네트워크/AR 인증/Alloy/.env)
-│   └── deploy.yml                   # Blue/Green 배포 (.env 갱신 + switch.sh 실행)
+│   ├── tasks/render_env.yaml         # .env 렌더 태스크
+│   ├── playbook.yaml                 # VM 프로비저닝 (Docker/Caddy/Redis/네트워크/AR 인증/Alloy/.env)
+│   └── deploy.yaml                   # Blue/Green 배포 (.env 갱신 + switch.sh 실행)
 ├── monitoring/
-│   ├── docker-compose.monitoring.yml  # Alloy 엣지 에이전트(단일)
+│   ├── docker-compose.monitoring.yaml  # Alloy 엣지 에이전트(단일)
 │   ├── alloy/config.alloy              # host+actuator 메트릭 → GC Prometheus, Docker 로그 → GC Loki
 │   └── grafana-cloud/                  # GC 설정 가이드 + Discord ERROR 알림 룰 스펙
 └── .env.example                     # 앱 런타임 시크릿 + GC 자격증명 (VM의 .env로 복사)
 
-.github/workflows/deploy-dev.yml     # CI: 빌드 → 이미지 푸시 → Ansible 프로비저닝 + 배포
+.github/workflows/deploy-dev.yaml     # CI: 빌드 → 이미지 푸시 → Ansible 프로비저닝 + 배포
 ```
 
 ## 역할 분리
 
 - **CI (GitHub Actions)**: jar 빌드 → 이미지 빌드/푸시(Artifact Registry) → Ansible 실행.
-- **프로비저닝 (Ansible `playbook.yml`, 멱등)**: Docker·compose 설치, 파일 배치, `todakun-net` 생성, GHCR 로그인, `.env`·인증서 렌더링, 공용 인프라 기동.
-- **배포 (Ansible `deploy.yml` → `switch.sh`, 매 릴리스)**: 최신 산출물 동기화 후 Blue/Green 전환.
+- **프로비저닝 (Ansible `playbook.yaml`, 멱등)**: Docker·compose 설치, 파일 배치, `todakun-net` 생성, GHCR 로그인, `.env`·인증서 렌더링, 공용 인프라 기동.
+- **배포 (Ansible `deploy.yaml` → `switch.sh`, 매 릴리스)**: 최신 산출물 동기화 후 Blue/Green 전환.
 
 ## 헬스 체크 (curl은 컨테이너 밖)
 
@@ -63,13 +63,13 @@ cd deploy/ansible
 cp inventory/hosts.ini.example inventory/hosts.ini              # VM IP/유저 채우기
 # SECRETS.md대로 age 키 생성 → secrets.sops.yaml 작성·암호화
 export SOPS_AGE_KEY=...                                         # 또는 ~/.config/sops/age/keys.txt
-ansible-playbook -i inventory/hosts.ini playbook.yml            # .env는 SOPS에서 자동 렌더
+ansible-playbook -i inventory/hosts.ini playbook.yaml            # .env는 SOPS에서 자동 렌더
 ```
 
 ## CI 배포 (GitHub Actions)
 
-`develop` 푸시 또는 수동 실행(`workflow_dispatch`) 시 `.github/workflows/deploy-dev.yml`이:
-**build**(`./gradlew check` 테스트 → bootJar → **GHCR 이미지 푸시**) → **deploy**(`playbook.yml` 프로비저닝 → `deploy.yml` Blue/Green)을 실행한다.
+`develop` 푸시 또는 수동 실행(`workflow_dispatch`) 시 `.github/workflows/deploy-dev.yaml`이:
+**build**(`./gradlew check` 테스트 → bootJar → **GHCR 이미지 푸시**) → **deploy**(`playbook.yaml` 프로비저닝 → `deploy.yaml` Blue/Green)을 실행한다.
 `concurrency: deploy-dev`로 동시 배포는 직렬화된다. 이미지는 **GHCR**(`ghcr.io/<owner>/todakun-app`)를 쓰고, CI 푸시는 자동 제공되는 `GITHUB_TOKEN`(`packages: write`)으로 한다 — **GCP 인증(WIF) 불필요.**
 
 **필요한 GitHub Secrets**

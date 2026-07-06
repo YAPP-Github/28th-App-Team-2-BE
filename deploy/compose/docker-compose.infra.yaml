@@ -1,5 +1,5 @@
 # 상시 기동되는 공용 인프라: Caddy(리버스 프록시) + Redis.
-# 앱 color(blue/green)는 docker-compose.app.yml로 별도 기동하며 같은 외부 네트워크에 붙는다.
+# 앱 color(blue/green)는 docker-compose.app.yaml로 별도 기동하며 같은 외부 네트워크에 붙는다.
 services:
   caddy:
     image: caddy:2-alpine

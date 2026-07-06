@@ -21,7 +21,7 @@ VM에 수동 배치(scp·mkdir)하지 않는다. 이 디렉터리의 로컬 `*.p
    ```
 3. Cloudflare **SSL/TLS → Overview → Full (Strict)** 로 설정.
 
-배포(playbook) 시 Ansible이 `tasks/render_certs.yml`로 `cloudflare-origin.pem`(0644) / `cloudflare-origin.key`(0600, root)를
+배포(playbook) 시 Ansible이 `tasks/render_certs.yaml`로 `cloudflare-origin.pem`(0644) / `cloudflare-origin.key`(0600, root)를
 VM에 생성한다. 파일명은 `Caddyfile.template`의 `tls` 지시자와 일치한다.
 
 > Origin Certificate는 Cloudflare Origin CA 서명 — 공개 신뢰 CA가 아니라 **공개 CT 로그에 남지 않는다**.

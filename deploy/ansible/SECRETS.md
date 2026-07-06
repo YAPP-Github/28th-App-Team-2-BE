@@ -21,7 +21,7 @@ secrets.sops.{env}.yaml (암호화, git) ──sops 복호화(컨트롤러)─�
 ```bash
 mkdir -p ~/.config/sops/age
 brew install sops age ansible
-ansible-galaxy collection install -r collections/requirements.yml
+ansible-galaxy collection install -r collections/requirements.yaml
 ```
 
 ## 2. age 키페어 생성
@@ -49,21 +49,21 @@ git add inventory/dev/group_vars/all/secrets.sops.dev.yaml
 - 이후 수정은 `sops inventory/dev/group_vars/all/secrets.sops.dev.yaml` (에디터에서 평문 편집 → 저장 시 재암호화).
 - prod도 동일 절차 (`secrets.sops.prod.yaml`).
 - **Cloudflare Origin 인증서**(`cloudflare_origin_cert`/`cloudflare_origin_key`)도 이 시크릿에 PEM으로 넣으면
-  Ansible(`tasks/render_certs.yml`)이 VM `/opt/todakun/caddy/certs/`로 렌더링한다 — **수동 배치 불필요**.
+  Ansible(`tasks/render_certs.yaml`)이 VM `/opt/todakun/caddy/certs/`로 렌더링한다 — **수동 배치 불필요**.
 
 ## 4. CI(GitHub Actions) 연결
 
 - GitHub 저장소 Secret에 **`SOPS_AGE_KEY`** 추가 = `keys.txt`의 **개인키 한 줄**(`AGE-SECRET-KEY-1...`).
-- 워크플로가 sops를 설치하고 이 키로 복호화한다(`.github/workflows/deploy-dev.yml`).
+- 워크플로가 sops를 설치하고 이 키로 복호화한다(`.github/workflows/deploy-dev.yaml`).
 
 ## 5. 로컬에서 배포 실행 시
 
 ```bash
 # ~/.config/sops/age/keys.txt 가 있으면 sops가 자동으로 찾는다
-ansible-playbook -i inventory/dev playbook.yml
+ansible-playbook -i inventory/dev playbook.yaml
 # 또는 명시적으로
 export SOPS_AGE_KEY=$(grep -v '^#' ~/.config/sops/age/keys.txt | grep AGE-SECRET-KEY)
-ansible-playbook -i inventory/dev playbook.yml
+ansible-playbook -i inventory/dev playbook.yaml
 ```
 
 ## 회전(rotation)

@@ -1,5 +1,5 @@
 ---
-# Ansible 컬렉션 의존성. 설치:  ansible-galaxy collection install -r collections/requirements.yml
+# Ansible 컬렉션 의존성. 설치:  ansible-galaxy collection install -r collections/requirements.yaml
 collections:
   # docker_container/docker_network/docker_volume 모듈(멱등적 컨테이너 관리).
   - name: community.docker
