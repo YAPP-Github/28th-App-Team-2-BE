@@ -6,6 +6,7 @@
     that:
       - domain is defined
       - db_password is defined
+      - jwt_secret is defined
       - gc_token is defined
     fail_msg: "SOPS 복호화 실패 또는 secrets.sops.yaml 누락 — sops 바이너리/SOPS_AGE_KEY/파일 존재를 확인하세요."
   no_log: true

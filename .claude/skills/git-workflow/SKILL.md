@@ -12,11 +12,13 @@ description: Load when branching/committing/creating PRs. Branch strategy, commi
 | Branch | Purpose | PR target |
 |--------|---------|-----------|
 | `main` | Production deploy | — |
-| `develop` | Integration | main |
-| `feat/#issue-number` | Feature development | develop |
+| `develop` | Integration | `main` (release promotion PR only) |
+| `feat/#issue-number` | Feature development | `develop` |
 
 When starting a new feature: branch `feat/#issue-number` off the `develop` branch.
 Always include the issue number in the branch name.
+
+> Day-to-day work PRs (feature/fix/chore/…) always target `develop`. The `develop → main` PR is reserved for release promotion.
 
 ## Commit Messages
 
@@ -37,7 +39,7 @@ You must pass `./gradlew ktlintCheck` before committing.
 
 ## PR Rules
 
-- A PR must target the `develop` branch.
+- A feature/fix/chore PR must target the `develop` branch (only the release-promotion PR targets `main`).
 - PR title format: `[#issue-number] [Type] description` (description in Korean).
   - **The `[Type] description` part is the working branch's issue title, verbatim.** Issue titles already follow `[Type] 한글 설명`, so the PR title is simply `[#issue-number] ` + the issue title. (e.g. issue `[Feature] Boilerplate 작성` → PR `[#1] [Feature] Boilerplate 작성`)
   - Note: this differs from the commit message format — the PR title wraps the type in brackets as a capitalized full word (`[Feature]`), not `type:`.

@@ -40,7 +40,7 @@ echo "[switch] todakun-app-$IDLE healthcheck 대기 (http://todakun-app-$IDLE:80
 healthy=0
 for _ in $(seq 1 "$HEALTH_RETRIES"); do
   if docker run --rm --network "$NETWORK" "$CURL_IMAGE" \
-      -fsS "http://todakun-app-$IDLE:8080/actuator/health" >/dev/null 2>&1; then
+      -fsS --connect-timeout 3 --max-time 5 "http://todakun-app-$IDLE:8080/actuator/health" >/dev/null 2>&1; then
     healthy=1; break
   fi
   sleep "$HEALTH_INTERVAL"

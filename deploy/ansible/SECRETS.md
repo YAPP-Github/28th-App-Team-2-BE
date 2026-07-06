@@ -8,13 +8,13 @@ Ansible이 **컨트롤러(CI/로컬)에서 복호화**해 VM의 `/opt/todakun/.e
 | dev  | `inventory/dev/group_vars/all/secrets.sops.dev.yaml` |
 | prod | `inventory/prod/group_vars/all/secrets.sops.prod.yaml` |
 
-```
+```text
 secrets.sops.{env}.yaml (암호화, git) ──sops 복호화(컨트롤러)──▶ Ansible vars ──env.j2──▶ /opt/todakun/.env (VM, 0600)
 ```
 
-> **주의**: `community.sops` vars 플러그인이 `group_vars/all/` 의 `*.sops.*.yaml` 파일을 **모두** 로드한다.
-> 현재는 dev만 실제 값을 가지므로 충돌이 없지만, prod 값을 채우기 전에 인벤토리 디렉터리를
-> `inventory/dev/`, `inventory/prod/`로 분리하는 것을 권장한다.
+> **주의**: `community.sops` vars 플러그인은 인벤토리별 `group_vars/all/` 의 `*.sops.*.yaml` 파일을 로드한다.
+> 인벤토리는 이미 `inventory/dev/`, `inventory/prod/`로 분리되어 있으므로(`-i inventory/dev` / `-i inventory/prod`),
+> 각 환경 실행 시 해당 환경의 시크릿만 로드되어 값이 서로 섞이지 않는다.
 
 ## 1. 도구 설치 (로컬, 최초 1회)
 

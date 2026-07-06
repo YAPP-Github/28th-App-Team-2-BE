@@ -99,8 +99,14 @@ jobs:
           pipx install --include-deps ansible
           ansible-galaxy collection install -r collections/requirements.yml
           SOPS_VERSION=v3.9.1
-          curl -fsSL -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
+          base="https://github.com/getsops/sops/releases/download/${SOPS_VERSION}"
+          curl -fsSL -o sops "${base}/sops-${SOPS_VERSION}.linux.amd64"
+          curl -fsSL -o sops.checksums.txt "${base}/sops-${SOPS_VERSION}.checksums.txt"
+          # 릴리스 자산 변조/공급망 위험 방지 — 공식 체크섬과 대조 후에만 설치.
+          expected=$(grep "sops-${SOPS_VERSION}.linux.amd64" sops.checksums.txt | awk '{print $1}')
+          echo "${expected}  sops" | sha256sum -c -
           sudo install -m 0755 sops /usr/local/bin/sops
+          rm -f sops sops.checksums.txt
 
       - name: Provision VM (idempotent)
         working-directory: deploy/ansible

@@ -150,8 +150,24 @@ class FcmPushNotificationAdapter(
             }
         }
 
-    override fun sendAll(notifications: List<PushNotification>): List<PushResult> =
-        notifications.map { send(it) }   // 대량 발송은 sendEachForMulticast(MulticastMessage)로 최적화 가능
+    // 대량 발송: 토큰 수만큼 send()를 직렬 호출하지 않고 단일 배치 호출(sendEach)로 처리한다.
+    // (본문이 서로 다른 이기종 알림 → sendEach(List<Message>). 동일 본문·다수 토큰이면 sendEachForMulticast.)
+    override fun sendAll(notifications: List<PushNotification>): List<PushResult> {
+        if (notifications.isEmpty()) return emptyList()
+        val batch = firebaseMessaging.sendEach(notifications.map { it.toMessage() })
+        return notifications.mapIndexed { i, notification ->
+            val response = batch.responses[i]
+            when {
+                response.isSuccessful -> PushResult(token = notification.token, success = true)
+                // 등록 해제/무효 토큰 → 실패가 아니라 "정리 대상"으로 보고 (application이 삭제)
+                response.exception?.messagingErrorCode in
+                    setOf(MessagingErrorCode.UNREGISTERED, MessagingErrorCode.INVALID_ARGUMENT) ->
+                    PushResult(token = notification.token, success = false, tokenExpired = true)
+                // 그 외(쿼터/서버 오류 등)는 실패로 승격
+                else -> throw NotificationException(NotificationErrorCode.PUSH_SEND_FAILED, response.exception)
+            }
+        }
+    }
 
     private fun PushNotification.toMessage(): Message =
         Message.builder()
