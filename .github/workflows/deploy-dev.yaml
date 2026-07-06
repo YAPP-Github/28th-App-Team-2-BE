@@ -79,6 +79,9 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
+          # 호스트 키 검증 비활성화(HOST_KEY_CHECKING=False) 대신 known_hosts를 사전에 채워 MITM 방지.
+          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 600 ~/.ssh/known_hosts
 
       - name: Render Ansible inventory
         working-directory: deploy/ansible
@@ -111,14 +114,12 @@ jobs:
       - name: Provision VM (idempotent)
         working-directory: deploy/ansible
         env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: ansible-playbook -i inventory/dev playbook.yaml
 
       - name: Deploy (Blue/Green switch)
         working-directory: deploy/ansible
         env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
           APP_IMAGE: ${{ needs.build.outputs.image }}
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: ansible-playbook -i inventory/dev deploy.yaml
