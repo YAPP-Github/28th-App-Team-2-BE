@@ -12,7 +12,26 @@
 {$DOMAIN} {
 	tls /etc/caddy/certs/cloudflare-origin.pem /etc/caddy/certs/cloudflare-origin.key
 
-	encode gzip
+	# SSE(text/event-stream)는 압축에서 제외한다.
+	#   이유: gzip은 응답을 버퍼링하므로 AI 토큰 스트리밍이 지연/뭉침(chunk 뭉개짐) 된다.
+	#   방법: encode 기본 match에서 광범위한 text/*를 세부 subtype으로 풀어쓰고 text/event-stream만 뺀다.
+	#         (Caddy encode의 match는 Content-Type OR 매칭 — 나열되지 않은 타입은 압축하지 않는다.)
+	encode {
+		gzip
+		match {
+			header Content-Type text/html*
+			header Content-Type text/plain*
+			header Content-Type text/css*
+			header Content-Type text/xml*
+			header Content-Type application/json*
+			header Content-Type application/javascript*
+			header Content-Type application/xhtml+xml*
+			header Content-Type application/atom+xml*
+			header Content-Type application/rss+xml*
+			header Content-Type image/svg+xml*
+			header Content-Type application/wasm*
+		}
+	}
 
 	# actuator는 외부 비공개(404). Prometheus 스크레이프/헬스체크는 todakun-net 내부로만 수행되므로 영향 없음.
 	handle /actuator/* {
