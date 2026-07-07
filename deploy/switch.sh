@@ -31,8 +31,11 @@ fi
 echo "[switch] active=$ACTIVE → idle 배포: $IDLE (image=$APP_IMAGE)"
 
 # 2) idle color 기동
+# 이미지는 배포 단계(deploy.yaml)가 GHCR 인증(`docker --config`)으로 미리 받아둔다.
+# 여기선 로컬 이미지를 그대로 기동한다(--pull never) — switch.sh가 레지스트리 인증에
+# 의존하지 않게 해 become 환경변수 전파 이슈를 회피한다.
 COLOR="$IDLE" APP_IMAGE="$APP_IMAGE" \
-  docker compose -p "todakun-$IDLE" -f "$APP_COMPOSE" up -d --pull always
+  docker compose -p "todakun-$IDLE" -f "$APP_COMPOSE" up -d --pull never
 
 # health 대기 — todakun-net 안에서 일회성 curl 컨테이너로 컨테이너명에 직접 요청.
 # (앱 이미지에 curl 미포함, 호스트 포트 노출 없음 — BEAT 패턴)

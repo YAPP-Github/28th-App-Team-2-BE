@@ -27,16 +27,20 @@
     - name: SOPS 시크릿 → /opt/todakun/.env 갱신 (앱이 최신 시크릿으로 기동)
       ansible.builtin.import_tasks: tasks/render_env.yaml
 
+    - name: 앱 이미지 pull (GHCR 인증 — --config로 config 디렉터리 명시)
+      # provision이 /root/.docker/config.json에 GHCR 인증을 써 둔다. `docker --config`로
+      # 그 디렉터리를 명시 지정해(become 시 HOME/DOCKER_CONFIG 전파 불확실성 제거) private
+      # 앱 이미지를 여기서 미리 받아둔다. 이후 switch.sh는 로컬 이미지를 그대로 기동한다.
+      ansible.builtin.command: docker --config /root/.docker pull {{ app_image }}
+      register: app_pull
+      changed_when: "'Downloaded newer image' in app_pull.stdout"
+
     - name: Blue/Green 전환 실행
       ansible.builtin.command: ./switch.sh
       args:
         chdir: "{{ app_dir }}"
       environment:
         APP_IMAGE: "{{ app_image }}"
-        # provision이 /root/.docker/config.json에 써 둔 GHCR 인증을 `--pull`이 확실히 쓰도록
-        # config 디렉터리를 고정한다. become 시 HOME이 root가 아닐 수 있어 docker의 기본
-        # 자동 탐색($HOME/.docker)이 빗나가면 private 이미지 pull이 denied로 실패한다.
-        DOCKER_CONFIG: /root/.docker
       register: switch_result
       changed_when: true
 
