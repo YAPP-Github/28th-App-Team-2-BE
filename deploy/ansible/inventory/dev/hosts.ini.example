@@ -1,7 +1,0 @@
-# hosts.ini로 복사해 실제 VM 정보를 채운다(hosts.ini는 커밋 금지).
-[todakun_dev]
-todakun-instance ansible_host=<VM_EXTERNAL_IP> ansible_user=<SSH_USER>
-
-[todakun_dev:vars]
-ansible_ssh_private_key_file=~/.ssh/todakun_dev
-ansible_python_interpreter=/usr/bin/python3
