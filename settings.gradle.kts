@@ -3,6 +3,7 @@ rootProject.name = "todakun"
 include("bootstrap")
 include("common")
 include("common-web")
+include("common-persistence")
 include("shared")
 include("architecture-test")
 
@@ -22,6 +23,7 @@ include("member:adapter-out")
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
 project(":common-web").projectDir = file("module-common-web")
+project(":common-persistence").projectDir = file("module-common-persistence")
 project(":shared").projectDir = file("module-shared")
 project(":architecture-test").projectDir = file("module-architecture-test")
 
