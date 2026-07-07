@@ -19,8 +19,9 @@ deploy/
 │   ├── .sops.yaml                   # SOPS 암호화 규칙(age recipient)
 │   ├── SECRETS.md                   # 🔑 SOPS+age 시크릿 관리 런북
 │   ├── collections/requirements.yaml # community.docker / community.sops
-│   ├── inventory/hosts.ini.example  # VM 접속 정보 (hosts.ini로 복사, CI는 secrets로 렌더)
-│   ├── inventory/group_vars/all/secrets.sops.yaml  # 🔐 암호화 시크릿(커밋 O) — .env 소스
+│   ├── inventory/hosts.ini.example  # VM 접속 정보 템플릿(dev/prod 공용, 루트에 둠 — 파싱 대상 밖)
+│   ├── inventory/{dev,prod}/hosts.ini  # 환경별 접속 정보 (커밋 X, CI는 secrets로 렌더)
+│   ├── inventory/{dev,prod}/group_vars/all/secrets.sops.{dev,prod}.yaml  # 🔐 암호화 시크릿(커밋 O) — .env 소스
 │   ├── templates/env.j2             # secrets → /opt/todakun/.env 렌더 템플릿
 │   ├── tasks/render_env.yaml         # .env 렌더 태스크
 │   ├── playbook.yaml                 # VM 프로비저닝 (Docker/Caddy/Redis/네트워크/AR 인증/Alloy/.env)
@@ -52,18 +53,18 @@ docker run --rm --network todakun-net curlimages/curl:8.12.1 -fsS http://todakun
 
 ## 시크릿 (SOPS) — VM `.env`는 수동 배치 안 함
 
-시크릿은 `ansible/inventory/group_vars/all/secrets.sops.yaml`(SOPS 암호화, 커밋)에 두고, Ansible이
-컨트롤러에서 복호화해 VM `/opt/todakun/.env`로 렌더링한다. 최초 셋업(age 키 생성·암호화·CI 연결)은 **[`ansible/SECRETS.md`](./ansible/SECRETS.md)** 참고.
+시크릿은 환경별 `ansible/inventory/{dev,prod}/group_vars/all/secrets.sops.{dev,prod}.yaml`(SOPS 암호화, 커밋)에 두고,
+Ansible이 컨트롤러에서 복호화해 VM `/opt/todakun/.env`로 렌더링한다. 최초 셋업(age 키 생성·암호화·CI 연결)은 **[`ansible/SECRETS.md`](./ansible/SECRETS.md)** 참고.
 `deploy/.env.example`은 이제 스키마 문서 + 로컬 `bootRun`용이며, VM에는 사용하지 않는다.
 
 ## 최초 세팅 (수동)
 
 ```bash
 cd deploy/ansible
-cp inventory/hosts.ini.example inventory/hosts.ini              # VM IP/유저 채우기
-# SECRETS.md대로 age 키 생성 → secrets.sops.yaml 작성·암호화
+cp inventory/hosts.ini.example inventory/dev/hosts.ini          # <env>→dev, VM IP/유저 채우기
+# SECRETS.md대로 age 키 생성 → secrets.sops.dev.yaml 작성·암호화
 export SOPS_AGE_KEY=...                                         # 또는 ~/.config/sops/age/keys.txt
-ansible-playbook -i inventory/hosts.ini playbook.yaml            # .env는 SOPS에서 자동 렌더
+ansible-playbook -i inventory/dev/hosts.ini playbook.yaml       # .env는 SOPS에서 자동 렌더
 ```
 
 ## CI 배포 (GitHub Actions)
@@ -80,7 +81,6 @@ ansible-playbook -i inventory/hosts.ini playbook.yaml            # .env는 SOPS�
 | `VM_USER` | VM SSH 유저 |
 | `VM_SSH_PRIVATE_KEY` | VM 접속용 SSH 개인키 |
 | `SOPS_AGE_KEY` | SOPS 복호화용 age 개인키 (`AGE-SECRET-KEY-1...`) |
-| `DISCORD_DEPLOY_WEBHOOK` | (선택) 배포 성공/실패 Discord 알림 |
 
 > GHCR **push**는 `GITHUB_TOKEN` 자동 처리. VM의 **pull**은 private 이미지라 SOPS 시크릿의 `ghcr_user`/`ghcr_pat`(read:packages PAT)로 `docker login`(playbook이 수행).
 

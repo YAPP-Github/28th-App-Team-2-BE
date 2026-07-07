@@ -49,7 +49,7 @@ jobs:
           echo "image=ghcr.io/${owner}/todakun-app:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
           echo "latest=ghcr.io/${owner}/todakun-app:dev-latest" >> "$GITHUB_OUTPUT"
 
-      - name: Log in to GHCR
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -69,8 +69,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: dev
-    env:
-      HAS_DISCORD: ${{ secrets.DISCORD_DEPLOY_WEBHOOK != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -115,21 +113,11 @@ jobs:
         working-directory: deploy/ansible
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/dev playbook.yaml
+        run: ansible-playbook -i inventory/dev/hosts.ini playbook.yaml
 
       - name: Deploy (Blue/Green switch)
         working-directory: deploy/ansible
         env:
           APP_IMAGE: ${{ needs.build.outputs.image }}
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/dev deploy.yaml
-
-      - name: Notify Discord (result)
-        if: always() && env.HAS_DISCORD == 'true'
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
-          MSG: "todakun dev 배포 ${{ job.status }} — ${{ github.sha }} by ${{ github.actor }}"
-        run: |
-          curl -fsSL -X POST -H 'Content-type: application/json' \
-            --data "$(python3 -c 'import json,os;print(json.dumps({"content":os.environ["MSG"]}))')" \
-            "$DISCORD_WEBHOOK_URL"
+        run: ansible-playbook -i inventory/dev/hosts.ini deploy.yaml

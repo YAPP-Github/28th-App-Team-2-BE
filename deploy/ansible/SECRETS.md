@@ -13,8 +13,10 @@ secrets.sops.{env}.yaml (암호화, git) ──sops 복호화(컨트롤러)─�
 ```
 
 > **주의**: `community.sops` vars 플러그인은 인벤토리별 `group_vars/all/` 의 `*.sops.*.yaml` 파일을 로드한다.
-> 인벤토리는 이미 `inventory/dev/`, `inventory/prod/`로 분리되어 있으므로(`-i inventory/dev` / `-i inventory/prod`),
-> 각 환경 실행 시 해당 환경의 시크릿만 로드되어 값이 서로 섞이지 않는다.
+> 인벤토리는 이미 `inventory/dev/`, `inventory/prod/`로 분리되어 있으므로(`-i inventory/dev/hosts.ini` / `-i inventory/prod/hosts.ini`),
+> 각 환경 실행 시 해당 환경의 `group_vars`만 로드되어 값이 서로 섞이지 않는다.
+> (인벤토리 파일을 직접 지정해도 `group_vars`는 인접 디렉터리 기준으로 로드된다. 디렉터리(`-i inventory/dev`)로
+> 지정하면 그 안의 `hosts.ini.example` 같은 템플릿까지 파싱되므로 파일을 명시한다.)
 
 ## 1. 도구 설치 (로컬, 최초 1회)
 
@@ -60,10 +62,10 @@ git add inventory/dev/group_vars/all/secrets.sops.dev.yaml
 
 ```bash
 # ~/.config/sops/age/keys.txt 가 있으면 sops가 자동으로 찾는다
-ansible-playbook -i inventory/dev playbook.yaml
+ansible-playbook -i inventory/dev/hosts.ini playbook.yaml
 # 또는 명시적으로
 export SOPS_AGE_KEY=$(grep -v '^#' ~/.config/sops/age/keys.txt | grep AGE-SECRET-KEY)
-ansible-playbook -i inventory/dev playbook.yaml
+ansible-playbook -i inventory/dev/hosts.ini playbook.yaml
 ```
 
 ## 회전(rotation)
