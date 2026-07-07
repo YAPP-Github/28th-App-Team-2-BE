@@ -33,6 +33,10 @@
         chdir: "{{ app_dir }}"
       environment:
         APP_IMAGE: "{{ app_image }}"
+        # provision이 /root/.docker/config.json에 써 둔 GHCR 인증을 `--pull`이 확실히 쓰도록
+        # config 디렉터리를 고정한다. become 시 HOME이 root가 아닐 수 있어 docker의 기본
+        # 자동 탐색($HOME/.docker)이 빗나가면 private 이미지 pull이 denied로 실패한다.
+        DOCKER_CONFIG: /root/.docker
       register: switch_result
       changed_when: true
 
