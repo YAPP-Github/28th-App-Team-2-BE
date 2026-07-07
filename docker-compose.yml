@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:17.10
+    container_name: todakun-postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: todakun
+    ports:
+      - "5432:5432"
+    volumes:
+      - todakun-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.2
+    container_name: todakun-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - todakun-redis-data:/data
+
+volumes:
+  todakun-postgres-data:
+  todakun-redis-data:
