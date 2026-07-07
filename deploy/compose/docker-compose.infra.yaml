@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     # Caddyfile {$DOMAIN} 치환용(비밀 서브도메인은 .env에만). DOMAIN 미설정 시 Caddy 기동 실패하니 반드시 채울 것.
     # 인터넷에 노출되는 컨테이너이므로 전체 .env(앱 시크릿)를 상속하지 않고 DOMAIN만 전달한다.
-    # ${DOMAIN}은 compose가 CWD(/opt/todakun)의 .env에서 자동 보간한다.
+    # ${DOMAIN}은 `docker compose --env-file .env`로 보간된다(Ansible playbook이 명시 지정).
     environment:
       - DOMAIN=${DOMAIN:?DOMAIN 환경변수가 필요합니다}
     ports:

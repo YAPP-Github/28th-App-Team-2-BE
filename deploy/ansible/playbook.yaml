@@ -130,7 +130,12 @@
       ansible.builtin.import_tasks: tasks/render_certs.yaml
 
     - name: 공용 인프라(Caddy/Redis) 기동
-      ansible.builtin.command: docker compose -f compose/docker-compose.infra.yaml up -d
+      # DOMAIN 보간을 위해 .env를 명시 지정한다. compose는 compose 파일 위치 기준으로 .env를
+      # 찾으므로 CWD(chdir)의 .env를 자동으로 읽지 않는다. --env-file은 보간용일 뿐,
+      # caddy 컨테이너에는 environment 블록의 DOMAIN만 주입된다(전체 시크릿 비상속 유지).
+      ansible.builtin.command: >
+        docker compose -f compose/docker-compose.infra.yaml
+        --env-file .env up -d
       args:
         chdir: "{{ app_dir }}"
       register: infra_up
