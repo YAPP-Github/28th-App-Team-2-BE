@@ -53,8 +53,8 @@ docker run --rm --network todakun-net curlimages/curl:8.12.1 -fsS http://todakun
 
 ## 시크릿 (SOPS) — VM `.env`는 수동 배치 안 함
 
-시크릿은 `ansible/inventory/group_vars/all/secrets.sops.yaml`(SOPS 암호화, 커밋)에 두고, Ansible이
-컨트롤러에서 복호화해 VM `/opt/todakun/.env`로 렌더링한다. 최초 셋업(age 키 생성·암호화·CI 연결)은 **[`ansible/SECRETS.md`](./ansible/SECRETS.md)** 참고.
+시크릿은 환경별 `ansible/inventory/{dev,prod}/group_vars/all/secrets.sops.{dev,prod}.yaml`(SOPS 암호화, 커밋)에 두고,
+Ansible이 컨트롤러에서 복호화해 VM `/opt/todakun/.env`로 렌더링한다. 최초 셋업(age 키 생성·암호화·CI 연결)은 **[`ansible/SECRETS.md`](./ansible/SECRETS.md)** 참고.
 `deploy/.env.example`은 이제 스키마 문서 + 로컬 `bootRun`용이며, VM에는 사용하지 않는다.
 
 ## 최초 세팅 (수동)
