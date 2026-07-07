@@ -27,13 +27,23 @@
     - name: SOPS 시크릿 → /opt/todakun/.env 갱신 (앱이 최신 시크릿으로 기동)
       ansible.builtin.import_tasks: tasks/render_env.yaml
 
-    - name: 앱 이미지 pull (GHCR 인증 — --config로 config 디렉터리 명시)
-      # provision이 /root/.docker/config.json에 GHCR 인증을 써 둔다. `docker --config`로
-      # 그 디렉터리를 명시 지정해(become 시 HOME/DOCKER_CONFIG 전파 불확실성 제거) private
-      # 앱 이미지를 여기서 미리 받아둔다. 이후 switch.sh는 로컬 이미지를 그대로 기동한다.
-      ansible.builtin.command: docker --config /root/.docker pull {{ app_image }}
-      register: app_pull
-      changed_when: "'Downloaded newer image' in app_pull.stdout"
+    - name: GHCR 로그인 후 앱 이미지 pull (private 이미지)
+      # switch.sh의 docker compose가 GHCR 인증을 못 써 registry denied로 실패하던 문제 해결.
+      # --config /root/.docker로 명시 로그인(자격증명은 env로 전달 → 로그 미노출,
+      # --password-stdin으로 argv 미노출) 후 이미지를 미리 받아둔다. 로그인은 plaintext
+      # config.json에 저장돼 credential helper 경로를 타지 않는다(헤드리스 VM 안전).
+      # 이후 switch.sh는 --pull never로 이 로컬 이미지를 그대로 기동한다.
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          printf '%s' "$GHCR_PAT" | docker --config /root/.docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          docker --config /root/.docker pull "$APP_IMAGE"
+      environment:
+        GHCR_USER: "{{ ghcr_user }}"
+        GHCR_PAT: "{{ ghcr_pat }}"
+        APP_IMAGE: "{{ app_image }}"
+      register: ghcr_pull
+      changed_when: "'Downloaded newer image' in ghcr_pull.stdout"
 
     - name: Blue/Green 전환 실행
       ansible.builtin.command: ./switch.sh
