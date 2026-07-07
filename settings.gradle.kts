@@ -12,6 +12,12 @@ include("auth:application")
 include("auth:adapter-in")
 include("auth:adapter-out")
 
+// member 도메인 (:member 하위에 nested된 4개 모듈, leaf는 레이어명만)
+include("member:domain")
+include("member:application")
+include("member:adapter-in")
+include("member:adapter-out")
+
 // 모듈 디렉터리는 `module-*` 접두사를 쓰므로 프로젝트 경로를 매핑한다.
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
@@ -26,3 +32,9 @@ project(":auth:domain").projectDir = file("module-auth/auth-domain")
 project(":auth:application").projectDir = file("module-auth/auth-application")
 project(":auth:adapter-in").projectDir = file("module-auth/auth-adapter-in")
 project(":auth:adapter-out").projectDir = file("module-auth/auth-adapter-out")
+
+project(":member").projectDir = file("module-member")
+project(":member:domain").projectDir = file("module-member/member-domain")
+project(":member:application").projectDir = file("module-member/member-application")
+project(":member:adapter-in").projectDir = file("module-member/member-adapter-in")
+project(":member:adapter-out").projectDir = file("module-member/member-adapter-out")
