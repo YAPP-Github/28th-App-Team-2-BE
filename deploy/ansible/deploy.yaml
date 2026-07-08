@@ -27,14 +27,6 @@
     - name: SOPS 시크릿 → /opt/todakun/.env 갱신 (앱이 최신 시크릿으로 기동)
       ansible.builtin.import_tasks: tasks/render_env.yaml
 
-    - name: (진단) ansible이 로드한 GHCR 자격증명 값 확인 (해시/길이만)
-      ansible.builtin.debug:
-        msg: >-
-          user='{{ ghcr_user }}' user_len={{ ghcr_user | length }}
-          pat_len={{ ghcr_pat | length }}
-          pat_first4={{ ghcr_pat[:4] }} pat_last4={{ ghcr_pat[-4:] }}
-          pat_sha12={{ (ghcr_pat | hash('sha256'))[:12] }}
-
     - name: GHCR 로그인 후 앱 이미지 pull (private 이미지)
       # switch.sh의 docker compose가 GHCR 인증을 못 써 registry denied로 실패하던 문제 해결.
       # --config /root/.docker로 명시 로그인(자격증명은 env로 전달 → 로그 미노출,
