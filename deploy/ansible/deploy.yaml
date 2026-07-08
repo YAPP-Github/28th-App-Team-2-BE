@@ -27,6 +27,21 @@
     - name: SOPS 시크릿 → /opt/todakun/.env 갱신 (앱이 최신 시크릿으로 기동)
       ansible.builtin.import_tasks: tasks/render_env.yaml
 
+    - name: (진단) 자동 vars vs sops 직접 복호화 비교
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          echo "auto_var_ghcr_user_first6='{{ ghcr_user[:6] }}'"
+          echo "sops_bin=$(command -v sops || echo MISSING)"
+          echo -n "direct_sops_user="
+          sops -d --extract '["ghcr_user"]' inventory/dev/group_vars/all/secrets.sops.dev.yaml 2>&1 | head -1
+      register: sopsdiag
+      changed_when: false
+
+    - name: (진단) 출력
+      ansible.builtin.debug:
+        var: sopsdiag.stdout_lines
+
     - name: GHCR 로그인 후 앱 이미지 pull (private 이미지)
       # switch.sh의 docker compose가 GHCR 인증을 못 써 registry denied로 실패하던 문제 해결.
       # --config /root/.docker로 명시 로그인(자격증명은 env로 전달 → 로그 미노출,
