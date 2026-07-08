@@ -5,18 +5,21 @@ Ansible이 **컨트롤러(CI/로컬)에서 복호화**해 VM의 `/opt/todakun/.e
 
 | 환경 | 시크릿 파일 |
 |------|------------|
-| dev  | `inventory/dev/group_vars/all/secrets.sops.dev.yaml` |
-| prod | `inventory/prod/group_vars/all/secrets.sops.prod.yaml` |
+| dev  | `inventory/dev/group_vars/all.sops.yaml` |
+| prod | `inventory/prod/group_vars/all.sops.yaml` |
 
 ```text
-secrets.sops.{env}.yaml (암호화, git) ──sops 복호화(컨트롤러)──▶ Ansible vars ──env.j2──▶ /opt/todakun/.env (VM, 0600)
+group_vars/all.sops.yaml (암호화, git) ──sops 복호화(컨트롤러)──▶ Ansible vars ──env.j2──▶ /opt/todakun/.env (VM, 0600)
 ```
 
-> **주의**: `community.sops` vars 플러그인은 인벤토리별 `group_vars/all/` 의 `*.sops.*.yaml` 파일을 로드한다.
-> 인벤토리는 이미 `inventory/dev/`, `inventory/prod/`로 분리되어 있으므로(`-i inventory/dev/hosts.ini` / `-i inventory/prod/hosts.ini`),
-> 각 환경 실행 시 해당 환경의 `group_vars`만 로드되어 값이 서로 섞이지 않는다.
-> (인벤토리 파일을 직접 지정해도 `group_vars`는 인접 디렉터리 기준으로 로드된다. 디렉터리(`-i inventory/dev`)로
-> 지정하면 그 안의 `hosts.ini.example` 같은 템플릿까지 파싱되므로 파일을 명시한다.)
+> **⚠️ 파일 위치 필수 규칙**: `community.sops` vars 플러그인은 **`group_vars/<그룹>.sops.yaml` 플랫 파일만** 복호화한다
+> (기본 `valid_extensions`: `.sops.yaml`/`.sops.yml`/`.sops.json`). `group_vars/all/` **하위 디렉터리**에 둔
+> `*.sops.*.yaml`(예: `group_vars/all/secrets.sops.dev.yaml`)는 복호화되지 않고 `host_group_vars`가 **암호문 그대로** 로드하므로,
+> 반드시 `group_vars/all.sops.yaml`(그룹명 = `all`) 경로에 둔다.
+>
+> 인벤토리는 `inventory/dev/`, `inventory/prod/`로 분리되어 있어(`-i inventory/dev/hosts.ini` / `-i inventory/prod/hosts.ini`)
+> 각 환경 실행 시 인접한 `group_vars`만 로드되어 값이 섞이지 않는다. (디렉터리(`-i inventory/dev`)로 지정하면
+> 그 안의 `hosts.ini.example` 같은 템플릿까지 파싱되므로 파일을 명시한다.)
 
 ## 1. 도구 설치 (로컬, 최초 1회)
 
@@ -41,15 +44,15 @@ age-keygen -o ~/.config/sops/age/keys.txt
 ```bash
 cd deploy/ansible
 # 예제에서 복사 후 실제 값 채우기
-cp inventory/secrets.sops.yaml.example inventory/dev/group_vars/all/secrets.sops.dev.yaml
+cp inventory/secrets.sops.yaml.example inventory/dev/group_vars/all.sops.yaml
 # 편집 완료 후 제자리 암호화
-sops -e -i inventory/dev/group_vars/all/secrets.sops.dev.yaml
+sops -e -i inventory/dev/group_vars/all.sops.yaml
 # 암호화 확인 후 커밋
-git add inventory/dev/group_vars/all/secrets.sops.dev.yaml
+git add inventory/dev/group_vars/all.sops.yaml
 ```
 
-- 이후 수정은 `sops inventory/dev/group_vars/all/secrets.sops.dev.yaml` (에디터에서 평문 편집 → 저장 시 재암호화).
-- prod도 동일 절차 (`secrets.sops.prod.yaml`).
+- 이후 수정은 `sops inventory/dev/group_vars/all.sops.yaml` (에디터에서 평문 편집 → 저장 시 재암호화).
+- prod도 동일 절차 (`inventory/prod/group_vars/all.sops.yaml`).
 - **Cloudflare Origin 인증서**(`cloudflare_origin_cert`/`cloudflare_origin_key`)도 이 시크릿에 PEM으로 넣으면
   Ansible(`tasks/render_certs.yaml`)이 VM `/opt/todakun/caddy/certs/`로 렌더링한다 — **수동 배치 불필요**.
 
@@ -70,8 +73,8 @@ ansible-playbook -i inventory/dev/hosts.ini playbook.yaml
 
 ## 회전(rotation)
 
-- 값 변경: `sops inventory/dev/group_vars/all/secrets.sops.dev.yaml` 편집 → 커밋 → 재배포.
-- recipient(팀원/키) 추가·제거: `.sops.yaml` 수정 후 `sops updatekeys inventory/dev/group_vars/all/secrets.sops.dev.yaml`.
+- 값 변경: `sops inventory/dev/group_vars/all.sops.yaml` 편집 → 커밋 → 재배포.
+- recipient(팀원/키) 추가·제거: `.sops.yaml` 수정 후 `sops updatekeys inventory/dev/group_vars/all.sops.yaml`.
 
 ## 주의
 

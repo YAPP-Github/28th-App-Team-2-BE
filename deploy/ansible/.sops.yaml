@@ -2,9 +2,9 @@
 # age 공개키(recipient)로 암호화 → 대응하는 개인키(SOPS_AGE_KEY)를 가진 쪽만 복호화.
 # 팀원/CI를 추가하려면 각자의 age 공개키를 age 목록에 콤마로 추가하고 재암호화(`sops updatekeys`).
 creation_rules:
-  - path_regex: inventory/dev/.*\.sops\.dev\.ya?ml$
+  - path_regex: inventory/dev/.*\.sops\.ya?ml$
     age: >-
       age1jdem2d3d95c2lumpkgtfu9ajge7gt065952yysfve5jwppyq6utqnharl9
-  - path_regex: inventory/prod/.*\.sops\.prod\.ya?ml$
+  - path_regex: inventory/prod/.*\.sops\.ya?ml$
     age: >-
       age1jdem2d3d95c2lumpkgtfu9ajge7gt065952yysfve5jwppyq6utqnharl9

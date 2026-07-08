@@ -62,24 +62,6 @@
         groups: docker
         append: true
 
-    - name: GHCR 인증용 docker config 디렉터리 생성 (root)
-      ansible.builtin.file:
-        path: /root/.docker
-        state: directory
-        mode: "0700"
-
-    - name: GHCR 인증 (config.json 직접 작성 — VM이 private 이미지 pull, root)
-      # `docker login`은 헤드리스 VM에서 credential helper(secretservice/D-Bus) 경로로
-      # 유효한 자격증명에도 non-zero 실패할 수 있어, 표준 auth(config.json)를 직접 쓴다.
-      # switch.sh의 `docker compose ... --pull always`가 이 인증으로 GHCR 이미지를 받는다.
-      # ghcr_user/ghcr_pat(read:packages PAT)은 SOPS 시크릿에서 온다.
-      ansible.builtin.copy:
-        dest: /root/.docker/config.json
-        content: |
-          {"auths":{"ghcr.io":{"auth":"{{ (ghcr_user ~ ':' ~ ghcr_pat) | b64encode }}"}}}
-        mode: "0600"
-      no_log: true
-
     - name: 앱 디렉터리 구조 생성
       ansible.builtin.file:
         path: "{{ item }}"
