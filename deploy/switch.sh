@@ -38,7 +38,7 @@ COLOR="$IDLE" APP_IMAGE="$APP_IMAGE" \
   docker compose -p "todakun-$IDLE" -f "$APP_COMPOSE" up -d --pull never
 
 # health 대기 — todakun-net 안에서 일회성 curl 컨테이너로 컨테이너명에 직접 요청.
-# (앱 이미지에 curl 미포함, 호스트 포트 노출 없음 — BEAT 패턴)
+# (앱 이미지에 curl 미포함, 호스트 포트 노출 없음)
 echo "[switch] todakun-app-$IDLE healthcheck 대기 (http://todakun-app-$IDLE:8080/actuator/health)..."
 healthy=0
 for _ in $(seq 1 "$HEALTH_RETRIES"); do

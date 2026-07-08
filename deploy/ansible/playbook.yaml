@@ -96,7 +96,7 @@
         sed "s|__APP_UPSTREAM__|todakun-app-blue:8080|"
         {{ app_dir }}/caddy/Caddyfile.template
       register: caddy_rendered
-      changed_when: false
+      changed_when: "false"
 
     - name: Caddyfile 저장
       ansible.builtin.copy:
@@ -111,7 +111,7 @@
     - name: SOPS 시크릿 → Cloudflare Origin 인증서 렌더링
       ansible.builtin.import_tasks: tasks/render_certs.yaml
 
-    - name: 공용 인프라(Caddy/Redis) 기동
+    - name: Caddy/Redis 기동
       # DOMAIN 보간을 위해 .env를 명시 지정한다. compose는 compose 파일 위치 기준으로 .env를
       # 찾으므로 CWD(chdir)의 .env를 자동으로 읽지 않는다. --env-file은 보간용일 뿐,
       # caddy 컨테이너에는 environment 블록의 DOMAIN만 주입된다(전체 시크릿 비상속 유지).
@@ -131,8 +131,7 @@
         mode: "0644"
         directory_mode: "0755"
 
-    - name: 모니터링 스택(Prometheus/Loki/Alloy/Grafana) 기동
-      # secrets(DISCORD_WEBHOOK_URL 등)는 VM의 .env에서 주입.
+    - name: Grafana Alloy 기동
       ansible.builtin.command: >
         docker compose -f monitoring/docker-compose.monitoring.yaml
         --env-file .env up -d
