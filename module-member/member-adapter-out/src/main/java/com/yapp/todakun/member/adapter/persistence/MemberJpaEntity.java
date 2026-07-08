@@ -52,6 +52,9 @@ public class MemberJpaEntity extends BaseTimeEntity {
     @Column(nullable = false)
     private OAuthProvider oauthProvider;
 
+    @Column(nullable = false)
+    private String providerId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Job job;
@@ -72,6 +75,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
             Gender gender,
             Role role,
             OAuthProvider oauthProvider,
+            String providerId,
             Job job,
             RelationshipStatus relationshipStatus
     ) {
@@ -83,6 +87,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
         this.gender = gender;
         this.role = role;
         this.oauthProvider = oauthProvider;
+        this.providerId = providerId;
         this.job = job;
         this.relationshipStatus = relationshipStatus;
     }
@@ -97,6 +102,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
                 member.getGender(),
                 member.getRole(),
                 member.getOauthProvider(),
+                member.getProviderId(),
                 member.getJob(),
                 member.getRelationshipStatus()
         );
@@ -112,6 +118,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
                 gender,
                 role,
                 oauthProvider,
+                providerId,
                 job,
                 relationshipStatus
         );

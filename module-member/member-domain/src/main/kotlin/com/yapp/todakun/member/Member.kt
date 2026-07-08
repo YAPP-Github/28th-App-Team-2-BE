@@ -13,6 +13,7 @@ data class Member(
     val gender: Gender,
     val role: Role,
     val oauthProvider: OAuthProvider,
+    val providerId: String,
     val job: Job,
     val relationshipStatus: RelationshipStatus,
 )
