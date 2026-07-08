@@ -27,20 +27,29 @@
     - name: SOPS 시크릿 → /opt/todakun/.env 갱신 (앱이 최신 시크릿으로 기동)
       ansible.builtin.import_tasks: tasks/render_env.yaml
 
-    - name: (진단) 자동 vars vs sops 직접 복호화 비교
+    - name: (진단-controller) 컨트롤러 sops/플러그인/키 확인
+      delegate_to: localhost
+      connection: local
+      become: false
+      run_once: true
       ansible.builtin.shell:
+        chdir: "{{ playbook_dir }}"
         cmd: |
-          set -eu
           echo "auto_var_ghcr_user_first6='{{ ghcr_user[:6] }}'"
-          echo "sops_bin=$(command -v sops || echo MISSING)"
-          echo -n "direct_sops_user="
+          echo "sops=$(command -v sops || echo MISSING)"
+          echo "age_key_set=$([ -n \"${SOPS_AGE_KEY:-}\" ] && echo yes || echo no)"
+          echo "cfg=$(python3 -c 'import os;print(os.environ.get(\"ANSIBLE_CONFIG\",\"unset\"))')"
+          ansible-galaxy collection list community.sops 2>/dev/null | grep -i community.sops || echo "collection=not-found"
+          echo -n "direct_decrypt_user="
           sops -d --extract '["ghcr_user"]' inventory/dev/group_vars/all/secrets.sops.dev.yaml 2>&1 | head -1
-      register: sopsdiag
+      register: cdiag
       changed_when: false
 
-    - name: (진단) 출력
+    - name: (진단-controller) 출력
+      delegate_to: localhost
+      run_once: true
       ansible.builtin.debug:
-        var: sopsdiag.stdout_lines
+        var: cdiag.stdout_lines
 
     - name: GHCR 로그인 후 앱 이미지 pull (private 이미지)
       # switch.sh의 docker compose가 GHCR 인증을 못 써 registry denied로 실패하던 문제 해결.
