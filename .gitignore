@@ -59,5 +59,5 @@ deploy/caddy/certs/*.key
 
 ### Ansible SOPS 시크릿 — 암호화 후에만 커밋 (평문 절대 커밋 금지) ###
 # sops -e -i 암호화 완료 후 git add 로 추가. 평문 상태로 커밋 시 즉시 전 시크릿 회전.
-# secrets.sops.dev.yaml, secrets.sops.prod.yaml 는 암호화 상태로만 커밋
-secrets.sops.*.origin.yaml
+# all.sops.yaml은 암호화 상태로만 커밋
+all.sops.origin.yaml

@@ -15,7 +15,7 @@ Grafana Cloud 스택 → **Connections**에서 각 엔드포인트/유저/토큰
 | `GC_LOKI_USER` | Loki 스택의 username(숫자 ID) |
 | `GC_TOKEN` | Cloud Access Policy 토큰 (metrics:write, logs:write 스코프) — **유일한 시크릿** |
 
-> `GC_TOKEN` 하나로 Prometheus/Loki 양쪽 basic_auth password를 겸한다(BEAT 패턴).
+> `GC_TOKEN` 하나로 Prometheus/Loki 양쪽 basic_auth password를 겸한다.
 
 ## 2. ERROR 로그 → Discord 알림
 
