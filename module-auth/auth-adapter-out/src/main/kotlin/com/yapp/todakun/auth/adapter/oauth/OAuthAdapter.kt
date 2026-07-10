@@ -1,9 +1,9 @@
 package com.yapp.todakun.auth.adapter.oauth
 
 import com.yapp.todakun.auth.OAuthMemberProfile
-import com.yapp.todakun.auth.adapter.oauth.fetcher.GoogleOAuthFetcher
-import com.yapp.todakun.auth.adapter.oauth.fetcher.KakaoOAuthFetcher
-import com.yapp.todakun.auth.port.OAuthPort
+import com.yapp.todakun.auth.adapter.oauth.google.GoogleOAuthFetcher
+import com.yapp.todakun.auth.adapter.oauth.kakao.KakaoOAuthFetcher
+import com.yapp.todakun.auth.port.outbound.OAuthPort
 import com.yapp.todakun.shared.OAuthProvider
 import org.springframework.stereotype.Component
 

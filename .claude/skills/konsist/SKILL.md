@@ -22,7 +22,8 @@ Test location: `architecture-test/src/test/kotlin/com/yapp/todakun/architecture/
 | No JPA annotations on domain classes | The same targets may not have `jakarta.persistence.*` annotations |
 | CQRS service location | `@CommandService`/`@QueryService` classes live only in the `.application` package |
 | Controller → Api implementation enforced | `*Controller` classes must implement a `*Api` interface |
-| UseCase location | `*UseCase` interfaces live only in the `.application` package |
+| UseCase location | `*UseCase` interfaces (inbound port) live only in the `.port.inbound` package (`{domain}-domain`, not `{domain}-application`) |
+| Outbound Port location | `*Port` interfaces live only in the `.port.outbound` package (`{domain}-domain`); cross-domain ports in `shared` (e.g. `UserAuthPort`) are excluded |
 | JpaEntity location | `*JpaEntity` classes live only in the `.adapter` package |
 | Adapter location | `*Adapter` classes live only in the `.adapter` package |
 | Api interface location | `*Api` interfaces live only in the `.adapter` package |

@@ -17,4 +17,10 @@ object SecurityPaths {
             "/actuator/health/**",
             "/actuator/prometheus",
         )
+
+    /** 인증 없이 접근 가능한 API 경로. */
+    val PUBLIC =
+        arrayOf(
+            "/auth/login",
+        )
 }

@@ -1,6 +1,6 @@
 package com.yapp.todakun.auth.adapter.oauth.config
 
-import com.yapp.todakun.auth.adapter.oauth.properties.KakaoOAuthProperties
+import com.yapp.todakun.auth.adapter.oauth.kakao.KakaoOAuthProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

@@ -40,6 +40,8 @@ token:
   jwt:
     secret: ${JWT_SECRET}
     expiry-seconds: 604800  # 7일(엑세스 토큰 만료시간)
+  onboarding:
+    expiry-seconds: 600  # 10분(온보딩 토큰 만료시간)
   redis:
     expiry-seconds: 2592000  # 30일(리프레시 토큰 만료시간)
 

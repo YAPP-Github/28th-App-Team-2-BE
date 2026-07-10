@@ -3,5 +3,6 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(project(":auth:domain"))
 }

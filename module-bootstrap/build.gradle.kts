@@ -7,9 +7,11 @@ dependencies {
     implementation(project(":common-web"))
     implementation(project(":common-persistence"))
     implementation(project(":auth:domain"))
+    implementation(project(":auth:application"))
     implementation(project(":auth:adapter-in"))
     implementation(project(":auth:adapter-out"))
     implementation(project(":member:domain"))
+    implementation(project(":member:application"))
     implementation(project(":member:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
