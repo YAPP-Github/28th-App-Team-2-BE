@@ -1,8 +1,7 @@
 package com.yapp.todakun.auth.adapter.redis.onboarding
 
-import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.config.TestContainersConfig
-import com.yapp.todakun.shared.OauthProvider
+import com.yapp.todakun.auth.fixture.OauthFixture
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -11,8 +10,8 @@ import io.kotest.matchers.string.shouldNotBeBlank
 import org.springframework.boot.data.redis.test.autoconfigure.DataRedisTest
 import org.springframework.context.annotation.Import
 import kotlin.uuid.ExperimentalUuidApi
-
-private const val NON_EXISTENT_TOKEN = "non-existent-token"
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 @ExperimentalUuidApi
 @DataRedisTest
@@ -24,12 +23,7 @@ class OnboardingTokenAdapterTest(
             val properties = OnboardingTokenProperties(expirySeconds = 600L)
             val adapter = OnboardingTokenAdapter(onboardingTokenRepository, properties)
 
-            fun profile() =
-                OauthMemberProfile(
-                    provider = OauthProvider.KAKAO,
-                    providerId = "kakao-provider-id",
-                    email = "test@example.com",
-                )
+            fun profile() = OauthFixture.oauthMemberProfile()
 
             describe("issue") {
                 context("OAuth 프로필이 주어지면") {
@@ -56,7 +50,9 @@ class OnboardingTokenAdapterTest(
 
                 context("존재하지 않는 토큰이면") {
                     it("null을 반환한다") {
-                        adapter.findProfile(NON_EXISTENT_TOKEN).shouldBeNull()
+                        val nonExistentToken = Uuid.generateV7().toJavaUuid().toString()
+
+                        adapter.findProfile(nonExistentToken).shouldBeNull()
                     }
                 }
             }

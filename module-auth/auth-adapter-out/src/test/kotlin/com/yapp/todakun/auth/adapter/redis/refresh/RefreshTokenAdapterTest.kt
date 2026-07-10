@@ -11,8 +11,6 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
-private const val NON_EXISTENT_TOKEN = "non-existent-token"
-
 @ExperimentalUuidApi
 @DataRedisTest
 @Import(TestContainersConfig::class)
@@ -22,12 +20,11 @@ class RefreshTokenAdapterTest(
         {
             val properties = RefreshTokenProperties(expirySeconds = 86400L)
             val adapter = RefreshTokenAdapter(refreshTokenRepository, properties)
+            val memberId = Uuid.generateV7().toJavaUuid()
 
             describe("issue") {
                 context("memberId가 주어지면") {
                     it("토큰을 저장하고 발급 정보를 반환한다") {
-                        val memberId = Uuid.generateV7().toJavaUuid()
-
                         val issued = adapter.issue(memberId)
 
                         issued.value.shouldNotBeBlank()
@@ -40,7 +37,9 @@ class RefreshTokenAdapterTest(
             describe("findMemberId") {
                 context("존재하지 않는 토큰이면") {
                     it("null을 반환한다") {
-                        adapter.findMemberId(NON_EXISTENT_TOKEN).shouldBeNull()
+                        val nonExistentToken = Uuid.generateV7().toJavaUuid().toString()
+
+                        adapter.findMemberId(nonExistentToken).shouldBeNull()
                     }
                 }
             }
@@ -48,7 +47,6 @@ class RefreshTokenAdapterTest(
             describe("revoke") {
                 context("존재하는 토큰이면") {
                     it("삭제한다") {
-                        val memberId = Uuid.generateV7().toJavaUuid()
                         val issued = adapter.issue(memberId)
 
                         adapter.revoke(issued.value)
@@ -59,9 +57,8 @@ class RefreshTokenAdapterTest(
             }
 
             describe("revokeAll") {
-                context("같은 memberId로 여러 토큰을 발급했으면") {
+                context("memberId로 여러 토큰을 발급했으면") {
                     it("모두 삭제한다") {
-                        val memberId = Uuid.generateV7().toJavaUuid()
                         val first = adapter.issue(memberId)
                         val second = adapter.issue(memberId)
 
