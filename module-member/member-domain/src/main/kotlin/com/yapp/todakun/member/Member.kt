@@ -1,6 +1,6 @@
 package com.yapp.todakun.member
 
-import com.yapp.todakun.shared.OAuthProvider
+import com.yapp.todakun.shared.OauthProvider
 import java.time.LocalDate
 import java.util.UUID
 
@@ -12,7 +12,7 @@ data class Member(
     val calendarType: CalendarType,
     val gender: Gender,
     val role: Role,
-    val oauthProvider: OAuthProvider,
+    val oauthProvider: OauthProvider,
     val providerId: String,
     val job: Job,
     val relationshipStatus: RelationshipStatus,

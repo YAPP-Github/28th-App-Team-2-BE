@@ -2,7 +2,7 @@ package com.yapp.todakun.member.adapter.persistence
 
 import com.yapp.todakun.member.Member
 import com.yapp.todakun.member.repository.MemberRepository
-import com.yapp.todakun.shared.OAuthProvider
+import com.yapp.todakun.shared.OauthProvider
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
@@ -15,7 +15,7 @@ class MemberRepositoryAdapter(
     override fun findById(id: UUID): Member? = memberJpaRepository.findById(id).map { it.toDomain() }.orElse(null)
 
     override fun findIdByOauth(
-        oauthProvider: OAuthProvider,
+        oauthProvider: OauthProvider,
         providerId: String,
     ): UUID? = memberJpaRepository.findByOauthProviderAndProviderId(oauthProvider, providerId)?.toDomain()?.id
 }

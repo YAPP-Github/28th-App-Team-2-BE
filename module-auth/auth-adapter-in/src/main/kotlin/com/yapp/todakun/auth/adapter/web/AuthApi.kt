@@ -18,7 +18,7 @@ interface AuthApi {
         description = "OAuth 액세스 토큰으로 로그인을 시도한다. 기존 회원이면 access/refresh 토큰을, 신규 회원이면 온보딩 토큰을 발급한다.",
     )
     @DisableSwaggerSecurity
-    @PostMapping("/auth/login")
+    @PostMapping("api/v1/auth/login")
     fun login(
         @RequestBody @Valid request: LoginRequest,
     ): ResponseEntity<CommonResponse<LoginResponse>>

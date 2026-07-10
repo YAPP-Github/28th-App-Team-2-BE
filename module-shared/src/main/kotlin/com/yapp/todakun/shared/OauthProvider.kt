@@ -1,6 +1,6 @@
 package com.yapp.todakun.shared
 
-enum class OAuthProvider {
+enum class OauthProvider {
     KAKAO,
     GOOGLE,
 }

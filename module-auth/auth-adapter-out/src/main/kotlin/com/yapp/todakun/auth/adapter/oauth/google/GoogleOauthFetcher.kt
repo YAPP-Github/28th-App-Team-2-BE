@@ -5,25 +5,25 @@ import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor
-import com.yapp.todakun.auth.OAuthMemberProfile
+import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.adapter.oauth.requireVerifiedEmail
 import com.yapp.todakun.auth.code.AuthErrorCode
 import com.yapp.todakun.common.exception.UnauthorizedException
-import com.yapp.todakun.shared.OAuthProvider
+import com.yapp.todakun.shared.OauthProvider
 import org.springframework.stereotype.Component
 import java.text.ParseException
 
 @Component
-class GoogleOAuthFetcher(
+class GoogleOauthFetcher(
     private val googleIdTokenProcessor: ConfigurableJWTProcessor<SecurityContext>,
-    private val googleOAuthProperties: GoogleOAuthProperties,
+    private val googleOauthProperties: GoogleOauthProperties,
 ) {
-    fun fetchProfile(idToken: String): OAuthMemberProfile {
+    fun fetchProfile(idToken: String): OauthMemberProfile {
         val claims = parseVerifiedClaims(idToken)
         val email = requireVerifiedEmail(claims.getStringClaim("email"), isEmailVerified(claims))
 
-        return OAuthMemberProfile(
-            provider = OAuthProvider.GOOGLE,
+        return OauthMemberProfile(
+            provider = OauthProvider.GOOGLE,
             providerId = claims.subject,
             email = email,
         )
@@ -47,7 +47,7 @@ class GoogleOAuthFetcher(
         } catch (_: JOSEException) {
             throw UnauthorizedException(AuthErrorCode.OAUTH_TOKEN_INVALID)
         }.also { claims ->
-            if (claims.issuer !in googleOAuthProperties.issuers || googleOAuthProperties.clientIds.none { it in claims.audience }) {
+            if (claims.issuer !in googleOauthProperties.issuers || googleOauthProperties.clientIds.none { it in claims.audience }) {
                 throw UnauthorizedException(AuthErrorCode.OAUTH_TOKEN_INVALID)
             }
         }

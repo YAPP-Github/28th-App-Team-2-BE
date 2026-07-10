@@ -8,7 +8,7 @@ import com.yapp.todakun.member.Member;
 import com.yapp.todakun.member.RelationshipStatus;
 import com.yapp.todakun.member.Role;
 import com.yapp.todakun.persistence.BaseTimeEntity;
-import com.yapp.todakun.shared.OAuthProvider;
+import com.yapp.todakun.shared.OauthProvider;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -50,7 +50,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private OAuthProvider oauthProvider;
+    private OauthProvider oauthProvider;
 
     @Column(nullable = false)
     private String providerId;
@@ -74,7 +74,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
             CalendarType calendarType,
             Gender gender,
             Role role,
-            OAuthProvider oauthProvider,
+            OauthProvider oauthProvider,
             String providerId,
             Job job,
             RelationshipStatus relationshipStatus

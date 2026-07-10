@@ -4,7 +4,7 @@ import java.util.UUID
 
 interface MemberAuthPort {
     fun findMemberId(
-        provider: OAuthProvider,
+        provider: OauthProvider,
         providerId: String,
     ): UUID?
 }

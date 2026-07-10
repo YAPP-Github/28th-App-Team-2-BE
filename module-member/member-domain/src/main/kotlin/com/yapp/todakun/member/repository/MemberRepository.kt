@@ -1,7 +1,7 @@
 package com.yapp.todakun.member.repository
 
 import com.yapp.todakun.member.Member
-import com.yapp.todakun.shared.OAuthProvider
+import com.yapp.todakun.shared.OauthProvider
 import java.util.UUID
 
 interface MemberRepository {
@@ -10,7 +10,7 @@ interface MemberRepository {
     fun findById(id: UUID): Member?
 
     fun findIdByOauth(
-        oauthProvider: OAuthProvider,
+        oauthProvider: OauthProvider,
         providerId: String,
     ): UUID?
 }

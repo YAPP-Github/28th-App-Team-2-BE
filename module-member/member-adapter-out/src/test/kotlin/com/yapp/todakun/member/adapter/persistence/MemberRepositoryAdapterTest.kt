@@ -2,7 +2,7 @@ package com.yapp.todakun.member.adapter.persistence
 
 import com.yapp.todakun.member.config.TestContainersConfig
 import com.yapp.todakun.member.fixture.MemberFixture
-import com.yapp.todakun.shared.OAuthProvider
+import com.yapp.todakun.shared.OauthProvider
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -88,7 +88,7 @@ class MemberRepositoryAdapterTest(
                     it("null을 반환한다") {
                         val nonExistentProviderId = Uuid.generateV7().toString()
 
-                        val found = adapter.findIdByOauth(OAuthProvider.KAKAO, nonExistentProviderId)
+                        val found = adapter.findIdByOauth(OauthProvider.KAKAO, nonExistentProviderId)
 
                         found.shouldBeNull()
                     }

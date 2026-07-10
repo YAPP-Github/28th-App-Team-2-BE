@@ -1,9 +1,9 @@
 package com.yapp.todakun.auth.adapter.redis.onboarding
 
-import com.yapp.todakun.auth.OAuthMemberProfile
+import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.token.IssuedOnboardingToken
-import com.yapp.todakun.shared.OAuthProvider
+import com.yapp.todakun.shared.OauthProvider
 import org.springframework.stereotype.Component
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -15,7 +15,7 @@ class OnboardingTokenAdapter(
     private val onboardingTokenProperties: OnboardingTokenProperties,
 ) : OnboardingTokenPort {
     @ExperimentalUuidApi
-    override fun issue(profile: OAuthMemberProfile): IssuedOnboardingToken {
+    override fun issue(profile: OauthMemberProfile): IssuedOnboardingToken {
         val token = Uuid.generateV7().toJavaUuid().toString()
         onboardingTokenRepository.save(
             OnboardingToken(
@@ -30,11 +30,11 @@ class OnboardingTokenAdapter(
         return IssuedOnboardingToken(value = token, expiresInSeconds = onboardingTokenProperties.expirySeconds)
     }
 
-    override fun findProfile(token: String): OAuthMemberProfile? =
+    override fun findProfile(token: String): OauthMemberProfile? =
         onboardingTokenRepository.findById(token)
             .map {
-                OAuthMemberProfile(
-                    provider = OAuthProvider.valueOf(it.provider),
+                OauthMemberProfile(
+                    provider = OauthProvider.valueOf(it.provider),
                     providerId = it.providerId,
                     email = it.email,
                 )

@@ -1,12 +1,12 @@
 package com.yapp.todakun.auth.port.outbound
 
-import com.yapp.todakun.auth.OAuthMemberProfile
+import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.token.IssuedOnboardingToken
 
 interface OnboardingTokenPort {
-    fun issue(profile: OAuthMemberProfile): IssuedOnboardingToken
+    fun issue(profile: OauthMemberProfile): IssuedOnboardingToken
 
-    fun findProfile(token: String): OAuthMemberProfile?
+    fun findProfile(token: String): OauthMemberProfile?
 
     fun revoke(token: String)
 }

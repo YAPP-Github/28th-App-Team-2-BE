@@ -21,6 +21,6 @@ object SecurityPaths {
     /** 인증 없이 접근 가능한 API 경로. */
     val PUBLIC =
         arrayOf(
-            "/auth/login",
+            "/api/v1/auth/login",
         )
 }

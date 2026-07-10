@@ -1,10 +1,10 @@
 package com.yapp.todakun.auth.adapter.oauth.kakao
 
-import com.yapp.todakun.auth.OAuthMemberProfile
+import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.adapter.oauth.requireVerifiedEmail
 import com.yapp.todakun.auth.code.AuthErrorCode
 import com.yapp.todakun.common.exception.UnauthorizedException
-import com.yapp.todakun.shared.OAuthProvider
+import com.yapp.todakun.shared.OauthProvider
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -12,16 +12,16 @@ import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.client.requiredBody
 
 @Component
-class KakaoOAuthFetcher(
+class KakaoOauthFetcher(
     private val restClient: RestClient,
-    private val kakaoOAuthProperties: KakaoOAuthProperties,
+    private val kakaoOauthProperties: KakaoOauthProperties,
 ) {
-    fun fetchProfile(accessToken: String): OAuthMemberProfile {
+    fun fetchProfile(accessToken: String): OauthMemberProfile {
         val response = fetchMemberInfo(accessToken)
         val email = requireVerifiedEmail(response.kakaoAccount.email, response.kakaoAccount.isEmailVerified)
 
-        return OAuthMemberProfile(
-            provider = OAuthProvider.KAKAO,
+        return OauthMemberProfile(
+            provider = OauthProvider.KAKAO,
             providerId = response.id.toString(),
             email = email,
         )
@@ -30,7 +30,7 @@ class KakaoOAuthFetcher(
     private fun fetchMemberInfo(accessToken: String): KakaoMemberInfoResponse =
         try {
             restClient.get()
-                .uri(kakaoOAuthProperties.userMeUri)
+                .uri(kakaoOauthProperties.userMeUri)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
                 .retrieve()
                 .requiredBody<KakaoMemberInfoResponse>()
