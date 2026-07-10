@@ -11,33 +11,35 @@ import io.mockk.every
 import io.mockk.mockk
 
 class MemberAuthServiceTest :
-    DescribeSpec({
-        val memberRepository = mockk<MemberRepository>()
-        val memberAuthService = MemberAuthService(memberRepository)
+    DescribeSpec(
+        {
+            val memberRepository = mockk<MemberRepository>()
+            val memberAuthService = MemberAuthService(memberRepository)
 
-        afterTest { clearMocks(memberRepository) }
+            afterTest { clearMocks(memberRepository) }
 
-        describe("findMemberId") {
-            context("일치하는 회원이 존재하면") {
-                it("해당 회원의 id를 반환한다") {
-                    val member = MemberFixture.create()
-                    every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns member.id
+            describe("findMemberId") {
+                context("일치하는 회원이 존재하면") {
+                    it("해당 회원의 id를 반환한다") {
+                        val member = MemberFixture.create()
+                        every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns member.id
 
-                    val found = memberAuthService.findMemberId(member.oauthProvider, member.providerId)
+                        val found = memberAuthService.findMemberId(member.oauthProvider, member.providerId)
 
-                    found shouldBe member.id
+                        found shouldBe member.id
+                    }
+                }
+
+                context("일치하는 회원이 없으면") {
+                    it("null을 반환한다") {
+                        val member = MemberFixture.create(oauthProvider = OauthProvider.KAKAO)
+                        every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns null
+
+                        val found = memberAuthService.findMemberId(member.oauthProvider, member.providerId)
+
+                        found.shouldBeNull()
+                    }
                 }
             }
-
-            context("일치하는 회원이 없으면") {
-                it("null을 반환한다") {
-                    val member = MemberFixture.create(oauthProvider = OauthProvider.KAKAO)
-                    every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns null
-
-                    val found = memberAuthService.findMemberId(member.oauthProvider, member.providerId)
-
-                    found.shouldBeNull()
-                }
-            }
-        }
-    })
+        },
+    )

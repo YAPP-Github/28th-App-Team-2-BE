@@ -108,10 +108,12 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+testcontainers-core = { module = "org.testcontainers:testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 spring-boot-data-jpa-test = { module = "org.springframework.boot:spring-boot-data-jpa-test" }
+spring-boot-data-redis-test = { module = "org.springframework.boot:spring-boot-data-redis-test" }
 
 [bundles]
 # 모든 모듈 공통 테스트(Kotest). MockK는 필요 모듈에서 개별 추가.
@@ -123,6 +125,14 @@ testcontainers = [
     "testcontainers-junit-jupiter",
     "spring-boot-testcontainers",
     "spring-boot-data-jpa-test",
+]
+
+# adapter-out Redis 통합 테스트 인프라(@ServiceConnection, @DataRedisTest 등).
+testcontainers-redis = [
+    "testcontainers-core",
+    "testcontainers-junit-jupiter",
+    "spring-boot-testcontainers",
+    "spring-boot-data-redis-test",
 ]
 
 # JWT (auth adapter-out): api는 implementation, impl/jackson은 runtimeOnly 권장.

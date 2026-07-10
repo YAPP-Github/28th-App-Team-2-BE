@@ -36,7 +36,10 @@ class RefreshTokenAdapter(
         refreshTokenRepository.deleteById(token)
     }
 
+    // Spring Data Redis는 파생 삭제 쿼리(deleteAllByX)를 지원하지 않아 조회 후 삭제한다.
     override fun revokeAll(memberId: UUID) {
-        refreshTokenRepository.deleteAllByMemberId(memberId.toString())
+        val tokens = refreshTokenRepository.findAllByMemberId(memberId.toString())
+
+        refreshTokenRepository.deleteAll(tokens)
     }
 }

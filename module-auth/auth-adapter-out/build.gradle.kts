@@ -12,4 +12,7 @@ dependencies {
     implementation(libs.spring.web)
     implementation(libs.jackson.annotations)
     implementation(libs.nimbus.jose.jwt)
+
+    testImplementation(libs.bundles.testcontainers.redis)
+    testImplementation(libs.kotest.extensions.spring)
 }
