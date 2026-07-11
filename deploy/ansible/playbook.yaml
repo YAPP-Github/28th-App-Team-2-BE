@@ -11,6 +11,7 @@
     app_dir: /opt/todakun
 
   tasks:
+    # unattended-upgrades가 apt 락을 쥐고 있으면 기본 60초 대기로는 부족해 배포가 실패한다.
     - name: APT 캐시 갱신 및 선행 패키지 설치
       ansible.builtin.apt:
         name:
@@ -19,6 +20,7 @@
           - gnupg
         state: present
         update_cache: true
+        lock_timeout: 600
 
     - name: apt keyrings 디렉터리 생성
       ansible.builtin.file:
@@ -49,6 +51,7 @@
           - docker-compose-plugin
         state: present
         update_cache: true
+        lock_timeout: 600
 
     - name: docker 서비스 활성화
       ansible.builtin.systemd:
