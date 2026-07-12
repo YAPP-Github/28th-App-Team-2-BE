@@ -116,6 +116,7 @@ spring-boot-data-jpa-test = { module = "org.springframework.boot:spring-boot-dat
 spring-boot-data-redis-test = { module = "org.springframework.boot:spring-boot-data-redis-test" }
 spring-boot-test = { module = "org.springframework.boot:spring-boot-test" }
 spring-boot-test-autoconfigure = { module = "org.springframework.boot:spring-boot-test-autoconfigure" }
+spring-boot-webmvc-test = { module = "org.springframework.boot:spring-boot-webmvc-test" }
 spring-test = { module = "org.springframework:spring-test" }
 spring-security-test = { module = "org.springframework.security:spring-security-test" }
 

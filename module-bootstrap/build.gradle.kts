@@ -25,8 +25,10 @@ dependencies {
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
     runtimeOnly(libs.postgresql)
 
+    testImplementation(project(":shared"))
     testImplementation(libs.spring.boot.test)
     testImplementation(libs.spring.boot.test.autoconfigure)
+    testImplementation(libs.spring.boot.webmvc.test)
     testImplementation(libs.spring.test)
     testImplementation(libs.spring.security.test)
     testImplementation(libs.springmockk)
