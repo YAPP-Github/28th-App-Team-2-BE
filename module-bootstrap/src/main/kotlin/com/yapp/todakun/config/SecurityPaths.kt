@@ -22,5 +22,6 @@ object SecurityPaths {
     val PUBLIC =
         arrayOf(
             "/api/v1/auth/login",
+            "/api/v1/auth/signup",
         )
 }
