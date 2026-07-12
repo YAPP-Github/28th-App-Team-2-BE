@@ -60,7 +60,7 @@ slf4j-api = { module = "org.slf4j:slf4j-api" }
 jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api" }
 
 # --- 직렬화 / Kotlin (Boot BOM 관리) ---
-jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 
