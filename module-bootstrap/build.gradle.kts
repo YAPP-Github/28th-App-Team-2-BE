@@ -24,4 +24,15 @@ dependencies {
     implementation(libs.sentry.spring.boot4.starter)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
     runtimeOnly(libs.postgresql)
+
+    testImplementation(libs.spring.boot.test)
+    testImplementation(libs.spring.boot.test.autoconfigure)
+    testImplementation(libs.spring.test)
+    testImplementation(libs.spring.security.test)
+    testImplementation(libs.springmockk)
+    testImplementation(libs.kotest.extensions.spring)
+    testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.core)
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.spring.boot.testcontainers)
 }

@@ -114,6 +114,10 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-jun
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 spring-boot-data-jpa-test = { module = "org.springframework.boot:spring-boot-data-jpa-test" }
 spring-boot-data-redis-test = { module = "org.springframework.boot:spring-boot-data-redis-test" }
+spring-boot-test = { module = "org.springframework.boot:spring-boot-test" }
+spring-boot-test-autoconfigure = { module = "org.springframework.boot:spring-boot-test-autoconfigure" }
+spring-test = { module = "org.springframework:spring-test" }
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
 
 [bundles]
 # 모든 모듈 공통 테스트(Kotest). MockK는 필요 모듈에서 개별 추가.
