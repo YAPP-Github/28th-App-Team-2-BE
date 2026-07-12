@@ -2,8 +2,8 @@ package com.yapp.todakun.shared
 
 import java.util.UUID
 
-interface MemberAuthPort {
-    fun findMemberId(
+interface GetMemberPort {
+    fun findIdByOauth(
         provider: OauthProvider,
         providerId: String,
     ): UUID?

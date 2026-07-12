@@ -1,16 +1,16 @@
-package com.yapp.todakun.member.application
+package com.yapp.todakun.member.adapter.persistence
 
-import com.yapp.todakun.common.annotation.QueryService
 import com.yapp.todakun.member.repository.MemberRepository
-import com.yapp.todakun.shared.MemberAuthPort
+import com.yapp.todakun.shared.GetMemberPort
 import com.yapp.todakun.shared.OauthProvider
+import org.springframework.stereotype.Component
 import java.util.UUID
 
-@QueryService
-class MemberAuthService(
+@Component
+class GetMemberAdapter(
     private val memberRepository: MemberRepository,
-) : MemberAuthPort {
-    override fun findMemberId(
+) : GetMemberPort {
+    override fun findIdByOauth(
         provider: OauthProvider,
         providerId: String,
     ): UUID? = memberRepository.findIdByOauth(provider, providerId)

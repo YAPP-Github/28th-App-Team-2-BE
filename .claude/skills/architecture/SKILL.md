@@ -129,8 +129,8 @@ val id: UUID = Uuid.generateV7().toJavaUuid()  // domain entity / value object
 
 - Direct references between domain entities are forbidden
 - If you need data from another domain, go through a port interface in the `shared` module
-- `auth-application` → `shared.UserAuthPort` ← implemented by `user-application`
-- On MSA migration, replace the `user-application` implementation with an HTTP client
+- `auth-application` → `shared.GetMemberPort`/`CreateMemberPort` ← implemented by `member-adapter-out` (e.g. `GetMemberAdapter`, `CreateMemberAdapter`), not `member-application` — the port implementation is an adapter, not a use-case service
+- On MSA migration, replace the `member-adapter-out` implementation with an HTTP client
 
 ## Swagger Patterns
 

@@ -8,19 +8,19 @@ import com.yapp.todakun.auth.port.outbound.OauthPort
 import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.common.annotation.CommandService
-import com.yapp.todakun.shared.MemberAuthPort
+import com.yapp.todakun.shared.GetMemberPort
 
 @CommandService
 class LoginService(
     private val oauthPort: OauthPort,
-    private val memberAuthPort: MemberAuthPort,
+    private val getMemberPort: GetMemberPort,
     private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
     private val onboardingTokenPort: OnboardingTokenPort,
 ) : LoginUseCase {
     override fun login(command: LoginCommand): LoginResult {
         val profile = oauthPort.fetchProfile(command.provider, command.oauthAccessToken)
-        val memberId = memberAuthPort.findMemberId(profile.provider, profile.providerId)
+        val memberId = getMemberPort.findIdByOauth(profile.provider, profile.providerId)
 
         return if (memberId == null) {
             LoginResult(

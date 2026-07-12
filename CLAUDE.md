@@ -89,7 +89,7 @@ todakun/                              # top-level module dirs carry the `module-
 ```
 
 **Dependency direction:** `adapter-in`/`adapter-out` → `application` → `domain`; all modules → `common`/`shared`; `bootstrap` → integrates everything.
-**Cross-domain references:** `auth-application` → `shared.UserAuthPort` ← implemented by `user-application` (on MSA migration, swap the implementation for an HTTP client).
+**Cross-domain references:** `auth-application` → `shared.GetMemberPort`/`CreateMemberPort` ← implemented by `member-adapter-out` (e.g. `GetMemberAdapter`, `CreateMemberAdapter`) (on MSA migration, swap the implementation for an HTTP client).
 
 ## Core Development Principles (decisions not covered by skills)
 

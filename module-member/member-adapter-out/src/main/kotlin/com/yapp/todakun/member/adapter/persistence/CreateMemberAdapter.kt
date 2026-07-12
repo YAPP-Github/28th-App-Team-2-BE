@@ -1,6 +1,5 @@
-package com.yapp.todakun.member.application
+package com.yapp.todakun.member.adapter.persistence
 
-import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.member.BirthTime
 import com.yapp.todakun.member.CalendarType
 import com.yapp.todakun.member.Gender
@@ -10,12 +9,13 @@ import com.yapp.todakun.member.RelationshipStatus
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.shared.CreateMemberPort
 import com.yapp.todakun.shared.OauthProvider
+import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
-@CommandService
-class CreateMemberService(
+@Component
+class CreateMemberAdapter(
     private val memberRepository: MemberRepository,
 ) : CreateMemberPort {
     @ExperimentalUuidApi

@@ -1,4 +1,4 @@
-package com.yapp.todakun.member.application
+package com.yapp.todakun.member.adapter.persistence
 
 import com.yapp.todakun.member.fixture.MemberFixture
 import com.yapp.todakun.member.repository.MemberRepository
@@ -10,21 +10,21 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 
-class MemberAuthServiceTest :
+class GetMemberAdapterTest :
     DescribeSpec(
         {
             val memberRepository = mockk<MemberRepository>()
-            val memberAuthService = MemberAuthService(memberRepository)
+            val getMemberAdapter = GetMemberAdapter(memberRepository)
 
             afterTest { clearMocks(memberRepository) }
 
-            describe("findMemberId") {
+            describe("findIdByOauth") {
                 context("일치하는 회원이 존재하면") {
                     it("해당 회원의 id를 반환한다") {
                         val member = MemberFixture.create()
                         every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns member.id
 
-                        val found = memberAuthService.findMemberId(member.oauthProvider, member.providerId)
+                        val found = getMemberAdapter.findIdByOauth(member.oauthProvider, member.providerId)
 
                         found shouldBe member.id
                     }
@@ -35,7 +35,7 @@ class MemberAuthServiceTest :
                         val member = MemberFixture.create(oauthProvider = OauthProvider.KAKAO)
                         every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns null
 
-                        val found = memberAuthService.findMemberId(member.oauthProvider, member.providerId)
+                        val found = getMemberAdapter.findIdByOauth(member.oauthProvider, member.providerId)
 
                         found.shouldBeNull()
                     }
