@@ -1,8 +1,8 @@
 package com.yapp.todakun.auth.application.service
 
 import com.yapp.todakun.auth.exception.OnboardingTokenInvalidException
-import com.yapp.todakun.auth.port.inbound.LoginResult
 import com.yapp.todakun.auth.port.inbound.SignupCommand
+import com.yapp.todakun.auth.port.inbound.SignupResult
 import com.yapp.todakun.auth.port.inbound.SignupUseCase
 import com.yapp.todakun.auth.port.outbound.AccessTokenPort
 import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
@@ -17,7 +17,7 @@ class SignupService(
     private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
 ) : SignupUseCase {
-    override fun signup(command: SignupCommand): LoginResult {
+    override fun signup(command: SignupCommand): SignupResult {
         val profile =
             onboardingTokenPort.findProfile(command.onboardingToken)
                 ?: throw OnboardingTokenInvalidException()
@@ -35,8 +35,7 @@ class SignupService(
                 relationshipStatus = command.relationshipStatus,
             )
 
-        return LoginResult(
-            isNewMember = false,
+        return SignupResult(
             accessToken = accessTokenPort.generate(memberId),
             refreshToken = refreshTokenPort.issue(memberId),
         ).also { onboardingTokenPort.revoke(command.onboardingToken) }

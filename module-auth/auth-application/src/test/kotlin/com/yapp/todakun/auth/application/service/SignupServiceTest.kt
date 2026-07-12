@@ -74,7 +74,6 @@ class SignupServiceTest :
 
                         val result = signupService.signup(command)
 
-                        result.isNewMember shouldBe false
                         result.accessToken shouldBe issuedAccessToken
                         result.refreshToken shouldBe issuedRefreshToken
                         verify(exactly = 1) { onboardingTokenPort.revoke(command.onboardingToken) }
