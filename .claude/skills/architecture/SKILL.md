@@ -128,9 +128,10 @@ val id: UUID = Uuid.generateV7().toJavaUuid()  // domain entity / value object
 ## Cross-Domain References
 
 - Direct references between domain entities are forbidden
-- If you need data from another domain, go through a port interface in the `shared` module
-- `auth-application` → `shared.GetMemberPort`/`CreateMemberPort` ← implemented by `member-adapter-out` (e.g. `GetMemberAdapter`, `CreateMemberAdapter`), not `member-application` — the port implementation is an adapter, not a use-case service
-- On MSA migration, replace the `member-adapter-out` implementation with an HTTP client
+- Going through a `shared` port is only warranted when a domain's own use case must branch/act on another domain's data — not whenever data merely needs to be displayed. If nothing about the caller's logic depends on the result, let the client call the other domain's own `*UseCase` directly instead of coupling the two domains on the backend.
+- Example: `LoginService` must branch between issuing tokens vs. an onboarding token depending on whether the member already exists, so it goes through `shared.GetMemberPort` ← implemented by `member-adapter-out` (`GetMemberAdapter`), not `member-application` — the port implementation is an adapter, not a use-case service.
+- Today (monolith) `GetMemberAdapter` queries `MemberRepository` via JPA; once `member` is split out for MSA, only that adapter is swapped for an HTTP client — `auth-application`'s code doesn't change, because the port is the stable contract.
+- Counter-example: "show the member's own profile screen" needs no branching in another domain, so it doesn't need a cross-domain port — the client calls member's own `*UseCase` directly.
 
 ## Swagger Patterns
 
