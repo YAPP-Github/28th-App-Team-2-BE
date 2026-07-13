@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -32,6 +33,7 @@ import lombok.NoArgsConstructor;
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class MemberJpaEntity extends BaseTimeEntity {
 
     @Id
@@ -76,19 +78,19 @@ public class MemberJpaEntity extends BaseTimeEntity {
     private RelationshipStatus relationshipStatus;
 
     public static MemberJpaEntity fromDomain(Member member) {
-        return new MemberJpaEntity(
-                member.getId(),
-                member.getName(),
-                member.getBirthDate(),
-                member.getBirthTime(),
-                member.getCalendarType(),
-                member.getGender(),
-                member.getRole(),
-                member.getOauthProvider(),
-                member.getProviderId(),
-                member.getJob(),
-                member.getRelationshipStatus()
-        );
+        return MemberJpaEntity.builder()
+                .id(member.getId())
+                .name(member.getName())
+                .birthDate(member.getBirthDate())
+                .birthTime(member.getBirthTime())
+                .calendarType(member.getCalendarType())
+                .gender(member.getGender())
+                .role(member.getRole())
+                .oauthProvider(member.getOauthProvider())
+                .providerId(member.getProviderId())
+                .job(member.getJob())
+                .relationshipStatus(member.getRelationshipStatus())
+                .build();
     }
 
     public Member toDomain() {
