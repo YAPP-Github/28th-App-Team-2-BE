@@ -92,11 +92,6 @@ jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 # --- 구글 ID 토큰(JWKS) 검증 (auth adapter-out) ---
 nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
 
-# --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
-spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
-spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
-spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
-
 # --- 아키텍처 테스트 ---
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 
