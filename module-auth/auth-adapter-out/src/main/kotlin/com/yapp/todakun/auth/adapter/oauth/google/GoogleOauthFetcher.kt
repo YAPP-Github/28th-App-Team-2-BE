@@ -19,7 +19,7 @@ class GoogleOauthFetcher(
 ) {
     fun fetchProfile(idToken: String): OauthMemberProfile {
         val claims = parseVerifiedClaims(idToken)
-        val email = requireVerifiedEmail(claims.getStringClaim("email"), isEmailVerified(claims))
+        val email = requireVerifiedEmail(extractEmail(claims), isEmailVerified(claims))
 
         return OauthMemberProfile(
             provider = OauthProvider.GOOGLE,
@@ -49,5 +49,12 @@ class GoogleOauthFetcher(
             if (claims.issuer !in googleOauthProperties.issuers || googleOauthProperties.clientIds.none { it in claims.audience }) {
                 throw OauthTokenInvalidException()
             }
+        }
+
+    private fun extractEmail(claims: JWTClaimsSet): String? =
+        try {
+            claims.getStringClaim("email")
+        } catch (_: ParseException) {
+            throw OauthTokenInvalidException()
         }
 }
