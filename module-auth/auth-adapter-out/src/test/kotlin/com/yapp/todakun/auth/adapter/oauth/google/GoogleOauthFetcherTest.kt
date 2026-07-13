@@ -5,6 +5,7 @@ import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor
 import com.yapp.todakun.auth.code.AuthErrorCode
+import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.auth.fixture.GoogleOauthFixture
 import com.yapp.todakun.common.exception.UnauthorizedException
 import com.yapp.todakun.shared.OauthProvider
@@ -67,54 +68,54 @@ class GoogleOauthFetcherTest :
             }
 
             context("id 토큰 파싱에 실패하면") {
-                it("OAUTH_TOKEN_INVALID로 UnauthorizedException을 던진다") {
+                it("OauthTokenInvalidException을 던진다") {
                     every { googleIdTokenProcessor.process(ID_TOKEN, null) } throws ParseException("parse error", 0)
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(ID_TOKEN) }
+                    val exception = shouldThrow<OauthTokenInvalidException> { fetcher.fetchProfile(ID_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_TOKEN_INVALID
                 }
             }
 
             context("서명 검증에 실패하면") {
-                it("OAUTH_TOKEN_INVALID로 UnauthorizedException을 던진다") {
+                it("OauthTokenInvalidException을 던진다") {
                     every { googleIdTokenProcessor.process(ID_TOKEN, null) } throws BadJOSEException("signature error")
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(ID_TOKEN) }
+                    val exception = shouldThrow<OauthTokenInvalidException> { fetcher.fetchProfile(ID_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_TOKEN_INVALID
                 }
             }
 
             context("JOSE 처리에 실패하면") {
-                it("OAUTH_TOKEN_INVALID로 UnauthorizedException을 던진다") {
+                it("OauthTokenInvalidException을 던진다") {
                     every { googleIdTokenProcessor.process(ID_TOKEN, null) } throws JOSEException("jose error")
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(ID_TOKEN) }
+                    val exception = shouldThrow<OauthTokenInvalidException> { fetcher.fetchProfile(ID_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_TOKEN_INVALID
                 }
             }
 
             context("issuer가 신뢰할 수 없는 값이면") {
-                it("OAUTH_TOKEN_INVALID로 UnauthorizedException을 던진다") {
+                it("OauthTokenInvalidException을 던진다") {
                     every {
                         googleIdTokenProcessor.process(ID_TOKEN, null)
                     } returns GoogleOauthFixture.claims(issuer = UNTRUSTED_ISSUER)
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(ID_TOKEN) }
+                    val exception = shouldThrow<OauthTokenInvalidException> { fetcher.fetchProfile(ID_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_TOKEN_INVALID
                 }
             }
 
             context("audience에 등록된 clientId가 없으면") {
-                it("OAUTH_TOKEN_INVALID로 UnauthorizedException을 던진다") {
+                it("OauthTokenInvalidException을 던진다") {
                     every {
                         googleIdTokenProcessor.process(ID_TOKEN, null)
                     } returns GoogleOauthFixture.claims(audience = UNKNOWN_CLIENT_ID)
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(ID_TOKEN) }
+                    val exception = shouldThrow<OauthTokenInvalidException> { fetcher.fetchProfile(ID_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_TOKEN_INVALID
                 }

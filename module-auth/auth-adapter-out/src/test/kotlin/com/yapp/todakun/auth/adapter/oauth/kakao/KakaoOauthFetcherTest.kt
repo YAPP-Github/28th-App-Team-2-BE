@@ -1,6 +1,8 @@
 package com.yapp.todakun.auth.adapter.oauth.kakao
 
 import com.yapp.todakun.auth.code.AuthErrorCode
+import com.yapp.todakun.auth.exception.OauthProviderUnavailableException
+import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.auth.fixture.KakaoOauthFixture
 import com.yapp.todakun.auth.fixture.OauthFixture
 import com.yapp.todakun.common.exception.UnauthorizedException
@@ -13,8 +15,11 @@ import io.mockk.every
 import io.mockk.mockk
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.HttpServerErrorException
+import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
-import org.springframework.web.client.RestClientResponseException
 
 class KakaoOauthFetcherTest :
     DescribeSpec({
@@ -71,13 +76,29 @@ class KakaoOauthFetcherTest :
                 }
             }
 
-            context("카카오 API 호출이 실패하면") {
-                it("OAUTH_TOKEN_INVALID로 UnauthorizedException을 던진다") {
-                    stubFailure(RestClientResponseException("Unauthorized", 401, "Unauthorized", null, null, null))
+            context("카카오가 4xx를 응답하면") {
+                it("OauthTokenInvalidException을 던진다") {
+                    stubFailure(HttpClientErrorException(HttpStatus.UNAUTHORIZED))
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(OauthFixture.OAUTH_ACCESS_TOKEN) }
+                    val exception = shouldThrow<OauthTokenInvalidException> { fetcher.fetchProfile(OauthFixture.OAUTH_ACCESS_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_TOKEN_INVALID
+                }
+            }
+
+            context("카카오가 5xx를 응답하면") {
+                it("OauthProviderUnavailableException을 던진다") {
+                    stubFailure(HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE))
+
+                    shouldThrow<OauthProviderUnavailableException> { fetcher.fetchProfile(OauthFixture.OAUTH_ACCESS_TOKEN) }
+                }
+            }
+
+            context("네트워크 오류로 카카오 호출이 실패하면") {
+                it("OauthProviderUnavailableException을 던진다") {
+                    stubFailure(ResourceAccessException("Connection timed out"))
+
+                    shouldThrow<OauthProviderUnavailableException> { fetcher.fetchProfile(OauthFixture.OAUTH_ACCESS_TOKEN) }
                 }
             }
         }

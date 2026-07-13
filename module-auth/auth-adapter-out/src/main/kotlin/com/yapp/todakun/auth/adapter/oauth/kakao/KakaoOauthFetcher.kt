@@ -2,13 +2,14 @@ package com.yapp.todakun.auth.adapter.oauth.kakao
 
 import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.adapter.oauth.requireVerifiedEmail
-import com.yapp.todakun.auth.code.AuthErrorCode
-import com.yapp.todakun.common.exception.UnauthorizedException
+import com.yapp.todakun.auth.exception.OauthProviderUnavailableException
+import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.shared.OauthProvider
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClient
-import org.springframework.web.client.RestClientResponseException
+import org.springframework.web.client.RestClientException
 import org.springframework.web.client.requiredBody
 
 @Component
@@ -34,7 +35,9 @@ class KakaoOauthFetcher(
                 .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
                 .retrieve()
                 .requiredBody<KakaoMemberInfoResponse>()
-        } catch (_: RestClientResponseException) {
-            throw UnauthorizedException(AuthErrorCode.OAUTH_TOKEN_INVALID)
+        } catch (_: HttpClientErrorException) {
+            throw OauthTokenInvalidException()
+        } catch (_: RestClientException) {
+            throw OauthProviderUnavailableException()
         }
 }

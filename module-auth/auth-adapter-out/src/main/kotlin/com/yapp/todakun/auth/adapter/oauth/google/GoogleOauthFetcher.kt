@@ -7,8 +7,7 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor
 import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.adapter.oauth.requireVerifiedEmail
-import com.yapp.todakun.auth.code.AuthErrorCode
-import com.yapp.todakun.common.exception.UnauthorizedException
+import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.shared.OauthProvider
 import org.springframework.stereotype.Component
 import java.text.ParseException
@@ -41,14 +40,14 @@ class GoogleOauthFetcher(
         try {
             googleIdTokenProcessor.process(idToken, null)
         } catch (_: ParseException) {
-            throw UnauthorizedException(AuthErrorCode.OAUTH_TOKEN_INVALID)
+            throw OauthTokenInvalidException()
         } catch (_: BadJOSEException) {
-            throw UnauthorizedException(AuthErrorCode.OAUTH_TOKEN_INVALID)
+            throw OauthTokenInvalidException()
         } catch (_: JOSEException) {
-            throw UnauthorizedException(AuthErrorCode.OAUTH_TOKEN_INVALID)
+            throw OauthTokenInvalidException()
         }.also { claims ->
             if (claims.issuer !in googleOauthProperties.issuers || googleOauthProperties.clientIds.none { it in claims.audience }) {
-                throw UnauthorizedException(AuthErrorCode.OAUTH_TOKEN_INVALID)
+                throw OauthTokenInvalidException()
             }
         }
 }

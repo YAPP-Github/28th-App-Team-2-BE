@@ -15,4 +15,5 @@ enum class AuthErrorCode(
     OAUTH_TOKEN_INVALID("AUTH-401", "유효하지 않은 소셜 로그인 토큰입니다.", 401),
     OAUTH_EMAIL_REQUIRED("AUTH-401", "이메일 제공에 동의해야 로그인할 수 있습니다.", 401),
     ONBOARDING_TOKEN_INVALID("AUTH-401", "유효하지 않거나 만료된 온보딩 토큰입니다.", 401),
+    OAUTH_PROVIDER_UNAVAILABLE("AUTH-503", "소셜 로그인 서버에 일시적으로 연결할 수 없습니다.", 503),
 }
