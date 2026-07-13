@@ -9,4 +9,5 @@ enum class MemberErrorCode(
 ) : ResponseCode {
     MEMBER_NOT_FOUND("MEMBER-404", "회원을 찾을 수 없습니다.", 404),
     MEMBER_PROFILE_INVALID("MEMBER-400", "유효하지 않은 회원 정보입니다.", 400),
+    MEMBER_ALREADY_EXISTS("MEMBER-409", "이미 가입된 회원입니다.", 409),
 }

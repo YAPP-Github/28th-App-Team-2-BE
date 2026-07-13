@@ -1,8 +1,10 @@
 package com.yapp.todakun.member.adapter.persistence
 
 import com.yapp.todakun.member.config.TestContainersConfig
+import com.yapp.todakun.member.exception.MemberAlreadyExistsException
 import com.yapp.todakun.member.fixture.MemberFixture
 import com.yapp.todakun.shared.OauthProvider
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -46,6 +48,15 @@ class MemberRepositoryAdapterTest(
 
                         updated.name shouldBe updatedName
                         adapter.findById(member.id)?.name shouldBe updatedName
+                    }
+                }
+
+                context("동일한 oauthProvider와 providerId를 가진 다른 회원을 저장하면") {
+                    it("MemberAlreadyExistsException을 던진다") {
+                        val member = savedMember()
+                        val duplicatedMember = member.copy(id = Uuid.generateV7().toJavaUuid())
+
+                        shouldThrow<MemberAlreadyExistsException> { adapter.save(duplicatedMember) }
                     }
                 }
             }

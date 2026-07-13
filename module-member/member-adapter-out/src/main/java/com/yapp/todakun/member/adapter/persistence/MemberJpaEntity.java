@@ -15,6 +15,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -22,7 +23,13 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "member")
+@Table(
+        name = "member",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_member_oauth_provider_id",
+                columnNames = {"oauth_provider", "provider_id"}
+        )
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class MemberJpaEntity extends BaseTimeEntity {
