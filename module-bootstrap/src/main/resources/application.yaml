@@ -4,6 +4,8 @@ spring:
   jpa:
     # OSIV 비활성화 — 지연 로딩은 application 계층 트랜잭션 안에서 끝낸다.
     open-in-view: false
+    hibernate:
+      ddl-auto: validate  # 공통 기본값 — 각 프로필에서 오버라이드 가능
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
