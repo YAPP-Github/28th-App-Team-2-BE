@@ -17,9 +17,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "member")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class MemberJpaEntity extends BaseTimeEntity {
 
     @Id
@@ -62,35 +67,6 @@ public class MemberJpaEntity extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RelationshipStatus relationshipStatus;
-
-    protected MemberJpaEntity() {
-    }
-
-    private MemberJpaEntity(
-            UUID id,
-            String name,
-            LocalDate birthDate,
-            BirthTime birthTime,
-            CalendarType calendarType,
-            Gender gender,
-            Role role,
-            OauthProvider oauthProvider,
-            String providerId,
-            Job job,
-            RelationshipStatus relationshipStatus
-    ) {
-        this.id = id;
-        this.name = name;
-        this.birthDate = birthDate;
-        this.birthTime = birthTime;
-        this.calendarType = calendarType;
-        this.gender = gender;
-        this.role = role;
-        this.oauthProvider = oauthProvider;
-        this.providerId = providerId;
-        this.job = job;
-        this.relationshipStatus = relationshipStatus;
-    }
 
     public static MemberJpaEntity fromDomain(Member member) {
         return new MemberJpaEntity(

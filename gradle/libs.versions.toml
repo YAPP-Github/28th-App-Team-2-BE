@@ -22,11 +22,15 @@ sentry = "8.47.0"
 # Firebase Admin SDK (FCM 푸시 발송). Boot BOM 미관리 → 자체 버전. VM은 ADC로 인증(키 파일 불필요).
 firebaseAdmin = "9.10.0"
 nimbusJoseJwt = "10.9.1"
+# Lombok (Java JPA 엔티티 보일러플레이트 생성). JDK 25 지원 버전.
+lombok = "1.18.46"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-allopen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
+# kotlin("plugin.lombok"): 같은 모듈의 Kotlin 코드가 Lombok이 생성한 멤버를 인식하게 해준다(Java entity + Kotlin adapter 혼재 모듈용).
+kotlin-lombok-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-lombok", version.ref = "kotlin" }
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
 ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin", version.ref = "ktlint" }
 
@@ -66,6 +70,9 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 
 # --- 영속성 (adapter-out, Boot BOM 관리) ---
 postgresql = { module = "org.postgresql:postgresql" }
+
+# --- Lombok (Java JPA 엔티티: common-persistence, *-adapter-out) ---
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 
 # --- 모니터링 / APM (bootstrap) ---
 # Prometheus 메트릭 노출(/actuator/prometheus). 버전은 Boot BOM(Micrometer)이 관리.

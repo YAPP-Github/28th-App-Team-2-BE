@@ -1,5 +1,6 @@
 plugins {
     id("todakun.kotlin-common")
+    id("todakun.lombok")
 }
 
 dependencies {

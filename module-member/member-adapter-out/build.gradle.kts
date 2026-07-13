@@ -1,5 +1,6 @@
 plugins {
     id("todakun.spring")
+    id("todakun.lombok")
 }
 
 dependencies {
