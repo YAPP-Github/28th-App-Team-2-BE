@@ -46,5 +46,33 @@ data class Member(
                 job = job,
                 relationshipStatus = relationshipStatus,
             )
+
+        @JvmStatic
+        fun reconstitute(
+            id: UUID,
+            name: String,
+            birthDate: LocalDate,
+            birthTime: BirthTime,
+            calendarType: CalendarType,
+            gender: Gender,
+            role: Role,
+            oauthProvider: OauthProvider,
+            providerId: String,
+            job: Job,
+            relationshipStatus: RelationshipStatus,
+        ): Member =
+            Member(
+                id = id,
+                name = name,
+                birthDate = birthDate,
+                birthTime = birthTime,
+                calendarType = calendarType,
+                gender = gender,
+                role = role,
+                oauthProvider = oauthProvider,
+                providerId = providerId,
+                job = job,
+                relationshipStatus = relationshipStatus,
+            )
     }
 }

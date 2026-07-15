@@ -29,7 +29,7 @@ object MemberFixture {
         job: Job = Job.STUDENT,
         relationshipStatus: RelationshipStatus = RelationshipStatus.SOLO,
     ): Member =
-        Member(
+        Member.reconstitute(
             id = id,
             name = name,
             birthDate = birthDate,

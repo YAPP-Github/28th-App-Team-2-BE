@@ -7,21 +7,19 @@ import com.yapp.todakun.member.Job;
 import com.yapp.todakun.member.Member;
 import com.yapp.todakun.member.RelationshipStatus;
 import com.yapp.todakun.member.Role;
-import com.yapp.todakun.persistence.BaseTimeEntity;
+import com.yapp.todakun.persistence.BaseEntity;
 import com.yapp.todakun.shared.OauthProvider;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(
@@ -31,14 +29,10 @@ import lombok.NoArgsConstructor;
                 columnNames = {"oauth_provider", "provider_id"}
         )
 )
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
-public class MemberJpaEntity extends BaseTimeEntity {
-
-    @Id
-    @Column(nullable = false, updatable = false)
-    private UUID id;
+public class MemberJpaEntity extends BaseEntity {
 
     @Column(nullable = false)
     private String name;
@@ -94,8 +88,8 @@ public class MemberJpaEntity extends BaseTimeEntity {
     }
 
     public Member toDomain() {
-        return new Member(
-                id,
+        return Member.reconstitute(
+                getId(),
                 name,
                 birthDate,
                 birthTime,
