@@ -4,7 +4,9 @@
 creation_rules:
   - path_regex: inventory/dev/.*\.sops\.ya?ml$
     age: >-
-      age1jdem2d3d95c2lumpkgtfu9ajge7gt065952yysfve5jwppyq6utqnharl9
+      age1jdem2d3d95c2lumpkgtfu9ajge7gt065952yysfve5jwppyq6utqnharl9,
+      age1kkdg6kehtjn9dryapgj2hywgg0xlflv8dvdsxed4m5a8az82kdustamkv0
   - path_regex: inventory/prod/.*\.sops\.ya?ml$
     age: >-
-      age1jdem2d3d95c2lumpkgtfu9ajge7gt065952yysfve5jwppyq6utqnharl9
+      age1jdem2d3d95c2lumpkgtfu9ajge7gt065952yysfve5jwppyq6utqnharl9,
+      age1kkdg6kehtjn9dryapgj2hywgg0xlflv8dvdsxed4m5a8az82kdustamkv0
