@@ -22,22 +22,26 @@ class SignupService(
             onboardingTokenPort.findProfile(command.onboardingToken)
                 ?: throw OnboardingTokenInvalidException()
 
-        val memberId =
-            createMemberPort.create(
-                provider = profile.provider,
-                providerId = profile.providerId,
-                name = command.name,
-                birthDate = command.birthDate,
-                birthTime = command.birthTime,
-                calendarType = command.calendarType,
-                gender = command.gender,
-                job = command.job,
-                relationshipStatus = command.relationshipStatus,
-            )
+        try {
+            val memberId =
+                createMemberPort.create(
+                    provider = profile.provider,
+                    providerId = profile.providerId,
+                    name = command.name,
+                    birthDate = command.birthDate,
+                    birthTime = command.birthTime,
+                    calendarType = command.calendarType,
+                    gender = command.gender,
+                    job = command.job,
+                    relationshipStatus = command.relationshipStatus,
+                )
 
-        return SignupResult(
-            accessToken = accessTokenPort.generate(memberId),
-            refreshToken = refreshTokenPort.issue(memberId),
-        ).also { onboardingTokenPort.revoke(command.onboardingToken) }
+            return SignupResult(
+                accessToken = accessTokenPort.generate(memberId),
+                refreshToken = refreshTokenPort.issue(memberId),
+            )
+        } finally {
+            onboardingTokenPort.revoke(command.onboardingToken)
+        }
     }
 }
