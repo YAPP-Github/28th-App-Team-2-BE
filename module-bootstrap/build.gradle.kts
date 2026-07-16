@@ -5,11 +5,17 @@ plugins {
 
 dependencies {
     implementation(project(":common-web"))
+    implementation(project(":common-persistence"))
     implementation(project(":auth:domain"))
+    implementation(project(":auth:application"))
     implementation(project(":auth:adapter-in"))
     implementation(project(":auth:adapter-out"))
+    implementation(project(":member:domain"))
+    implementation(project(":member:application"))
+    implementation(project(":member:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
+    implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.actuator)
@@ -17,4 +23,18 @@ dependencies {
     implementation(libs.spring.boot.starter.security)
     implementation(libs.sentry.spring.boot4.starter)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    runtimeOnly(libs.postgresql)
+
+    testImplementation(project(":shared"))
+    testImplementation(libs.spring.boot.test)
+    testImplementation(libs.spring.boot.test.autoconfigure)
+    testImplementation(libs.spring.boot.webmvc.test)
+    testImplementation(libs.spring.test)
+    testImplementation(libs.spring.security.test)
+    testImplementation(libs.springmockk)
+    testImplementation(libs.kotest.extensions.spring)
+    testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.core)
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.spring.boot.testcontainers)
 }

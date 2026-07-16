@@ -1,10 +1,10 @@
 package com.yapp.todakun.config
 
-import com.yapp.todakun.auth.adapter.web.CustomAccessDeniedHandler
-import com.yapp.todakun.auth.adapter.web.CustomAuthenticationEntryPoint
-import com.yapp.todakun.auth.adapter.web.JwtAuthenticationFilter
-import com.yapp.todakun.auth.port.AccessTokenPort
-import com.yapp.todakun.auth.port.BlacklistTokenPort
+import com.yapp.todakun.auth.adapter.security.CustomAccessDeniedHandler
+import com.yapp.todakun.auth.adapter.security.CustomAuthenticationEntryPoint
+import com.yapp.todakun.auth.adapter.security.JwtAuthenticationFilter
+import com.yapp.todakun.auth.port.outbound.AccessTokenPort
+import com.yapp.todakun.auth.port.outbound.BlacklistTokenPort
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -47,6 +47,7 @@ class SecurityConfig {
             authorizeHttpRequests {
                 SecurityPaths.SWAGGER.forEach { pattern -> authorize(pattern, permitAll) }
                 SecurityPaths.ACTUATOR.forEach { pattern -> authorize(pattern, permitAll) }
+                SecurityPaths.PUBLIC.forEach { pattern -> authorize(pattern, permitAll) }
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {

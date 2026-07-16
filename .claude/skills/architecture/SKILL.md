@@ -41,8 +41,8 @@ Each domain (`auth`, `user`, ...) has the following 4 modules.
 
 | Module | Role | Spring dependency |
 |--------|------|-------------------|
-| `{domain}-domain` | Pure Kotlin domain entities, port interfaces | None |
-| `{domain}-application` | Use-case services (`@CommandService`/`@QueryService`) | spring-tx/context (via common), `todakun.spring` convention |
+| `{domain}-domain` | Pure Kotlin domain entities, inbound port(`*UseCase` + its command/result models, `port.inbound`) and outbound port(`*Port`, `port.outbound`) interfaces | None |
+| `{domain}-application` | Use-case service **implementations** (`@CommandService`/`@QueryService`) of the `port.inbound` interfaces | spring-tx/context (via common), `todakun.spring` convention |
 | `{domain}-adapter-in` | REST Controller, DTO, Swagger interface | spring-web, springdoc |
 | `{domain}-adapter-out` | JPA(Java), OAuth, JWT, Redis adapters | spring-data-jpa, security, etc. |
 
@@ -83,6 +83,15 @@ dependencies {
 | `*-adapter-in` | `com.yapp.todakun.{domain}.adapter.web` |
 | `*-adapter-out` | `com.yapp.todakun.{domain}.adapter.{tech}` |
 
+`*-domain` separates port interfaces by direction (traditional hexagonal `port.in`/`port.out` naming, adjusted since `in` is a hard keyword in Kotlin and a literal `port.in`/`` port.`in` `` package also fails ktlint's `standard:package-name` rule).
+
+| Sub-package | Purpose | Example class |
+|-------------|---------|---------------|
+| `.port.inbound` | Inbound port: `*UseCase` interface + its command/result models (the use case's input/output contract lives with the interface, not in `*-application`) | `LoginUseCase`, `LoginCommand`, `LoginResult` |
+| `.port.outbound` | Outbound port: interface the domain requires from the outside, implemented by `*-adapter-out` (or `*-adapter-in` for things like JWT filters) | `AccessTokenPort`, `OAuthPort` |
+
+`*-application` holds only the `*Service` classes that implement `port.inbound` interfaces — no port interfaces or command/result models live there.
+
 `*-adapter-out` separates sub-packages by technology.
 
 | Sub-package | Purpose | Example class |
@@ -93,6 +102,8 @@ dependencies {
 | `.adapter.redis` | Redis (cache) adapter | `RedisTokenStore` |
 
 When adding a new technology adapter, create a new sub-package named after the technology.
+
+> Konsist enforces both: `*UseCase` interfaces must reside in `..port.inbound..`, and `*Port` interfaces (except cross-domain ports in `shared`, e.g. `UserAuthPort`) must reside in `..port.outbound..` (`module-architecture-test/.../ArchitectureTest.kt`).
 
 ## Domain Entity vs JPA Entity
 
@@ -117,9 +128,10 @@ val id: UUID = Uuid.generateV7().toJavaUuid()  // domain entity / value object
 ## Cross-Domain References
 
 - Direct references between domain entities are forbidden
-- If you need data from another domain, go through a port interface in the `shared` module
-- `auth-application` → `shared.UserAuthPort` ← implemented by `user-application`
-- On MSA migration, replace the `user-application` implementation with an HTTP client
+- Going through a `shared` port is only warranted when a domain's own use case must branch/act on another domain's data — not whenever data merely needs to be displayed. If nothing about the caller's logic depends on the result, let the client call the other domain's own `*UseCase` directly instead of coupling the two domains on the backend.
+- Example: `LoginService` must branch between issuing tokens vs. an onboarding token depending on whether the member already exists, so it goes through `shared.GetMemberPort` ← implemented by `member-adapter-out` (`GetMemberAdapter`), not `member-application` — the port implementation is an adapter, not a use-case service.
+- Today (monolith) `GetMemberAdapter` queries `MemberRepository` via JPA; once `member` is split out for MSA, only that adapter is swapped for an HTTP client — `auth-application`'s code doesn't change, because the port is the stable contract.
+- Counter-example: "show the member's own profile screen" needs no branching in another domain, so it doesn't need a cross-domain port — the client calls member's own `*UseCase` directly.
 
 ## Swagger Patterns
 
@@ -189,6 +201,7 @@ Declare transactions by attaching a **CQRS stereotype** (`com.yapp.todakun.commo
 | `@QueryService` | `@Service` + `@Transactional(readOnly = true)` | Query use cases |
 
 ```kotlin
+// CreateUserUseCase/GetUserUseCase come from {domain}-domain's com.yapp.todakun.{domain}.port.inbound
 @CommandService
 class CreateUserService(...) : CreateUserUseCase { ... }
 
@@ -202,9 +215,9 @@ class GetUserService(...) : GetUserUseCase { ... }
 
 ## DTO ↔ Domain Mapping
 
-- Mapping happens **only in the adapter layer**. The domain knows nothing of DTOs (no importing `*Request`/`*Response` in `*-domain`/`*-application`).
+- Mapping happens **only in the adapter layer**. The domain knows nothing of `*Request`/`*Response` (no importing them in `*-domain`/`*-application`) — but it does own the UseCase's own input/output models (`*Command`/`*Result` in `port.inbound`), since those are the port's contract, not adapter DTOs.
 - Response: a `from(domain)` factory in the `companion object` of `*Response`. The controller wraps it in `CommonResponse` (`*Response` itself knows nothing of the envelope).
-- Request: a `toCommand()` / domain-conversion function on `*Request`.
+- Request: a `toCommand()` / domain-conversion function on `*Request`, building the `port.inbound` command type.
 - Persistence: `toDomain()` / `fromDomain(domain)` on `*JpaEntity` (adapter-out).
 
 ```kotlin

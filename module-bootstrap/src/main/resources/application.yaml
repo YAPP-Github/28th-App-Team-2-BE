@@ -4,6 +4,11 @@ spring:
   jpa:
     # OSIV 비활성화 — 지연 로딩은 application 계층 트랜잭션 안에서 끝낸다.
     open-in-view: false
+    hibernate:
+      ddl-auto: validate  # 공통 기본값 — 각 프로필에서 오버라이드 가능
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 springdoc:
   swagger-ui:
@@ -26,3 +31,13 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+# 카카오/구글이 정한 고정 API 규격 — 환경(local/dev/prod) 무관하게 동일한 값.
+oauth:
+  kakao:
+    user-me-uri: https://kapi.kakao.com/v2/user/me
+  google:
+    jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+    issuers:
+      - https://accounts.google.com
+      - accounts.google.com

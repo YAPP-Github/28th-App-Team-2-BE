@@ -73,13 +73,25 @@ class ArchitectureTest {
     }
 
     @Test
-    fun `UseCase 인터페이스는 application 패키지에만 위치한다`() {
+    fun `UseCase 인터페이스는 domain의 port_inbound 패키지에만 위치한다`() {
         scope
             .interfaces()
             .filter { it.name.endsWith("UseCase") }
             .forEach { iface ->
-                check(iface.resideInPackage("..application..")) {
-                    "${iface.name}는 .application 패키지에 위치해야 한다"
+                check(iface.resideInPackage("..port.inbound..")) {
+                    "${iface.name}는 port.inbound 패키지에 위치해야 한다"
+                }
+            }
+    }
+
+    @Test
+    fun `아웃바운드 Port 인터페이스는 domain의 port_outbound 패키지에만 위치한다`() {
+        scope
+            .interfaces()
+            .filter { it.name.endsWith("Port") && !it.resideInPackage("..shared..") }
+            .forEach { iface ->
+                check(iface.resideInPackage("..port.outbound..")) {
+                    "${iface.name}는 port.outbound 패키지에 위치해야 한다"
                 }
             }
     }

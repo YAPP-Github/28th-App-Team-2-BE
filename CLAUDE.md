@@ -89,7 +89,10 @@ todakun/                              # top-level module dirs carry the `module-
 ```
 
 **Dependency direction:** `adapter-in`/`adapter-out` → `application` → `domain`; all modules → `common`/`shared`; `bootstrap` → integrates everything.
-**Cross-domain references:** `auth-application` → `shared.UserAuthPort` ← implemented by `user-application` (on MSA migration, swap the implementation for an HTTP client).
+**Cross-domain references:** 다른 도메인 데이터를 그냥 조회하는 게 아니라, 그 데이터로 자기 도메인이 분기/실행해야 할 때만 `shared` 포트를 거친다.
+- 예: `LoginService`는 로그인 시 "이미 가입한 회원인지"에 따라 토큰 발급/온보딩 발급을 분기해야 하므로 `shared.GetMemberPort` ← `member-adapter-out`(`GetMemberAdapter`)를 거친다.
+- 지금(모놀리식)은 `GetMemberAdapter`가 JPA로 `MemberRepository`를 조회하지만, MSA로 `member`가 분리되면 같은 `GetMemberPort`를 HTTP 어댑터로 구현체만 교체하면 되고 `auth-application`의 코드는 바뀌지 않는다 — 포트가 안정적인 계약 역할을 하기 때문.
+- 반례: 단순히 "내 프로필 화면에 회원 정보를 보여준다"는 auth가 알 필요 없는 member 자신의 조회이므로, member의 `*UseCase`를 클라이언트가 직접 호출하면 됨 — 크로스 도메인 포트 불필요.
 
 ## Core Development Principles (decisions not covered by skills)
 

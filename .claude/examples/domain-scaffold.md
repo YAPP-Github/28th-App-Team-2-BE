@@ -7,10 +7,12 @@ The procedure (order, verification) follows the `/new-domain` command. This docu
 
 | Module | Package |
 |--------|---------|
-| `{domain}-domain` | `com.yapp.todakun.{domain}` |
-| `{domain}-application` | `com.yapp.todakun.{domain}.application` |
+| `{domain}-domain` | `com.yapp.todakun.{domain}` (entities); `com.yapp.todakun.{domain}.port.inbound` (`*UseCase` + its command/result models); `com.yapp.todakun.{domain}.port.outbound` (`*Repository`/`*Port`) |
+| `{domain}-application` | `com.yapp.todakun.{domain}.application` (only `*Service` implementations of `port.inbound` interfaces — no port interfaces or command/result models here) |
 | `{domain}-adapter-in` | `com.yapp.todakun.{domain}.adapter.web` |
 | `{domain}-adapter-out` | `com.yapp.todakun.{domain}.adapter.{tech}` (JPA uses `.adapter.persistence`) |
+
+> `in`/`out` (not `inbound`/`outbound`) is the traditional hexagonal naming, but `in` is a hard keyword in Kotlin and a backtick-escaped `` port.`in` `` package also fails ktlint's `standard:package-name` rule — hence `port.inbound`/`port.outbound`.
 
 ## build.gradle.kts (per module)
 
@@ -88,10 +90,11 @@ val id: UUID = Uuid.generateV7().toJavaUuid(),
 )
 ```
 
-`{Domain}Repository.kt` — outbound port:
+`{Domain}Repository.kt` — outbound port (`com.yapp.todakun.{domain}.port.outbound`):
 ```kotlin
-package com.yapp.todakun.{domain}
+package com.yapp.todakun.{domain}.port.outbound
 
+import com.yapp.todakun.{domain}.{Domain}
 import java.util.UUID
 
 interface {Domain}Repository {
@@ -124,13 +127,13 @@ import com.yapp.todakun.common.exception.NotFoundException
 class {Domain}NotFoundException : NotFoundException({Domain}ErrorCode.{DOMAIN}_NOT_FOUND)
 ```
 
-## {domain}-application (`com.yapp.todakun.{domain}.application`)
+## {domain}-domain — inbound ports (`com.yapp.todakun.{domain}.port.inbound`)
 
-Split UseCase implementations **by responsibility** — mutation: `@CommandService`, query: `@QueryService`. Do not attach `@Transactional` separately on methods. On retrieval failure, throw `{Domain}NotFoundException` (no direct `RuntimeException`).
+`*UseCase` interfaces and their command/result models live together here (the port's contract), not in `{domain}-application`.
 
 `Create{Domain}UseCase.kt`:
 ```kotlin
-package com.yapp.todakun.{domain}.application
+package com.yapp.todakun.{domain}.port.inbound
 
 import java.util.UUID
 
@@ -143,7 +146,7 @@ data class Create{Domain}Command(/* fields */)
 
 `Get{Domain}UseCase.kt`:
 ```kotlin
-package com.yapp.todakun.{domain}.application
+package com.yapp.todakun.{domain}.port.inbound
 
 import com.yapp.todakun.{domain}.{Domain}
 import java.util.UUID
@@ -153,13 +156,19 @@ interface Get{Domain}UseCase {
 }
 ```
 
+## {domain}-application (`com.yapp.todakun.{domain}.application`)
+
+Only `*Service` **implementations** of the `port.inbound` interfaces live here — no port interfaces, no command/result models. Split by responsibility — mutation: `@CommandService`, query: `@QueryService`. Do not attach `@Transactional` separately on methods. On retrieval failure, throw `{Domain}NotFoundException` (no direct `RuntimeException`).
+
 `Create{Domain}Service.kt`:
 ```kotlin
 package com.yapp.todakun.{domain}.application
 
 import com.yapp.todakun.common.annotation.CommandService
         import com.yapp.todakun.{domain}.{Domain}
-import com.yapp.todakun.{domain}.{Domain}Repository
+import com.yapp.todakun.{domain}.port.inbound.Create{Domain}Command
+import com.yapp.todakun.{domain}.port.inbound.Create{Domain}UseCase
+import com.yapp.todakun.{domain}.port.outbound.{Domain}Repository
         import java.util.UUID
 
         @CommandService
@@ -178,7 +187,8 @@ package com.yapp.todakun.{domain}.application
 import com.yapp.todakun.common.annotation.QueryService
         import com.yapp.todakun.{domain}.{Domain}
 import com.yapp.todakun.{domain}.{Domain}NotFoundException
-        import com.yapp.todakun.{domain}.{Domain}Repository
+import com.yapp.todakun.{domain}.port.inbound.Get{Domain}UseCase
+        import com.yapp.todakun.{domain}.port.outbound.{Domain}Repository
         import java.util.UUID
 
         @QueryService
@@ -240,7 +250,7 @@ interface {Domain}JpaRepository : JpaRepository<{Domain}JpaEntity, UUID>
 package com.yapp.todakun.{domain}.adapter.persistence
 
 import com.yapp.todakun.{domain}.{Domain}
-import com.yapp.todakun.{domain}.{Domain}Repository
+import com.yapp.todakun.{domain}.port.outbound.{Domain}Repository
         import org.springframework.stereotype.Repository
         import java.util.UUID
 
@@ -297,8 +307,8 @@ import com.yapp.todakun.web.openapi.annotation.DisableSwaggerSecurity
 package com.yapp.todakun.{domain}.adapter.web
 
 import com.yapp.todakun.web.response.CommonResponse
-        import com.yapp.todakun.{domain}.application.Create{Domain}UseCase
-        import com.yapp.todakun.{domain}.application.Get{Domain}UseCase
+        import com.yapp.todakun.{domain}.port.inbound.Create{Domain}UseCase
+        import com.yapp.todakun.{domain}.port.inbound.Get{Domain}UseCase
         import org.springframework.http.ResponseEntity
         import org.springframework.web.bind.annotation.*
         import java.util.UUID
@@ -324,7 +334,7 @@ private val get{Domain}UseCase: Get{Domain}UseCase,
 ```kotlin
 package com.yapp.todakun.{domain}.adapter.web
 
-import com.yapp.todakun.{domain}.application.Create{Domain}Command
+import com.yapp.todakun.{domain}.port.inbound.Create{Domain}Command
 
         data class Create{Domain}Request(
 // request fields
@@ -351,6 +361,7 @@ val id: UUID,
 
 ## Core Rules
 
+- `*UseCase` interfaces (+ their command/result models) live in `{domain}-domain`'s `port.inbound`; `*Repository`/`*Port` interfaces live in `port.outbound`. `{domain}-application` holds only the `*Service` implementations — Konsist enforces both locations (`module-architecture-test/.../ArchitectureTest.kt`)
 - JPA entities must be **Java classes**; absolutely no Spring/JPA imports in domain entities
 - DB PKs are **time-based UUIDv7** (`Uuid.generateV7().toJavaUuid()`); no separate UUID-generator annotation on JPA entities
 - Response codes are domain `*ErrorCode` (implementing `ResponseCode`); exceptions are **subclasses of `AppException`** such as the common `NotFoundException` (no direct `RuntimeException`)

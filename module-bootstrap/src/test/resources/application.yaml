@@ -1,0 +1,23 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+token:
+  jwt:
+    secret: "3b1c2e7f9a4d6081c5e2f7a9b3d6180425e8f1a7c4b9d2e6f3081a5c7e9b2d4"
+    expiry-seconds: 300
+  onboarding:
+    expiry-seconds: 300
+  redis:
+    expiry-seconds: 300
+
+oauth:
+  kakao:
+    user-me-uri: https://kapi.kakao.com/v2/user/me
+  google:
+    client-ids: test-google-client-id
+    jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+    issuers:
+      - https://accounts.google.com
+      - accounts.google.com

@@ -10,6 +10,7 @@ springBoot = "4.1.0"
 springdocOpenapi = "2.8.3"
 konsist = "0.17.3"
 kotest = "5.9.1"
+kotestExtensionsSpring = "1.3.0"
 mockk = "1.13.13"
 springmockk = "4.0.2"
 jjwt = "0.12.6"
@@ -20,11 +21,16 @@ googleCloudLibrariesBom = "26.50.0"
 sentry = "8.47.0"
 # Firebase Admin SDK (FCM 푸시 발송). Boot BOM 미관리 → 자체 버전. VM은 ADC로 인증(키 파일 불필요).
 firebaseAdmin = "9.10.0"
+nimbusJoseJwt = "10.9.1"
+# Lombok (Java JPA 엔티티 보일러플레이트 생성). JDK 25 지원 버전.
+lombok = "1.18.46"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-allopen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
+# kotlin("plugin.lombok"): 같은 모듈의 Kotlin 코드가 Lombok이 생성한 멤버를 인식하게 해준다(Java entity + Kotlin adapter 혼재 모듈용).
+kotlin-lombok-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-lombok", version.ref = "kotlin" }
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
 ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin", version.ref = "ktlint" }
 
@@ -46,6 +52,7 @@ spring-boot-starter-oauth2-client = { module = "org.springframework.boot:spring-
 # --- Spring Framework 경량 모듈 (common/common-web, Boot BOM 관리) ---
 spring-context = { module = "org.springframework:spring-context" }
 spring-tx = { module = "org.springframework:spring-tx" }
+spring-web = { module = "org.springframework:spring-web" }
 
 # --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
 spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
@@ -57,12 +64,15 @@ slf4j-api = { module = "org.slf4j:slf4j-api" }
 jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api" }
 
 # --- 직렬화 / Kotlin (Boot BOM 관리) ---
-jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 
 # --- 영속성 (adapter-out, Boot BOM 관리) ---
 postgresql = { module = "org.postgresql:postgresql" }
+
+# --- Lombok (Java JPA 엔티티: common-persistence, *-adapter-out) ---
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 
 # --- 모니터링 / APM (bootstrap) ---
 # Prometheus 메트릭 노출(/actuator/prometheus). 버전은 Boot BOM(Micrometer)이 관리.
@@ -86,23 +96,51 @@ jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 
+# --- 구글 ID 토큰(JWKS) 검증 (auth adapter-out) ---
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
+
 # --- 아키텍처 테스트 ---
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 
 # --- 테스트 (Boot BOM이 testcontainers 버전 관리) ---
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-extensions-spring = { module = "io.kotest.extensions:kotest-extensions-spring", version.ref = "kotestExtensionsSpring" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
-testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+testcontainers-core = { module = "org.testcontainers:testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
+spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
+spring-boot-data-jpa-test = { module = "org.springframework.boot:spring-boot-data-jpa-test" }
+spring-boot-data-redis-test = { module = "org.springframework.boot:spring-boot-data-redis-test" }
+spring-boot-test = { module = "org.springframework.boot:spring-boot-test" }
+spring-boot-test-autoconfigure = { module = "org.springframework.boot:spring-boot-test-autoconfigure" }
+spring-boot-webmvc-test = { module = "org.springframework.boot:spring-boot-webmvc-test" }
+spring-test = { module = "org.springframework:spring-test" }
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
 
 [bundles]
 # 모든 모듈 공통 테스트(Kotest). MockK는 필요 모듈에서 개별 추가.
 kotest = ["kotest-runner-junit5", "kotest-assertions-core"]
-# adapter-out 통합 테스트 인프라.
-testcontainers = ["testcontainers-postgresql", "testcontainers-junit-jupiter"]
+
+# adapter-out 통합 테스트 인프라(@ServiceConnection, @DataJpaTest 등).
+testcontainers = [
+    "testcontainers-postgresql",
+    "testcontainers-junit-jupiter",
+    "spring-boot-testcontainers",
+    "spring-boot-data-jpa-test",
+]
+
+# adapter-out Redis 통합 테스트 인프라(@ServiceConnection, @DataRedisTest 등).
+testcontainers-redis = [
+    "testcontainers-core",
+    "testcontainers-junit-jupiter",
+    "spring-boot-testcontainers",
+    "spring-boot-data-redis-test",
+]
+
 # JWT (auth adapter-out): api는 implementation, impl/jackson은 runtimeOnly 권장.
 jjwt = ["jjwt-api", "jjwt-impl", "jjwt-jackson"]
