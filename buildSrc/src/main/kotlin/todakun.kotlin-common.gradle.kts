@@ -8,6 +8,12 @@ repositories {
     mavenCentral()
 }
 
+// nested 도메인 모듈은 Gradle 프로젝트 경로 leaf가 레이어명만이라 이름이 겹칠 수 있어,
+// bootJar에서 BOOT-INF/lib jar 파일명이 충돌하지 않도록 전체 경로 기반으로 고유화한다.
+base {
+    archivesName.set(path.trimStart(':').replace(':', '-'))
+}
+
 dependencies {
     // :common은 모든 모듈이 공통으로 쓰는 전역 모듈 → 여기서 일괄 주입(자기 자신은 제외).
     if (path != ":common") {
