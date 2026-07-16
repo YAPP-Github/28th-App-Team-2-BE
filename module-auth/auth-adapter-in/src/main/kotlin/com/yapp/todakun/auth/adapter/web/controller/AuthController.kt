@@ -6,6 +6,8 @@ import com.yapp.todakun.auth.adapter.web.dto.request.SignupRequest
 import com.yapp.todakun.auth.adapter.web.dto.response.LoginResponse
 import com.yapp.todakun.auth.adapter.web.dto.response.SignupResponse
 import com.yapp.todakun.auth.port.inbound.LoginUseCase
+import com.yapp.todakun.auth.port.inbound.LogoutCommand
+import com.yapp.todakun.auth.port.inbound.LogoutUseCase
 import com.yapp.todakun.auth.port.inbound.SignupUseCase
 import com.yapp.todakun.web.response.CommonResponse
 import org.springframework.http.ResponseEntity
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(
     private val loginUseCase: LoginUseCase,
     private val signupUseCase: SignupUseCase,
+    private val logoutUseCase: LogoutUseCase,
 ) : AuthApi {
     override fun login(request: LoginRequest): ResponseEntity<CommonResponse<LoginResponse>> {
         val result = loginUseCase.login(request.toCommand())
@@ -26,5 +29,11 @@ class AuthController(
         val result = signupUseCase.signup(request.toCommand())
 
         return CommonResponse.created(SignupResponse.from(result))
+    }
+
+    override fun logout(accessToken: String): ResponseEntity<CommonResponse<Unit>> {
+        logoutUseCase.logout(LogoutCommand(accessToken))
+
+        return CommonResponse.deleted()
     }
 }

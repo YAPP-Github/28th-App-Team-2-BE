@@ -6,7 +6,9 @@ import com.yapp.todakun.auth.adapter.web.dto.response.LoginResponse
 import com.yapp.todakun.auth.adapter.web.dto.response.SignupResponse
 import com.yapp.todakun.web.openapi.annotation.DisableSwaggerSecurity
 import com.yapp.todakun.web.response.CommonResponse
+import com.yapp.todakun.web.security.annotation.BearerToken
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -34,4 +36,14 @@ interface AuthApi {
     fun signup(
         @RequestBody @Valid request: SignupRequest,
     ): ResponseEntity<CommonResponse<SignupResponse>>
+
+    @Operation(
+        summary = "로그아웃",
+        description = "현재 access token을 무효화하고 해당 회원의 모든 refresh token을 폐기한다.",
+    )
+    @PostMapping("api/v1/auth/logout")
+    fun logout(
+        @Parameter(hidden = true)
+        @BearerToken accessToken: String,
+    ): ResponseEntity<CommonResponse<Unit>>
 }
