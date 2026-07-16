@@ -26,4 +26,9 @@ cd "$PROJECT_ROOT" || exit 0
 
 [[ -f "./gradlew" ]] || exit 0
 
-./gradlew ktlintFormat --quiet 2>&1 | tail -5 || true
+if ! OUTPUT=$(./gradlew ktlintFormat --quiet 2>&1 | tail -5); then
+    echo "⚠️ ktlintFormat 실패:" >&2
+    echo "$OUTPUT" >&2
+fi
+
+exit 0
