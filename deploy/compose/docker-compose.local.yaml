@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: todakun
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - todakun-postgres-data:/var/lib/postgresql/data
 
@@ -15,7 +15,7 @@ services:
     image: redis:7.2
     container_name: todakun-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - todakun-redis-data:/data
 
