@@ -2,12 +2,14 @@ package com.yapp.todakun.auth.fixture
 
 import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.port.inbound.LoginCommand
+import com.yapp.todakun.auth.port.inbound.LogoutCommand
 import com.yapp.todakun.auth.port.inbound.SignupCommand
 import com.yapp.todakun.shared.OauthProvider
 import java.time.LocalDate
 import java.util.UUID
 
 private const val OAUTH_ACCESS_TOKEN = "test-oauth-access-token"
+private const val ACCESS_TOKEN = "test-access-token"
 private const val PROVIDER_ID = "1234567890"
 private const val EMAIL = "test@todakun.com"
 private const val ONBOARDING_TOKEN = "test-onboarding-token"
@@ -50,6 +52,8 @@ object AuthFixture {
             job = job,
             relationshipStatus = relationshipStatus,
         )
+
+    fun logoutCommand(accessToken: String = ACCESS_TOKEN): LogoutCommand = LogoutCommand(accessToken = accessToken)
 
     fun oauthMemberProfile(
         provider: OauthProvider = OauthProvider.KAKAO,
