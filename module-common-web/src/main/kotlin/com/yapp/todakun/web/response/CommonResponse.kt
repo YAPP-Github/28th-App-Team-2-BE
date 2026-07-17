@@ -8,14 +8,16 @@ import java.time.LocalDateTime
 
 /**
  * 모든 응답을 감싸는 공통 엔벨로프. 성공·실패가 동일한 형태를 가진다.
- * [data]는 값이 없으면 직렬화에서 생략된다.
+ * [data]는 값이 없으면 직렬화에서 생략된다. [reason]은 Bean Validation처럼 필드별 실패
+ * 사유가 있는 경우에만 채워지며, 이때 [message]는 비운다.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CommonResponse<T>(
     val success: Boolean,
     val code: String,
-    val message: String,
+    val message: String? = null,
     val data: T? = null,
+    val reason: Map<String, String>? = null,
     val timestamp: LocalDateTime = LocalDateTime.now(),
 ) {
     companion object {
@@ -34,11 +36,20 @@ data class CommonResponse<T>(
         /** 삭제 성공(200, 본문 없음). */
         fun deleted(): ResponseEntity<CommonResponse<Unit>> = ok(CommonSuccessCode.DELETED, null)
 
-        /** 에러 응답. [GlobalExceptionHandler]가 사용한다. */
+        /** 에러 응답. GlobalExceptionHandler가 사용한다. */
         fun error(errorCode: ResponseCode): ResponseEntity<CommonResponse<Unit>> =
             ResponseEntity
                 .status(errorCode.status)
                 .body(CommonResponse(success = false, code = errorCode.code, message = errorCode.message))
+
+        /** 검증 실패 응답(필드별 사유 포함). GlobalExceptionHandler가 사용한다. */
+        fun error(
+            errorCode: ResponseCode,
+            reason: Map<String, String>,
+        ): ResponseEntity<CommonResponse<Unit>> =
+            ResponseEntity
+                .status(errorCode.status)
+                .body(CommonResponse(success = false, code = errorCode.code, reason = reason))
 
         private fun <T> ok(
             code: ResponseCode,

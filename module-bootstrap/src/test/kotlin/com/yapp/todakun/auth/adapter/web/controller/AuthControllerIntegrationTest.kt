@@ -107,9 +107,18 @@ class AuthControllerIntegrationTest(
             }
 
             context("필수 필드가 누락되면") {
-                it("400을 반환한다") {
-                    signup(onboardingToken = INVALID_ONBOARDING_TOKEN, name = "")
-                        .andExpect { status { isBadRequest() } }
+                it("400과 함께 실패한 필드별 사유를 reason에 담아 반환한다") {
+                    val response =
+                        signup(onboardingToken = INVALID_ONBOARDING_TOKEN, name = "")
+                            .andExpect { status { isBadRequest() } }
+                            .andReturn()
+                            .response
+
+                    val body = objectMapper.readTree(response.contentAsString)
+
+                    body["success"].asBoolean() shouldBe false
+                    body["code"].asString().shouldNotBeBlank()
+                    body["reason"]["name"].asString().shouldNotBeBlank()
                 }
             }
         }

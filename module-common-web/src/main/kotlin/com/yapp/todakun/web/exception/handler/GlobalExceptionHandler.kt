@@ -34,7 +34,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(e: MethodArgumentNotValidException): ResponseEntity<CommonResponse<Unit>> {
         log.warn("Validation 오류: {}", e.message)
-        return CommonResponse.error(CommonErrorCode.VALIDATION_ERROR)
+        return CommonResponse.error(CommonErrorCode.VALIDATION_ERROR, toReason(e))
     }
 
     @ExceptionHandler(MissingServletRequestParameterException::class)
@@ -66,4 +66,9 @@ class GlobalExceptionHandler {
         log.error("Unexpected error 발생: {}", e.message, e)
         return CommonResponse.error(CommonErrorCode.INTERNAL_ERROR)
     }
+
+    private fun toReason(e: MethodArgumentNotValidException): Map<String, String> =
+        e.bindingResult.fieldErrors.associate {
+            it.field to (it.defaultMessage ?: CommonErrorCode.VALIDATION_ERROR.message)
+        }
 }
