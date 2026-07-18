@@ -6,6 +6,7 @@ import com.yapp.todakun.auth.port.outbound.AccessTokenPort
 import com.yapp.todakun.auth.port.outbound.BlacklistTokenPort
 import com.yapp.todakun.common.exception.BusinessException
 import com.yapp.todakun.common.exception.UnauthorizedException
+import com.yapp.todakun.web.security.extractBearerToken
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -13,8 +14,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
-
-private const val BEARER_PREFIX = "Bearer "
 
 /**
  * `Authorization: Bearer {accessToken}` 헤더를 검증해 [SecurityContextHolder]에 인증 정보를 채워 넣는다.
@@ -45,10 +44,7 @@ class JwtAuthenticationFilter(
         filterChain.doFilter(request, response)
     }
 
-    private fun resolveToken(request: HttpServletRequest): String? {
-        val header = request.getHeader(HttpHeaders.AUTHORIZATION) ?: return null
-        return header.takeIf { it.startsWith(BEARER_PREFIX) }?.removePrefix(BEARER_PREFIX)
-    }
+    private fun resolveToken(request: HttpServletRequest): String? = extractBearerToken(request.getHeader(HttpHeaders.AUTHORIZATION))
 
     private fun parseClaims(token: String): AccessTokenClaims {
         val claims = accessTokenPort.parse(token)

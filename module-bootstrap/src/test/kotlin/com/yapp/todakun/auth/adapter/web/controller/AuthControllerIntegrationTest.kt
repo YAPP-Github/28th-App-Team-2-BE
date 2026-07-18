@@ -20,6 +20,7 @@ import io.mockk.every
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActionsDsl
@@ -34,6 +35,9 @@ private const val NAME = "홍길동"
 
 // 존재/형식 여부만 중요하고 값 자체는 의미가 없는 온보딩 토큰(조회 실패·검증 실패 유도용)
 private const val INVALID_ONBOARDING_TOKEN = "invalid-onboarding-token"
+
+// 존재/형식 여부만 중요하고 값 자체는 의미가 없는 액세스 토큰(파싱 실패 유도용)
+private const val INVALID_ACCESS_TOKEN = "invalid-access-token"
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -103,22 +107,46 @@ class AuthControllerIntegrationTest(
             }
 
             context("필수 필드가 누락되면") {
-                it("400을 반환한다") {
-                    signup(onboardingToken = INVALID_ONBOARDING_TOKEN, name = "")
-                        .andExpect { status { isBadRequest() } }
+                it("400과 함께 실패한 필드별 사유를 reason에 담아 반환한다") {
+                    val response =
+                        signup(onboardingToken = INVALID_ONBOARDING_TOKEN, name = "")
+                            .andExpect { status { isBadRequest() } }
+                            .andReturn()
+                            .response
+
+                    val body = objectMapper.readTree(response.contentAsString)
+
+                    body["success"].asBoolean() shouldBe false
+                    body["code"].asString().shouldNotBeBlank()
+                    body["reason"]["name"].asString().shouldNotBeBlank()
                 }
             }
         }
-    }
 
-    /** 매 호출마다 고유한 OAuth 프로필을 스텁으로 등록하고, 그 프로필로 로그인할 때 사용할 oauthAccessToken을 반환한다. */
-    private fun stubNewOauthProfile(provider: OauthProvider = OauthProvider.KAKAO): String {
-        val oauthAccessToken = "oauth-token-${UUID.randomUUID()}"
-        val providerId = "provider-${UUID.randomUUID()}"
-        val profile = OauthMemberProfile(provider = provider, providerId = providerId, email = "$providerId@todakun.com")
-        every { oauthPort.fetchProfile(provider, oauthAccessToken) } returns profile
+        describe("POST /api/v1/auth/logout") {
+            context("유효한 accessToken이 주어지면") {
+                it("로그아웃에 성공하고, 이후 같은 토큰은 사용할 수 없다") {
+                    val accessToken = issueAccessToken()
 
-        return oauthAccessToken
+                    logout(accessToken).andExpect { status { isOk() } }
+
+                    logout(accessToken).andExpect { status { isUnauthorized() } }
+                }
+            }
+
+            context("인증 헤더 없이 요청하면") {
+                it("401을 반환한다") {
+                    mockMvc.post("/api/v1/auth/logout")
+                        .andExpect { status { isUnauthorized() } }
+                }
+            }
+
+            context("형식이 올바르지 않은 토큰이면") {
+                it("401을 반환한다") {
+                    logout(INVALID_ACCESS_TOKEN).andExpect { status { isUnauthorized() } }
+                }
+            }
+        }
     }
 
     private fun login(
@@ -152,6 +180,30 @@ class AuthControllerIntegrationTest(
                     relationshipStatus = RelationshipStatus.SOLO.name,
                 ).toJson()
         }
+
+    private fun logout(accessToken: String): ResultActionsDsl =
+        mockMvc.post("/api/v1/auth/logout") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+        }
+
+    /** 매 호출마다 고유한 OAuth 프로필을 스텁으로 등록하고, 그 프로필로 로그인할 때 사용할 oauthAccessToken을 반환한다. */
+    private fun stubNewOauthProfile(provider: OauthProvider = OauthProvider.KAKAO): String {
+        val oauthAccessToken = "oauth-token-${UUID.randomUUID()}"
+        val providerId = "provider-${UUID.randomUUID()}"
+        val profile = OauthMemberProfile(provider = provider, providerId = providerId, email = "$providerId@todakun.com")
+        every { oauthPort.fetchProfile(provider, oauthAccessToken) } returns profile
+
+        return oauthAccessToken
+    }
+
+    /** 신규 OAuth 프로필로 회원가입까지 마친 뒤, 로그인해서 발급받은 accessToken을 반환한다. */
+    private fun issueAccessToken(): String {
+        val oauthAccessToken = stubNewOauthProfile()
+        val onboardingToken = login(oauthAccessToken)["onboardingToken"].asString()
+        signup(onboardingToken).andExpect { status { isCreated() } }
+
+        return login(oauthAccessToken)["accessToken"].asString()
+    }
 
     private fun Any.toJson(): String = objectMapper.writeValueAsString(this)
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import tools.jackson.module.kotlin.KotlinInvalidNullException
 
 /**
  * 모든 예외를 공통 엔벨로프([CommonResponse])로 변환한다. common-web에 한 번만 두며
@@ -34,7 +35,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(e: MethodArgumentNotValidException): ResponseEntity<CommonResponse<Unit>> {
         log.warn("Validation 오류: {}", e.message)
-        return CommonResponse.error(CommonErrorCode.VALIDATION_ERROR)
+        return CommonResponse.error(CommonErrorCode.VALIDATION_ERROR, toReason(e))
     }
 
     @ExceptionHandler(MissingServletRequestParameterException::class)
@@ -51,6 +52,10 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleMessageNotReadable(e: HttpMessageNotReadableException): ResponseEntity<CommonResponse<Unit>> {
+        (e.cause as? KotlinInvalidNullException)?.let {
+            log.warn("요청 본문 필수 값 누락: {}", it.propertyName.simpleName)
+            return CommonResponse.error(CommonErrorCode.MISSING_VALUE, toReason(it))
+        }
         log.warn("요청 본문 파싱 실패: {}", e.message)
         return CommonResponse.error(CommonErrorCode.MALFORMED_REQUEST)
     }
@@ -66,4 +71,12 @@ class GlobalExceptionHandler {
         log.error("Unexpected error 발생: {}", e.message, e)
         return CommonResponse.error(CommonErrorCode.INTERNAL_ERROR)
     }
+
+    private fun toReason(e: MethodArgumentNotValidException): Map<String, String> =
+        e.bindingResult.fieldErrors.associate {
+            it.field to (it.defaultMessage ?: CommonErrorCode.VALIDATION_ERROR.message)
+        }
+
+    private fun toReason(e: KotlinInvalidNullException): Map<String, String> =
+        mapOf(e.propertyName.simpleName to CommonErrorCode.MISSING_VALUE.message)
 }
