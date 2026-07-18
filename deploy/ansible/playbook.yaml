@@ -11,7 +11,41 @@
     app_dir: /opt/todakun
 
   tasks:
-    # unattended-upgrades가 apt 락을 쥐고 있으면 기본 60초 대기로는 부족해 배포가 실패한다.
+    # apt-get update가 캐시를 쓸 공간조차 없어 실패하는 경우(No space left on device)를 막기 위해
+    # 매 실행마다 먼저 디스크를 정리한다. blue/green 전환 시 switch.sh가 이전 color 컨테이너는
+    # 내리지만 이미지는 지우지 않아 배포를 반복할수록 디스크가 계속 줄어든다.
+    - name: 디스크 공간 확보 (apt 캐시 / 저널 로그 / 미사용 도커 이미지 정리)
+      ansible.builtin.shell: |
+        set -e
+        apt-get clean
+        journalctl --vacuum-size=200M
+        if command -v docker >/dev/null 2>&1; then
+          docker system prune -af
+        fi
+      changed_when: false
+
+    # 신규 프로비저닝 VM은 첫 부팅 시 cloud-init이 자체적으로 apt-get update/upgrade를 돌리며
+    # apt 락을 쥐고 있을 수 있다. 이 대기가 끝나기 전에 apt 태스크를 실행하면 실패한다.
+    - name: cloud-init 완료 대기 (첫 부팅 시 apt 락 경쟁 방지)
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+      failed_when: false
+
+    # unattended-upgrades 타이머가 배포 중간에 apt 락을 잡지 않도록 비활성화한다.
+    - name: unattended-upgrades 타이머 비활성화 (배포 중 apt 락 경쟁 방지)
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: false
+        state: stopped
+        masked: true
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+        - unattended-upgrades.service
+
+    # lock_timeout은 dpkg 락 대기(설치 단계)에만 적용되고, apt-get update 자체의 재시도는
+    # update_cache_retries/update_cache_retry_max_delay가 별도로 제어한다(기본 5회/12초,
+    # 총 대기 ~32초에 불과해 락 경쟁 상황에서 부족하다).
     - name: APT 캐시 갱신 및 선행 패키지 설치
       ansible.builtin.apt:
         name:
@@ -21,6 +55,8 @@
         state: present
         update_cache: true
         lock_timeout: 600
+        update_cache_retries: 20
+        update_cache_retry_max_delay: 60
 
     - name: apt keyrings 디렉터리 생성
       ansible.builtin.file:

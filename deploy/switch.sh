@@ -67,4 +67,8 @@ if [ "$ACTIVE" != "none" ]; then
   echo "[switch] 이전 color($ACTIVE) 종료"
 fi
 
+# 5) 컨테이너 참조가 끊긴 이전 이미지 정리 — 안 지우면 배포할수록 디스크가 계속 줄어든다.
+docker image prune -af >/dev/null
+echo "[switch] 사용하지 않는 이미지 정리 완료"
+
 echo "[switch] 🎉 배포 완료: $IDLE 활성화"
