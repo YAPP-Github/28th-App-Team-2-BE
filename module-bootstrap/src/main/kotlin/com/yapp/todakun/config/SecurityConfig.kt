@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.web.cors.CorsConfigurationSource
 import tools.jackson.databind.ObjectMapper
 
 /** JWT 기반 무상태 인증 설정. 세션·CSRF는 사용하지 않는다. */
@@ -38,8 +39,10 @@ class SecurityConfig {
         jwtAuthenticationFilter: JwtAuthenticationFilter,
         customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
         customAccessDeniedHandler: CustomAccessDeniedHandler,
+        corsConfigurationSource: CorsConfigurationSource,
     ): SecurityFilterChain {
         http {
+            cors { configurationSource = corsConfigurationSource }
             csrf { disable() }
             formLogin { disable() }
             httpBasic { disable() }
