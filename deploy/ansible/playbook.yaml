@@ -44,8 +44,7 @@
         - unattended-upgrades.service
 
     # lock_timeout은 dpkg 락 대기(설치 단계)에만 적용되고, apt-get update 자체의 재시도는
-    # update_cache_retries/update_cache_retry_max_delay가 별도로 제어한다(기본 5회/12초,
-    # 총 대기 ~32초에 불과해 락 경쟁 상황에서 부족하다).
+    # update_cache_retries/update_cache_retry_max_delay가 별도로 제어한다(기본 5회/12초, 총 대기 ~32초에 불과해 락 경쟁 상황에서 부족하다).
     - name: APT 캐시 갱신 및 선행 패키지 설치
       ansible.builtin.apt:
         name:
