@@ -19,6 +19,11 @@ include("member:application")
 include("member:adapter-in")
 include("member:adapter-out")
 
+// saju 도메인 (REST 미노출: 크로스 도메인 내부 기능이라 adapter-in 없음)
+include("saju:domain")
+include("saju:application")
+include("saju:adapter-out")
+
 // 모듈 디렉터리는 `module-*` 접두사를 쓰므로 프로젝트 경로를 매핑한다.
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
@@ -40,3 +45,8 @@ project(":member:domain").projectDir = file("module-member/member-domain")
 project(":member:application").projectDir = file("module-member/member-application")
 project(":member:adapter-in").projectDir = file("module-member/member-adapter-in")
 project(":member:adapter-out").projectDir = file("module-member/member-adapter-out")
+
+project(":saju").projectDir = file("module-saju")
+project(":saju:domain").projectDir = file("module-saju/saju-domain")
+project(":saju:application").projectDir = file("module-saju/saju-application")
+project(":saju:adapter-out").projectDir = file("module-saju/saju-adapter-out")

@@ -9,11 +9,13 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.shared.CreateMemberPort
+import com.yapp.todakun.shared.CreateSajuChartPort
 
 @CommandService
 class SignupService(
     private val onboardingTokenPort: OnboardingTokenPort,
     private val createMemberPort: CreateMemberPort,
+    private val createSajuChartPort: CreateSajuChartPort,
     private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
 ) : SignupUseCase {
@@ -35,6 +37,18 @@ class SignupService(
                     job = command.job,
                     relationshipStatus = command.relationshipStatus,
                 )
+
+            // 회원 본인 사주 명식을 같은 트랜잭션에서 계산·저장(원자성 보장).
+            createSajuChartPort.create(
+                userId = memberId,
+                isSelf = true,
+                name = command.name,
+                gender = command.gender,
+                calendarType = command.calendarType,
+                birthDate = command.birthDate,
+                birthTime = command.birthTime,
+                isLeapMonth = false,
+            )
 
             return SignupResult(
                 accessToken = accessTokenPort.generate(memberId),

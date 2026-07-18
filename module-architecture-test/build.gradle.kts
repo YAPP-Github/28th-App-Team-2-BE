@@ -5,4 +5,8 @@ plugins {
 
 dependencies {
     testImplementation(libs.konsist)
+
+    testImplementation(project(":saju:domain"))
+    testImplementation(project(":saju:application"))
+    testImplementation(project(":saju:adapter-out"))
 }
