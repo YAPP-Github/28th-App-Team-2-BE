@@ -31,7 +31,7 @@ import lombok.experimental.SuperBuilder;
 public class SajuChartJpaEntity extends BaseEntity {
 
     @Column
-    private UUID userId;
+    private UUID memberId;
 
     @Column(nullable = false)
     private boolean isSelf;
@@ -70,7 +70,7 @@ public class SajuChartJpaEntity extends BaseEntity {
     public static SajuChartJpaEntity fromDomain(SajuChart chart) {
         return SajuChartJpaEntity.builder()
                 .id(chart.getId())
-                .userId(chart.getUserId())
+                .memberId(chart.getMemberId())
                 .isSelf(chart.isSelf())
                 .name(chart.getName())
                 .gender(chart.getGender())
@@ -87,7 +87,7 @@ public class SajuChartJpaEntity extends BaseEntity {
     public SajuChart toDomain(List<SajuPillar> pillars, List<OhaengCount> ohaeng, List<SipseongCount> sipseong) {
         return SajuChart.reconstitute(
                 getId(),
-                userId,
+                memberId,
                 isSelf,
                 name,
                 gender,

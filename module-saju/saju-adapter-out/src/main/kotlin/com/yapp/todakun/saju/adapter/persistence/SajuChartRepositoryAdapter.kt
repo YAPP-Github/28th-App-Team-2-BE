@@ -12,7 +12,6 @@ import kotlin.uuid.toJavaUuid
  * 사주 명식 애그리거트 영속 어댑터. 헤더 + 4주 + 오행/십성 집계를 각 테이블에 나눠 저장하고,
  * 조회 시 chartId로 자식들을 모아 도메인 애그리거트로 복원한다(트랜잭션은 application 서비스가 관리).
  */
-@OptIn(ExperimentalUuidApi::class)
 @Repository
 class SajuChartRepositoryAdapter(
     private val chartJpaRepository: SajuChartJpaRepository,
@@ -20,6 +19,7 @@ class SajuChartRepositoryAdapter(
     private val ohaengJpaRepository: SajuOhaengJpaRepository,
     private val sipseongJpaRepository: SajuSipseongJpaRepository,
 ) : SajuChartRepository {
+    @ExperimentalUuidApi
     override fun save(sajuChart: SajuChart): SajuChart {
         chartJpaRepository.save(SajuChartJpaEntity.fromDomain(sajuChart))
         pillarJpaRepository.saveAll(
@@ -43,5 +43,6 @@ class SajuChartRepositoryAdapter(
         )
     }
 
+    @ExperimentalUuidApi
     private fun newId(): UUID = Uuid.generateV7().toJavaUuid()
 }

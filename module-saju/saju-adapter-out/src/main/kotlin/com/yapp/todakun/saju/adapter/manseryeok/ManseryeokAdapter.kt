@@ -26,6 +26,13 @@ import java.time.LocalDate
  */
 @Component
 class ManseryeokAdapter : ManseryeokPort {
+    companion object {
+        private val SUPPORTED_YEARS = 1900..2050
+
+        /** 일주 60갑자 앵커. manseryeok-js(KASI)의 일주와 전 범위 55,151일 일치하도록 검증된 상수. */
+        private const val GAPJA_ANCHOR_OFFSET = 49
+    }
+
     override fun calculate(
         birthDate: LocalDate,
         birthTime: BirthTime,
@@ -122,12 +129,5 @@ class ManseryeokAdapter : ManseryeokPort {
         val y = date.year + 4800 - a
         val m = date.monthValue + 12 * a - 3
         return date.dayOfMonth + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045
-    }
-
-    companion object {
-        private val SUPPORTED_YEARS = 1900..2050
-
-        /** 일주 60갑자 앵커. manseryeok-js(KASI)의 일주와 전 범위 55,151일 일치하도록 검증된 상수. */
-        private const val GAPJA_ANCHOR_OFFSET = 49
     }
 }

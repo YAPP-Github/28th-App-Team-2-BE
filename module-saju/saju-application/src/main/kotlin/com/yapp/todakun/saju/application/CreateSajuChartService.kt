@@ -11,6 +11,7 @@ import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import com.yapp.todakun.shared.CreateSajuChartPort
 import java.time.LocalDate
 import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
 
 /**
  * 사주 명식 계산·저장 유스케이스. 크로스 도메인 진입점([CreateSajuChartPort]) 구현.
@@ -22,8 +23,9 @@ class CreateSajuChartService(
     private val manseryeokPort: ManseryeokPort,
     private val sajuChartRepository: SajuChartRepository,
 ) : CreateSajuChartPort {
+    @ExperimentalUuidApi
     override fun create(
-        userId: UUID?,
+        memberId: UUID?,
         isSelf: Boolean,
         name: String?,
         gender: String,
@@ -46,7 +48,7 @@ class CreateSajuChartService(
 
         val chart =
             SajuChart.create(
-                userId = userId,
+                memberId = memberId,
                 isSelf = isSelf,
                 name = name,
                 gender = genderEnum,

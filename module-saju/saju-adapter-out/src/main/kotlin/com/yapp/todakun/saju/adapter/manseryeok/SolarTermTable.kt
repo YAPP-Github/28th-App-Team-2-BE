@@ -16,6 +16,12 @@ import com.yapp.todakun.saju.exception.SajuYearOutOfRangeException
 internal object SolarTermTable {
     private const val RESOURCE_PATH = "/manseryeok/solar-terms.txt"
 
+    /** 입춘 = 두 번째 절(년주 경계). */
+    private const val IPCHUN_INDEX = 1
+
+    /** 소한 이전(전해 대설=子월)일 때의 절 인덱스. */
+    private const val DAESEOL_INDEX = 11
+
     /** 12절(節) 순서(양력 연중): 소한→대설. 각 절이 시작하는 절월의 절기명. */
     val TERM_NAMES =
         listOf("소한", "입춘", "경칩", "청명", "입하", "망종", "소서", "입추", "백로", "한로", "입동", "대설")
@@ -27,12 +33,6 @@ internal object SolarTermTable {
             EarthlyBranch.SA, EarthlyBranch.O, EarthlyBranch.MI, EarthlyBranch.SIN,
             EarthlyBranch.YU, EarthlyBranch.SUL, EarthlyBranch.HAE, EarthlyBranch.JA,
         )
-
-    /** 입춘 = 두 번째 절(년주 경계). */
-    private const val IPCHUN_INDEX = 1
-
-    /** 소한 이전(전해 대설=子월)일 때의 절 인덱스. */
-    private const val DAESEOL_INDEX = 11
 
     private val table: Map<Int, IntArray> by lazy { load() }
 

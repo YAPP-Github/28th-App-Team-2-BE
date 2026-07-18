@@ -75,7 +75,7 @@ class SignupServiceTest :
                         } returns memberId
                         every {
                             createSajuChartPort.create(
-                                userId = memberId,
+                                memberId = memberId,
                                 isSelf = true,
                                 name = command.name,
                                 gender = command.gender,
@@ -95,7 +95,7 @@ class SignupServiceTest :
                         result.refreshToken shouldBe issuedRefreshToken
                         verify(exactly = 1) {
                             createSajuChartPort.create(
-                                userId = memberId,
+                                memberId = memberId,
                                 isSelf = true,
                                 name = command.name,
                                 gender = command.gender,

@@ -11,10 +11,9 @@ import kotlin.uuid.toJavaUuid
  * 사주 명식 애그리거트. 헤더(입력값·일간) + 4주 + 오행/십성 분포를 한 덩어리로 보유한다.
  * 본인 입력과 타인(궁합 상대 등) 입력을 모두 이 한 타입으로 처리하며 [isSelf]로 구분한다.
  */
-@OptIn(ExperimentalUuidApi::class)
 data class SajuChart(
     val id: UUID,
-    val userId: UUID?,
+    val memberId: UUID?,
     val isSelf: Boolean,
     val name: String?,
     val gender: Gender,
@@ -31,8 +30,9 @@ data class SajuChart(
 ) {
     companion object {
         /** 만세력 4주([fourPillars])와 입력값으로 명식을 생성한다. 십성·십이운성·분포는 여기서 파생 계산된다. */
+        @ExperimentalUuidApi
         fun create(
-            userId: UUID?,
+            memberId: UUID?,
             isSelf: Boolean,
             name: String?,
             gender: Gender,
@@ -46,7 +46,7 @@ data class SajuChart(
             val pillars = SajuCalculator.pillars(fourPillars, dayMaster)
             return SajuChart(
                 id = Uuid.generateV7().toJavaUuid(),
-                userId = userId,
+                memberId = memberId,
                 isSelf = isSelf,
                 name = name,
                 gender = gender,
@@ -68,7 +68,7 @@ data class SajuChart(
         @JvmStatic
         fun reconstitute(
             id: UUID,
-            userId: UUID?,
+            memberId: UUID?,
             isSelf: Boolean,
             name: String?,
             gender: Gender,
@@ -85,7 +85,7 @@ data class SajuChart(
         ): SajuChart =
             SajuChart(
                 id = id,
-                userId = userId,
+                memberId = memberId,
                 isSelf = isSelf,
                 name = name,
                 gender = gender,
