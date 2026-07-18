@@ -149,16 +149,6 @@ class AuthControllerIntegrationTest(
         }
     }
 
-    /** 매 호출마다 고유한 OAuth 프로필을 스텁으로 등록하고, 그 프로필로 로그인할 때 사용할 oauthAccessToken을 반환한다. */
-    private fun stubNewOauthProfile(provider: OauthProvider = OauthProvider.KAKAO): String {
-        val oauthAccessToken = "oauth-token-${UUID.randomUUID()}"
-        val providerId = "provider-${UUID.randomUUID()}"
-        val profile = OauthMemberProfile(provider = provider, providerId = providerId, email = "$providerId@todakun.com")
-        every { oauthPort.fetchProfile(provider, oauthAccessToken) } returns profile
-
-        return oauthAccessToken
-    }
-
     private fun login(
         oauthAccessToken: String,
         provider: OauthProvider = OauthProvider.KAKAO,
@@ -191,6 +181,21 @@ class AuthControllerIntegrationTest(
                 ).toJson()
         }
 
+    private fun logout(accessToken: String): ResultActionsDsl =
+        mockMvc.post("/api/v1/auth/logout") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+        }
+
+    /** 매 호출마다 고유한 OAuth 프로필을 스텁으로 등록하고, 그 프로필로 로그인할 때 사용할 oauthAccessToken을 반환한다. */
+    private fun stubNewOauthProfile(provider: OauthProvider = OauthProvider.KAKAO): String {
+        val oauthAccessToken = "oauth-token-${UUID.randomUUID()}"
+        val providerId = "provider-${UUID.randomUUID()}"
+        val profile = OauthMemberProfile(provider = provider, providerId = providerId, email = "$providerId@todakun.com")
+        every { oauthPort.fetchProfile(provider, oauthAccessToken) } returns profile
+
+        return oauthAccessToken
+    }
+
     /** 신규 OAuth 프로필로 회원가입까지 마친 뒤, 로그인해서 발급받은 accessToken을 반환한다. */
     private fun issueAccessToken(): String {
         val oauthAccessToken = stubNewOauthProfile()
@@ -199,11 +204,6 @@ class AuthControllerIntegrationTest(
 
         return login(oauthAccessToken)["accessToken"].asString()
     }
-
-    private fun logout(accessToken: String): ResultActionsDsl =
-        mockMvc.post("/api/v1/auth/logout") {
-            header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
-        }
 
     private fun Any.toJson(): String = objectMapper.writeValueAsString(this)
 }
