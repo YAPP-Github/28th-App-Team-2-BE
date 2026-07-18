@@ -1,6 +1,8 @@
 package com.yapp.todakun.saju.adapter.manseryeok
 
 import com.yapp.todakun.saju.EarthlyBranch
+import com.yapp.todakun.saju.exception.SajuCalculationException
+import com.yapp.todakun.saju.exception.SajuYearOutOfRangeException
 
 /**
  * 24절기 기반 사주월(절월) 경계 테이블.
@@ -37,7 +39,7 @@ internal object SolarTermTable {
     private fun load(): Map<Int, IntArray> {
         val text =
             javaClass.getResourceAsStream(RESOURCE_PATH)?.bufferedReader()?.use { it.readText() }
-                ?: error("절기 리소스를 찾을 수 없습니다: $RESOURCE_PATH")
+                ?: throw SajuCalculationException()
 
         return text
             .lineSequence()
@@ -48,7 +50,7 @@ internal object SolarTermTable {
             }
     }
 
-    private fun boundaries(year: Int): IntArray = table[year] ?: error("절기 지원 범위 밖 연도: $year")
+    private fun boundaries(year: Int): IntArray = table[year] ?: throw SajuYearOutOfRangeException()
 
     /** [monthDay](=월*100+일)가 속한 절(節) 인덱스(0=소한 … 11=대설). 소한 이전이면 전해 대설(11). */
     fun termIndex(

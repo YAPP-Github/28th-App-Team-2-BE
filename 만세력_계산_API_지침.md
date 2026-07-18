@@ -57,38 +57,35 @@
 
 ## 3. 아키텍처
 
-```
-saju-core (순수 Kotlin, 프레임워크 의존성 없음)
- ├─ manseryeok/         manseryeok-js를 Kotlin으로 포팅한 모듈
- │   ├─ SolarLunarConverter   (solarToLunar/lunarToSolar 대응)
- │   ├─ GapjaCalculator       (getGapja, SIXTY_PILLARS 대응)
- │   └─ SajuCalculator        (calculateSaju/calculateSajuSimple 대응)
- ├─ sipseong/           일간 기준 십성 판정 (자체 구현)
- ├─ sibiunseong/        지지 기준 십이운성 판정 (자체 구현)
- └─ ganghap/            궁합 합충형파해 판정 (자체 구현)
+`saju`는 REST로 노출되지 않는 **크로스 도메인 내부 기능**이라, 헥사고날 3모듈(`domain`/`application`/`adapter-out`)로 구성한다(`adapter-in` 없음). 진입점은 `shared.CreateSajuChartPort`이며, 다른 도메인(auth 회원가입 등)이 이 포트로 호출한다.
 
-saju-app (Spring Boot)
- ├─ Service: saju-core 호출 → 계산 결과를 saju_chart/saju_pillar/saju_ohaeng/saju_sipseong에 저장
- ├─ Presenter/Mapper: enum 코드 + 라이브러리 데이터를 조합해 화면 표시용 DTO로 변환
- └─ API 컨트롤러
+```
+module-saju/
+ ├─ saju-domain/       순수 Kotlin. 도메인 엔티티(SajuChart/SajuPillar)·값 객체(EarthlyBranch/HeavenlyStem/
+ │                     Sipseong/Sibiunseong 등)·파생 계산(SajuCalculator: 십성·십이운성·오행/십성 분포)·
+ │                     아웃바운드 포트(ManseryeokPort/SajuChartRepository)
+ ├─ saju-application/  CreateSajuChartService(@CommandService) = shared.CreateSajuChartPort 구현.
+ │                     만세력 4주 계산(ManseryeokPort) → 파생 계산 → 저장(SajuChartRepository)을 한 트랜잭션으로 묶음
+ └─ saju-adapter-out/  ManseryeokAdapter(만세력 엔진: LunarSolarConverter/SolarTermTable 등) + JPA 영속성 어댑터
 ```
 
-이전 설계 대비 가장 큰 변화는 `solarterm/`, `timeadjust/` 모듈이 **포팅된 라이브러리 호출로 대체**된다는 점이다. 우리가 직접 구현/검증해야 했던 절기 계산과 진태양시 보정 로직 대부분이 이미 검증된 코드로 대체되므로, 자체 구현 범위는 십성·십이운성·궁합 판정으로 좁아진다.
+음양력 변환·60갑자·24절기는 `saju-adapter-out`의 만세력 엔진(manseryeok-js 데이터 이식)이 담당하고, 십성·십이운성 판정(일간 기준 상대 계산)은 라이브러리 범위 밖이라 `saju-domain`에서 자체 구현한다. 이 도메인에는 REST 컨트롤러·화면 표시값 조립(Presenter)이 없다 — 계산·저장만 수행한다(궁합·조회 API는 후속). 구현 세부는 8절 하단 **[구현 반영]**을 정본으로 삼는다.
 
 ---
 
 ## 4. 계산 처리 순서 (Pipeline)
 
-1. 입력 검증 (생년월일시, 양/음력, 윤달, 성별, 시간 모름 여부)
-2. 음력 입력 시 `lunarToSolar`로 양력 변환
-3. `calculateSaju(year, month, day, hour, minute, { longitude, applyTimeCorrection })` 호출 → 4주(년/월/일/시) + 보정된 시각(`correctedTime`) 획득
-   - 시간 모름이면 `calculateSajuSimple` 또는 `hour` 파라미터 생략 형태로 호출해 시주 제외
-4. 반환된 4주 각각에 대해 십성 판정 (일간 기준, 일주 천간은 "일원" 처리)
-5. 반환된 4주 각각의 지지에 대해 십이운성 판정
-6. 오행 산출 및 집계 (라이브러리의 `element` 필드 활용)
-7. 십성 산출 집계
-8. 결과 저장: `saju_chart` + `saju_pillar` + `saju_ohaeng` + `saju_sipseong`
-9. 응답 조립 시점에 라이브러리 데이터(한자/독음) + `code_sipseong`/`code_sibiunseong` 마스터를 조합해 표시값 포함 DTO 반환
+`CreateSajuChartService.create(...)`가 아래를 한 트랜잭션에서 수행한다(auth 회원가입 트랜잭션에 전파 REQUIRED로 참여).
+
+1. 입력 검증: 성별·달력종류·시진(`BirthTime`) enum 변환. 유효하지 않으면 `SajuInputInvalidException`(400)
+2. 만세력 4주 계산: `ManseryeokPort.calculate(birthDate, birthTime, calendarType, isLeapMonth)` → 년/월/일/시주 간지
+   - 음력 입력은 어댑터 내부에서 `LunarSolarConverter`가 양력으로 변환
+   - 시진 모름(`BirthTime.UNKNOWN`)이면 시주를 제외한 3주만 반환(`FourPillars.hour = null`)
+   - **진태양시(경도) 보정은 도입하지 않는다** — 십이시진(2시간 단위) 입력이라 분 단위 보정이 무의미
+3. 파생 계산(`SajuCalculator`): 4주 각각의 천간·지지에 십성 판정(일주 천간은 "일원"이라 십성 없음)
+4. 4주 각 지지의 십이운성 판정(포태법)
+5. 오행 분포 집계(항상 5행), 십성 분포 집계(항상 10행·0건 포함)
+6. 결과 저장: `saju_chart` + `saju_pillar` + `saju_ohaeng` + `saju_sipseong`
 
 ---
 
@@ -156,16 +153,13 @@ CREATE TABLE `saju_chart` (
   `is_self` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'TRUE=user_id 본인의 사주, FALSE=user_id가 타인(궁합 상대방 등)의 정보를 대신 입력한 사주. "내 사주 목록" 조회 시 필터링 기준',
   `name` VARCHAR(50) NULL COMMENT '토닥이, 토실이 등 대상 이름 (화면 표시용)',
   `gender` ENUM('MALE','FEMALE') NOT NULL COMMENT '성별, 대운 순행/역행 판정에 사용',
-  `input_calendar_type` ENUM('SOLAR','LUNAR') NOT NULL COMMENT '사용자가 입력한 달력 종류 (양력/음력)',
-  `input_date` DATE NOT NULL COMMENT '사용자가 입력한 원본 생년월일 (보정 전)',
-  `input_time` TIME NULL COMMENT '사용자가 입력한 원본 출생시간 (보정 전), 시간 모름이면 NULL. ※ 8절 "십이시진 vs 정확한 시간" 정책 결정과 연동',
+  `calendar_type` ENUM('SOLAR','LUNAR') NOT NULL COMMENT '사용자가 입력한 달력 종류 (양력/음력)',
+  `input_date` DATE NOT NULL COMMENT '사용자가 입력한 원본 생년월일',
+  `birth_time` ENUM('JASI','CHUKSI','INSI','MYOSI','JINSI','SASI','OSI','MISI','SINSI','YUSI','SULSI','HAESI','UNKNOWN') NOT NULL
+    COMMENT '십이시진(BirthTime enum). UNKNOWN이면 시주 계산 생략. ※ 진태양시 분 단위 보정은 미도입',
   `is_leap_month` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '음력 입력 시 윤달 여부',
-  `is_time_unknown` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '출생시간 모름 여부, TRUE면 시주 계산 생략',
-  `birth_longitude` DECIMAL(6,3) NULL COMMENT 'calculateSaju의 options.longitude로 전달, 미입력 시 라이브러리 기본값(127, 서울) 사용',
-  `is_time_corrected` BOOLEAN NOT NULL COMMENT '진태양시 보정 적용 여부, 라이브러리 응답의 isTimeCorrected',
-  `corrected_hour` TINYINT NULL COMMENT '진태양시 보정 후 시(時), 라이브러리 응답의 correctedTime.hour',
-  `corrected_minute` TINYINT NULL COMMENT '진태양시 보정 후 분(分), 라이브러리 응답의 correctedTime.minute',
-  `solar_term_name` VARCHAR(20) NULL COMMENT '월주 산정에 적용된 절기명 (라이브러리 조회 결과 스냅샷, FK 아님)',
+  `is_time_unknown` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '출생시간 모름 여부, TRUE면 시주 계산 생략(birth_time=UNKNOWN)',
+  `solar_term_name` VARCHAR(20) NULL COMMENT '월주 산정에 적용된 절기명 (SolarTermTable 조회 결과 스냅샷, FK 아님)',
   `day_master_stem` VARCHAR(10) NOT NULL COMMENT '일간(일주 천간) 코드, 모든 십성 판정의 기준값. 라이브러리 SIXTY_PILLARS 코드값',
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '계산 결과 생성 일시',
   PRIMARY KEY (`id`)
@@ -188,7 +182,8 @@ CREATE TABLE `saju_pillar` (
   `sibiunseong` ENUM('JANGSAENG','MOKYOK','GWANDAE','GEONROK','JEWANG',
                         'SOE','BYEONG','SA','MYO','JEOL','TAE','YANG') NOT NULL
     COMMENT '십이운성 (지지 기준 포태법 판정). 각 값의 의미는 5.2절 참고',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saju_pillar_chart_type` (`chart_id`, `pillar_type`) -- 차트당 기둥 종류 1행 보장(재시도·동시 저장 중복 차단)
 ) COMMENT='4주별 상세 정보. 천간/지지는 라이브러리 데이터 참조값(FK 없음), 십성/십이운성은 DB 네이티브 ENUM(Kotlin enum과 1:1 대응, 별도 마스터 테이블 없음)';
 
 ALTER TABLE `saju_pillar` ADD CONSTRAINT `fk_saju_pillar_chart` FOREIGN KEY (`chart_id`) REFERENCES `saju_chart`(`id`);
@@ -199,7 +194,8 @@ CREATE TABLE `saju_ohaeng` (
   `element` ENUM('WOOD','FIRE','EARTH','METAL','WATER') NOT NULL COMMENT '오행 종류 (목화토금수)',
   `count` TINYINT NOT NULL COMMENT '8글자(또는 시간 모름 시 6글자) 중 해당 오행에 속하는 글자 수',
   `percentage` DECIMAL(5,2) NOT NULL COMMENT '전체 글자 수 대비 비율(%)',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saju_ohaeng_chart_element` (`chart_id`, `element`) -- 차트당 오행 1행 보장(중복 차단)
 ) COMMENT='오행 분포 집계, 항상 5행';
 
 CREATE TABLE `saju_sipseong` (
@@ -208,9 +204,10 @@ CREATE TABLE `saju_sipseong` (
   `sipseong_type` ENUM('BIGYEON','GEOPJAE','SIKSIN','SANGGWAN','PYEONJAE',
                         'JEONGJAE','PYEONGWAN','JEONGGWAN','PYEONIN','JEONGIN') NOT NULL
     COMMENT '십성 종류. 각 값의 의미는 5.2절 참고',
-  `count` TINYINT NOT NULL COMMENT '일간을 제외한 나머지 글자 중 해당 십성으로 판정된 개수 (분모는 8절 정책 확정 필요)',
-  `percentage` DECIMAL(5,2) NOT NULL COMMENT '전체 판정 대상 글자 수 대비 비율(%)',
-  PRIMARY KEY (`id`)
+  `count` TINYINT NOT NULL COMMENT '일간(일원)을 제외한 글자 중 해당 십성으로 판정된 개수. 분모는 시주 있으면 7(천간 3+지지 4), 시간 모름이면 5(천간 2+지지 3)',
+  `percentage` DECIMAL(5,2) NOT NULL COMMENT '판정 대상 글자 수(7 또는 5) 대비 비율(%)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_saju_sipseong_chart_type` (`chart_id`, `sipseong_type`) -- 차트당 십성 종류 1행 보장(중복 차단)
 ) COMMENT='십성 분포 집계, 항상 10행 (0건 포함)';
 
 ALTER TABLE `saju_ohaeng` ADD CONSTRAINT `fk_saju_ohaeng_chart` FOREIGN KEY (`chart_id`) REFERENCES `saju_chart`(`id`);
@@ -274,10 +271,12 @@ ALTER TABLE `saju_compatibility_ganghap`
 
 ## 6. API 명세
 
-### 6.1 사주 명식 생성
+> ⚠️ **폐기(REST 미노출)**: `saju`는 클라이언트 REST API로 노출되지 않는다(`adapter-in` 없음). 아래 `POST /api/v1/saju-charts` 등의 엔드포인트·요청/응답 예시는 **초기 설계안이며 현재 계약이 아니다** — 실제 진입점은 `shared.CreateSajuChartPort.create(...)`(내부 크로스 도메인 호출)이다. 아래 JSON은 계산 결과의 데이터 형태 참고용으로만 남겨둔다(진태양시 `isTimeCorrected`/`correctedTime`, 경도 `birthLongitude`, 분 단위 `birthTime`은 미구현 필드). 실제 계약은 3절 구조와 8절 **[구현 반영]**을 따른다.
+
+### 6.1 사주 명식 생성 (초기 설계안 — 폐기)
 
 ```
-POST /api/v1/saju-charts
+POST /api/v1/saju-charts   (폐기: 실제로는 shared.CreateSajuChartPort.create 내부 호출)
 ```
 
 **Request**
@@ -370,21 +369,21 @@ GET  /api/v1/saju-compatibilities/{compatibilityId}
 
 ## 7. 에러 처리 기준
 
-| 상황 | HTTP 상태 | 처리 |
+| 상황 | HTTP 상태 | 예외 / 응답 코드 |
 |---|---|---|
-| 입력 연도가 라이브러리 지원 범위(1900~2050) 밖 | 422 | `OutOfRangeError` 캐치 후 지원 범위 안내 |
-| 유효하지 않은 날짜(윤달 오류 등) | 400 | `InvalidDateError` 캐치 후 안내 |
-| chartId/compatibilityId 존재하지 않음 | 404 | - |
-| 십성/십이운성 계산 로직이 정의되지 않은 값을 산출 | 500 | Kotlin enum 범위를 벗어난 값은 컴파일 타임/역직렬화 시점에 차단됨, DB `ENUM` 타입이 저장 시점에도 재차 제약 |
+| 입력 연도가 지원 범위(1900~2050) 밖 | 422 | `SajuYearOutOfRangeException` / `SAJU_YEAR_OUT_OF_RANGE` |
+| 유효하지 않은 입력값(존재하지 않는 윤달·일수 초과·시진/성별/달력 enum 변환 실패 등) | 400 | `SajuInputInvalidException` / `SAJU_INPUT_INVALID` |
+| chartId 존재하지 않음 | 404 | `SajuChartNotFoundException` / `SAJU_CHART_NOT_FOUND` |
+| 계산 내부 오류(만세력 리소스 누락·십성 판정 불가 등 정상 흐름 밖 시스템 오류) | 500 | `SajuCalculationException` / `SAJU_CALCULATION_FAILED` |
 
 ---
 
 ## 8. 정책 확정 필요 항목 (기획자 협의 대상)
 
-- [ ] **출생시간 입력 방식 (신규, 중요)**: 실제 파일에서 `member`/`Partner` 모두 `birth_time`을 정확한 시:분이 아니라 **십이시진(12개 전통 시진, 2시간 단위) Enum**으로 받고 있다. 반면 manseryeok-js의 진태양시 보정은 분 단위 정밀도를 전제로 동작한다. 십이시진 단위 입력만 받으면: (1) 보정으로 인해 실제로는 다른 시진으로 넘어가야 하는 경계 케이스를 감지할 수 없고, (2) `corrected_hour`/`corrected_minute` 같은 분 단위 보정 필드가 사실상 무의미해진다. 정확한 시:분 입력을 받을지, 십이시진 선택만 지원하고 보정을 포기할지 결정 필요 — 이전 화면 캡처(15시 00분, 11시 00분)에는 분 단위 입력이 있었으므로, 두 입력 경로가 공존하는 것인지도 확인 필요
+- [x] **출생시간 입력 방식 (신규, 중요) → 십이시진 채택·진태양시 보정 미도입 (확정)**: 입력을 **십이시진(12개 전통 시진, 2시간 단위) `BirthTime` Enum**으로 받는다(모름은 `UNKNOWN`). 시진 단위 입력이라 분 단위 진태양시 보정은 무의미하므로 도입하지 않으며, `birth_longitude`/`is_time_corrected`/`corrected_hour`/`corrected_minute` 컬럼도 두지 않는다. 시주 지지는 시진에서 직접, 시주 천간은 오서둔(五鼠遁)으로 산출한다.
 - [ ] **`member`-`saju_chart` 데이터 중복 해소**: `member`의 생년월일 관련 컬럼을 유지할지, `saju_chart`로 완전히 이관할지
-- [ ] **1912년 이전 출생자 지원 여부**: manseryeok-js는 항상 동경 135도 표준 자오선 기준 경도 보정만 수행하며, 한국의 역사적 표준시 변경 이력(1908~1911년 동경 127도30분 사용 등)은 반영하지 않는다. 해당 기간 출생자의 시주 정확도를 별도로 보정할지, 라이브러리 계산값을 그대로 사용할지 결정 필요 → 보정한다면 `standard_time_period` 테이블 유지, 아니면 삭제
-- [ ] 자시 처리 정책: 라이브러리는 자시를 분리하지 않고 단일 처리함. 야자시/조자시 구분이 필요하면 라이브러리의 `correctedTime` 결과를 받아 자체 후처리 로직 추가 필요
+- [x] **1912년 이전 출생자 지원 여부 → 경도 보정 미적용(확정)**: 진태양시 보정을 도입하지 않으므로 역사적 표준시 변경 이력(1908~1911년 동경 127도30분 등)도 반영하지 않는다. 시주는 시진 입력을 그대로 사용한다. `standard_time_period` 테이블 불필요.
+- [ ] 자시 처리 정책: 현재 `BirthTime.JASI`(23:30~01:29)로 단일 처리한다. 야자시/조자시 구분이 필요하면 후속 과제로 시진 분리 규칙을 추가한다(진태양시 보정 미도입이라 분 단위 `correctedTime`은 사용하지 않음).
 - [x] 십성 집계 분모 (7 vs 8) → **7 채택** (일간 제외한 나머지 글자; 시주 있으면 천간 3 + 지지 4)
 - [ ] 궁합 결과 재생성 시 이력 관리 방식 (덮어쓰기 vs 버전 이력)
 - [ ] 시간 모름 입력 시 궁합/십성 분석 제한 범위 안내 문구
@@ -410,24 +409,24 @@ GET  /api/v1/saju-compatibilities/{compatibilityId}
 
 ## 9. 검증(테스트) 기준
 
-- manseryeok-js README에 명시된 회귀 테스트(월주 절기 기준 26개, 24절기-사주월 매핑 33개)가 포팅 후에도 동일하게 통과하는지 이식 검증
-- 절기 경계 전후 수 분 이내 출생 시각 케이스 회귀 테스트
-- 진태양시 보정 결과(`correctedTime`)가 원본 라이브러리와 Kotlin 포팅본에서 동일하게 나오는지 대조 테스트
-- 일간(10종) × 지지(12종) 조합 십성/십이운성 판정 전수 테스트 (자체 구현 영역이므로 특히 중요)
+- 년/월/일/시주 60갑자를 manseryeok-js(KASI)와 전 범위(1900~2050, 55,151일) 대조 검증(절기 경계 ±1일 495개 회귀 샘플 포함)
+- 음력→양력 변환을 `solarToLunar` 역추출본과 전 구간(55,121일) 양방향 대조(윤달 포함 443개 회귀 샘플)
+- 절기 경계 전후 케이스(입춘·절월 경계) 회귀 테스트
+- 일간(10종) × 지지(12종) 조합 십성/십이운성 판정 테스트 (자체 구현 영역이므로 특히 중요)
 - 시중 만세력 서비스 결과값 대조 테스트셋
-- `code_*` 마스터 조인 결과가 실제 화면 캡처와 1:1 일치하는지 스냅샷 테스트
+- (진태양시 보정은 미도입이라 `correctedTime` 대조 테스트는 대상 아님)
 
 ---
 
 ## 10. 관련 DB 엔티티 요약
 
-- `standard_time_period` — 원천 데이터 (유지 여부는 8절 정책 결정 대상)
-- `saju_chart`, `saju_pillar`, `saju_ohaeng`, `saju_sipseong` — 개인별 계산 결과
-- `saju_compatibility`, `saju_compatibility_ohaeng`, `saju_compatibility_ganghap` — 궁합 비교 결과
+- `saju_chart`, `saju_pillar`, `saju_ohaeng`, `saju_sipseong` — 개인별 계산 결과 (구현 완료)
+- `saju_compatibility`, `saju_compatibility_ohaeng`, `saju_compatibility_ganghap` — 궁합 비교 결과 (후속 과제)
 
 > ~~`solar_term`~~, ~~`code_heavenly_stem`~~, ~~`code_earthly_branch`~~, ~~`code_ohaeng`~~ — manseryeok-js 포팅으로 대체되어 삭제됨
 > ~~`code_sipseong`~~, ~~`code_sibiunseong`~~ — Kotlin enum(`Sipseong`, `Sibiunseong`)으로 대체되어 삭제됨. DB에는 값 검증용 네이티브 `ENUM` 컬럼만 남음
 > ~~`Partner`~~ — `saju_chart.is_self` 컬럼 추가로 대체되어 삭제됨. 관계 유형은 `saju_compatibility.relationship_type`으로 통합
+> ~~`standard_time_period`~~ — 진태양시 보정 미도입(8절 확정)으로 불필요
 > `member`의 생년월일 관련 컬럼(`birth_date`/`birth_time`/`calendar_type`/`gender`) 유지 여부는 8절 정책 결정 대상 (`saju_chart`와 데이터 중복)
 
 (상세 컬럼 정의는 본 문서 5절 DDL 참조)

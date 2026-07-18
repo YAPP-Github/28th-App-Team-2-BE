@@ -62,4 +62,4 @@ class CreateSajuChartService(
 }
 
 private inline fun <reified T : Enum<T>> String.toSajuEnum(): T =
-    runCatching { enumValueOf<T>(this.uppercase()) }.getOrElse { throw SajuInputInvalidException() }
+    runCatching { enumValueOf<T>(this.trim().uppercase()) }.getOrElse { throw SajuInputInvalidException() }

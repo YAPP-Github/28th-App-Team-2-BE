@@ -36,8 +36,8 @@ class SajuCalculatorTest : DescribeSpec({
             byType.getValue(PillarType.MONTH).stemSipseong shouldBe Sipseong.BIGYEON
         }
 
-        it("지지 巳(水剋火·음)는 편재") {
-            byType.getValue(PillarType.YEAR).branchSipseong shouldBe Sipseong.PYEONJAE
+        it("지지 巳(水剋火·양)는 정재") {
+            byType.getValue(PillarType.YEAR).branchSipseong shouldBe Sipseong.JEONGJAE
         }
     }
 
@@ -71,8 +71,8 @@ class SajuCalculatorTest : DescribeSpec({
     describe("십성 분포 집계 (일간 제외 7글자)") {
         val sipseong = SajuCalculator.sipseongDistribution(pillars).associateBy { it.sipseong }
 
-        it("편재 3글자(년·월·일 지지 巳巳巳)") {
-            sipseong.getValue(Sipseong.PYEONJAE).count shouldBe 3
+        it("정재 3글자(년·월·일 지지 巳巳巳)") {
+            sipseong.getValue(Sipseong.JEONGJAE).count shouldBe 3
         }
 
         it("10종 합계는 7글자") {

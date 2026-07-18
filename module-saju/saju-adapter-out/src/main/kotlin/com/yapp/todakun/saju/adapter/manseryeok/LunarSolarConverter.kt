@@ -1,5 +1,6 @@
 package com.yapp.todakun.saju.adapter.manseryeok
 
+import com.yapp.todakun.saju.exception.SajuCalculationException
 import java.time.LocalDate
 
 /**
@@ -28,7 +29,7 @@ internal object LunarSolarConverter {
     private fun load(): Map<Int, LunarYear> {
         val text =
             javaClass.getResourceAsStream(RESOURCE_PATH)?.bufferedReader()?.use { it.readText() }
-                ?: error("음력 인덱스 리소스를 찾을 수 없습니다: $RESOURCE_PATH")
+                ?: throw SajuCalculationException()
 
         return text
             .lineSequence()

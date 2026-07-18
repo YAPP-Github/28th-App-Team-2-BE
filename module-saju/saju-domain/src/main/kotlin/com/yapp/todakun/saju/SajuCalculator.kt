@@ -62,6 +62,6 @@ object SajuCalculator {
         if (total == 0) {
             0.0
         } else {
-            BigDecimal(count * 100.0 / total).setScale(2, RoundingMode.HALF_UP).toDouble()
+            BigDecimal(count * 100).divide(BigDecimal(total), 2, RoundingMode.HALF_UP).toDouble()
         }
 }

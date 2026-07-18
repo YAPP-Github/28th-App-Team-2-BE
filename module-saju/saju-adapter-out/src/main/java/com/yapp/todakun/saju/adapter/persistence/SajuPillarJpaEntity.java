@@ -12,6 +12,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -20,7 +21,13 @@ import lombok.experimental.SuperBuilder;
 
 /** 4주별 상세(천간/지지/십성/십이운성). 천간·지지는 라이브러리 코드값, 십성/십이운성은 도메인 enum. */
 @Entity
-@Table(name = "saju_pillar")
+@Table(
+        name = "saju_pillar",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_saju_pillar_chart_type",
+                columnNames = {"chart_id", "pillar_type"}
+        )
+)
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)

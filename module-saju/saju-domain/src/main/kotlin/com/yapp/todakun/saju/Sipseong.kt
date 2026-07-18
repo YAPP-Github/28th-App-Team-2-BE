@@ -1,5 +1,7 @@
 package com.yapp.todakun.saju
 
+import com.yapp.todakun.saju.exception.SajuCalculationException
+
 /**
  * 십성(十星). 일간(日干)을 기준으로 대상 글자의 오행·음양 관계로 판정한다.
  * 각 값의 의미는 만세력 지침 5.2절을 따른다.
@@ -37,7 +39,7 @@ enum class Sipseong(
                 dm.controls() == targetElement -> if (sameYinYang) PYEONJAE else JEONGJAE
                 targetElement.controls() == dm -> if (sameYinYang) PYEONGWAN else JEONGGWAN
                 targetElement.generates() == dm -> if (sameYinYang) PYEONIN else JEONGIN
-                else -> error("십성 판정 불가: 일간=$dayMaster, 대상=$targetElement/$targetYinYang")
+                else -> throw SajuCalculationException()
             }
         }
     }

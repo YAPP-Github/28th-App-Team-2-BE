@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -17,7 +18,13 @@ import lombok.experimental.SuperBuilder;
 
 /** 오행 분포 집계(항상 5행). */
 @Entity
-@Table(name = "saju_ohaeng")
+@Table(
+        name = "saju_ohaeng",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_saju_ohaeng_chart_element",
+                columnNames = {"chart_id", "element"}
+        )
+)
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
