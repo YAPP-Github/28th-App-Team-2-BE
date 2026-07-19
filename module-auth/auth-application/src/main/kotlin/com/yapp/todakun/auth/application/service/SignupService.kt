@@ -9,11 +9,13 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.shared.CreateMemberPort
+import com.yapp.todakun.shared.CreateSajuChartPort
 
 @CommandService
 class SignupService(
     private val onboardingTokenPort: OnboardingTokenPort,
     private val createMemberPort: CreateMemberPort,
+    private val createSajuChartPort: CreateSajuChartPort,
     private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
 ) : SignupUseCase {
@@ -35,6 +37,20 @@ class SignupService(
                     job = command.job,
                     relationshipStatus = command.relationshipStatus,
                 )
+
+            // 회원 본인 사주 명식을 같은 트랜잭션에서 계산·저장(원자성 보장).
+            // 음력 입력은 평달로 간주해 isLeapMonth=false로 고정한다(윤달 미지원 — 대부분의 만세력 서비스와 동일 정책).
+            // 알려진 한계: 음력 윤달 생일자는 평달로 계산됨. 윤달 지원이 필요해지면 SignupCommand에 윤달 필드를 추가한다.
+            createSajuChartPort.create(
+                memberId = memberId,
+                isSelf = true,
+                name = command.name,
+                gender = command.gender,
+                calendarType = command.calendarType,
+                birthDate = command.birthDate,
+                birthTime = command.birthTime,
+                isLeapMonth = false,
+            )
 
             return SignupResult(
                 accessToken = accessTokenPort.generate(memberId),

@@ -13,6 +13,9 @@ dependencies {
     implementation(project(":member:domain"))
     implementation(project(":member:application"))
     implementation(project(":member:adapter-out"))
+    implementation(project(":saju:domain"))
+    implementation(project(":saju:application"))
+    implementation(project(":saju:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.data.jpa)
