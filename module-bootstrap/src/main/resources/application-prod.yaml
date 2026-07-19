@@ -43,6 +43,9 @@ oauth:
   google:
     client-ids: ${GOOGLE_OAUTH_CLIENT_IDS}  # 콤마 구분(Android/iOS 등 플랫폼별 클라이언트 ID)
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}  # 콤마 구분
+
 logging:
   # 구조화 로그(JSON) → stdout → Alloy가 level 파싱 → Loki. Discord ERROR 알림의 기반.
   structured:
