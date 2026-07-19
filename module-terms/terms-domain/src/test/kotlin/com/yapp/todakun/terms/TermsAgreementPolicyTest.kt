@@ -1,5 +1,6 @@
 package com.yapp.todakun.terms
 
+import com.yapp.todakun.terms.exception.DuplicateTermsAgreementException
 import com.yapp.todakun.terms.exception.RequiredTermsNotAgreedException
 import com.yapp.todakun.terms.exception.TermsNotFoundException
 import io.kotest.assertions.throwables.shouldNotThrowAny
@@ -29,6 +30,18 @@ class TermsAgreementPolicyTest :
                             TermsAgreementPolicy.validate(
                                 catalog = catalog,
                                 submittedTermsIds = listOf(serviceId, privacyId, marketingId),
+                                agreedTermsIds = setOf(serviceId, privacyId),
+                            )
+                        }
+                    }
+                }
+
+                context("같은 약관 ID가 중복되면") {
+                    it("DuplicateTermsAgreementException을 던진다") {
+                        shouldThrow<DuplicateTermsAgreementException> {
+                            TermsAgreementPolicy.validate(
+                                catalog = catalog,
+                                submittedTermsIds = listOf(serviceId, privacyId, serviceId),
                                 agreedTermsIds = setOf(serviceId, privacyId),
                             )
                         }

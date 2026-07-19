@@ -1,7 +1,9 @@
 package com.yapp.todakun.terms.adapter.persistence
 
 import com.yapp.todakun.terms.config.TestContainersConfig
+import com.yapp.todakun.terms.exception.TermsAgreementConflictException
 import com.yapp.todakun.terms.fixture.TermsFixture
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -54,6 +56,15 @@ class MemberTermsAgreementRepositoryAdapterTest(
                         val found = adapter.findAllByMemberId(TermsFixture.MEMBER_ID)
                         found shouldHaveSize 1
                         found.first().agreed shouldBe true
+                    }
+                }
+
+                context("같은 회원·약관을 서로 다른 id로 저장하면(동시 재제출 레이스)") {
+                    it("유니크 제약 위반을 TermsAgreementConflictException으로 변환한다") {
+                        val first = TermsFixture.agreement(id = TermsFixture.SERVICE_ID, termsId = TermsFixture.SERVICE_ID)
+                        val second = TermsFixture.agreement(id = TermsFixture.MARKETING_ID, termsId = TermsFixture.SERVICE_ID)
+
+                        shouldThrow<TermsAgreementConflictException> { adapter.saveAll(listOf(first, second)) }
                     }
                 }
             }

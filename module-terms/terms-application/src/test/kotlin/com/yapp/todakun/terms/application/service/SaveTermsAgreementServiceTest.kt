@@ -3,6 +3,7 @@ package com.yapp.todakun.terms.application.service
 import com.yapp.todakun.terms.MemberTermsAgreement
 import com.yapp.todakun.terms.Terms
 import com.yapp.todakun.terms.TermsType
+import com.yapp.todakun.terms.exception.DuplicateTermsAgreementException
 import com.yapp.todakun.terms.exception.RequiredTermsNotAgreedException
 import com.yapp.todakun.terms.exception.TermsNotFoundException
 import com.yapp.todakun.terms.port.inbound.SaveTermsAgreementCommand
@@ -140,6 +141,27 @@ class SaveTermsAgreementServiceTest :
                             )
 
                         shouldThrow<TermsNotFoundException> { service.save(command) }
+
+                        verify(exactly = 0) { memberTermsAgreementRepository.saveAll(any()) }
+                    }
+                }
+
+                context("같은 약관 ID가 중복 제출되면") {
+                    it("DuplicateTermsAgreementException을 던지고 저장하지 않는다") {
+                        every { termsRepository.findAll() } returns catalog
+
+                        val command =
+                            SaveTermsAgreementCommand(
+                                memberId = memberId,
+                                items =
+                                    listOf(
+                                        TermsAgreementItem(serviceId, agreed = true),
+                                        TermsAgreementItem(privacyId, agreed = true),
+                                        TermsAgreementItem(serviceId, agreed = false),
+                                    ),
+                            )
+
+                        shouldThrow<DuplicateTermsAgreementException> { service.save(command) }
 
                         verify(exactly = 0) { memberTermsAgreementRepository.saveAll(any()) }
                     }
