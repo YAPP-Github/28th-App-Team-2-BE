@@ -15,7 +15,10 @@ CADDY_TEMPLATE="caddy/Caddyfile.template"
 CADDY_RENDERED="caddy/Caddyfile"
 NETWORK="todakun-net"
 CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:8.12.1}"
-HEALTH_RETRIES=40
+# 소형 VM(스왑 스래싱·버스터블 CPU)에서 앱 부팅이 240초+ 걸리고, 전환 순간엔 green+blue
+# 두 JVM이 동시에 떠 더 느려진다. 부팅 중 curl은 connection refused로 즉시 실패(≈4s/회)하므로
+# 40회(≈160s)로는 부팅을 못 버텨 롤백됐다 → 여유롭게 늘린다(≈10분 창). VM 증설이 근본 해법.
+HEALTH_RETRIES=150
 HEALTH_INTERVAL=3
 
 running() { docker ps --format '{{.Names}}' | grep -qx "todakun-app-$1"; }
@@ -43,7 +46,7 @@ echo "[switch] todakun-app-$IDLE healthcheck 대기 (http://todakun-app-$IDLE:80
 healthy=0
 for _ in $(seq 1 "$HEALTH_RETRIES"); do
   if docker run --rm --network "$NETWORK" "$CURL_IMAGE" \
-      -fsS --connect-timeout 3 --max-time 5 "http://todakun-app-$IDLE:8080/actuator/health" >/dev/null 2>&1; then
+      -fsS --connect-timeout 3 --max-time 10 "http://todakun-app-$IDLE:8080/actuator/health" >/dev/null 2>&1; then
     healthy=1; break
   fi
   sleep "$HEALTH_INTERVAL"
