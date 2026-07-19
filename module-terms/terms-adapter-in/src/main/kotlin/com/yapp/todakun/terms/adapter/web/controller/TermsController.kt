@@ -25,6 +25,7 @@ class TermsController(
     ): ResponseEntity<CommonResponse<List<TermsAgreementResponse>>> {
         val saved = saveTermsAgreementUseCase.save(request.toCommand(memberId))
 
-        return CommonResponse.created(saved.map(TermsAgreementResponse::from))
+        // 신규 생성/기존 갱신이 섞인 upsert이므로 201이 아닌 200으로 응답한다.
+        return CommonResponse.success(saved.map(TermsAgreementResponse::from))
     }
 }

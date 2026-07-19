@@ -4,6 +4,7 @@ import com.yapp.todakun.persistence.BaseEntity;
 import com.yapp.todakun.terms.MemberTermsAgreement;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
@@ -18,6 +19,11 @@ import lombok.experimental.SuperBuilder;
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_member_terms_agreement_member_terms",
                 columnNames = {"member_id", "terms_id"}
+        ),
+        // 알림 발송 대상 조회("특정 약관에 동의한 회원") 최적화 — terms_id 선행 복합 인덱스.
+        indexes = @Index(
+                name = "ix_member_terms_agreement_terms_agreed",
+                columnList = "terms_id, agreed"
         )
 )
 @SuperBuilder

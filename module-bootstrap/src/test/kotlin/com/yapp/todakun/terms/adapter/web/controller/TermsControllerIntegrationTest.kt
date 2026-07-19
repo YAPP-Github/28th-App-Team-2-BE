@@ -113,7 +113,7 @@ class TermsControllerIntegrationTest(
                                     .with(authentication(UsernamePasswordAuthenticationToken(MEMBER_ID, null, emptyList())))
                                     .contentType("application/json")
                                     .content(objectMapper.writeValueAsString(requestBody)),
-                            ).andExpect(status().isCreated)
+                            ).andExpect(status().isOk)
                             .andReturn()
                             .response.contentAsString
 
