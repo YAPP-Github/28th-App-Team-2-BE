@@ -36,6 +36,7 @@ class SignupService(
                     gender = command.gender,
                     job = command.job,
                     relationshipStatus = command.relationshipStatus,
+                    favoriteFortuneCategories = command.favoriteFortuneCategories,
                 )
 
             // 회원 본인 사주 명식을 같은 트랜잭션에서 계산·저장(원자성 보장).
