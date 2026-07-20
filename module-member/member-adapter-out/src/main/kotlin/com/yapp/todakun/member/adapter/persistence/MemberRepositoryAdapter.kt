@@ -24,5 +24,5 @@ class MemberRepositoryAdapter(
     override fun findIdByOauth(
         oauthProvider: OauthProvider,
         providerId: String,
-    ): UUID? = memberJpaRepository.findByOauthProviderAndProviderId(oauthProvider, providerId)?.toDomain()?.id
+    ): UUID? = memberJpaRepository.findByOauthProviderAndProviderId(oauthProvider, providerId)?.id
 }

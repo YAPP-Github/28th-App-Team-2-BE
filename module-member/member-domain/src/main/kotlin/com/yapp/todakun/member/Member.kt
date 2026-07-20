@@ -1,5 +1,6 @@
 package com.yapp.todakun.member
 
+import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.OauthProvider
 import java.time.LocalDate
 import java.util.UUID
@@ -19,6 +20,7 @@ data class Member(
     val providerId: String,
     val job: Job,
     val relationshipStatus: RelationshipStatus,
+    val favoriteFortuneCategories: Set<FortuneCategory>,
 ) {
     companion object {
         @ExperimentalUuidApi
@@ -32,6 +34,7 @@ data class Member(
             providerId: String,
             job: Job,
             relationshipStatus: RelationshipStatus,
+            favoriteFortuneCategories: Set<FortuneCategory>,
         ): Member =
             Member(
                 id = Uuid.generateV7().toJavaUuid(),
@@ -45,6 +48,7 @@ data class Member(
                 providerId = providerId,
                 job = job,
                 relationshipStatus = relationshipStatus,
+                favoriteFortuneCategories = favoriteFortuneCategories,
             )
 
         @JvmStatic
@@ -60,6 +64,7 @@ data class Member(
             providerId: String,
             job: Job,
             relationshipStatus: RelationshipStatus,
+            favoriteFortuneCategories: Set<FortuneCategory>,
         ): Member =
             Member(
                 id = id,
@@ -73,6 +78,7 @@ data class Member(
                 providerId = providerId,
                 job = job,
                 relationshipStatus = relationshipStatus,
+                favoriteFortuneCategories = favoriteFortuneCategories,
             )
     }
 }

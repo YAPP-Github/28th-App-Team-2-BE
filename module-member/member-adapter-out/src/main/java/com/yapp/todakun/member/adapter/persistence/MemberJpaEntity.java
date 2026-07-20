@@ -8,14 +8,20 @@ import com.yapp.todakun.member.Member;
 import com.yapp.todakun.member.RelationshipStatus;
 import com.yapp.todakun.member.Role;
 import com.yapp.todakun.persistence.BaseEntity;
+import com.yapp.todakun.shared.FortuneCategory;
 import com.yapp.todakun.shared.OauthProvider;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -71,6 +77,23 @@ public class MemberJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private RelationshipStatus relationshipStatus;
 
+    @ElementCollection
+    @CollectionTable(
+            name = "member_favorite_fortune_category",
+            joinColumns = @JoinColumn(
+                    name = "member_id",
+                    nullable = false,
+                    foreignKey = @ForeignKey(name = "fk_member_favorite_fortune_category_member_id")
+            ),
+            uniqueConstraints = @UniqueConstraint(
+                    name = "uk_member_favorite_fortune_category_member_id_fortune_category",
+                    columnNames = {"member_id", "fortune_category"}
+            )
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "fortune_category", nullable = false)
+    private Set<FortuneCategory> favoriteFortuneCategories;
+
     public static MemberJpaEntity fromDomain(Member member) {
         return MemberJpaEntity.builder()
                 .id(member.getId())
@@ -84,6 +107,7 @@ public class MemberJpaEntity extends BaseEntity {
                 .providerId(member.getProviderId())
                 .job(member.getJob())
                 .relationshipStatus(member.getRelationshipStatus())
+                .favoriteFortuneCategories(member.getFavoriteFortuneCategories())
                 .build();
     }
 
@@ -99,7 +123,8 @@ public class MemberJpaEntity extends BaseEntity {
                 oauthProvider,
                 providerId,
                 job,
-                relationshipStatus
+                relationshipStatus,
+                favoriteFortuneCategories
         );
     }
 }

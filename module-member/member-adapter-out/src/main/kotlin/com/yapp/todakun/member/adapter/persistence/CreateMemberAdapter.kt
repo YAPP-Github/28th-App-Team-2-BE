@@ -8,6 +8,7 @@ import com.yapp.todakun.member.Member
 import com.yapp.todakun.member.RelationshipStatus
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.shared.CreateMemberPort
+import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.OauthProvider
 import org.springframework.stereotype.Component
 import java.time.LocalDate
@@ -29,6 +30,7 @@ class CreateMemberAdapter(
         gender: String,
         job: String,
         relationshipStatus: String,
+        favoriteFortuneCategories: List<String>,
     ): UUID {
         val member =
             Member.create(
@@ -41,6 +43,7 @@ class CreateMemberAdapter(
                 providerId = providerId,
                 job = job.toMemberEnum<Job>(),
                 relationshipStatus = relationshipStatus.toMemberEnum<RelationshipStatus>(),
+                favoriteFortuneCategories = favoriteFortuneCategories.map { it.toMemberEnum<FortuneCategory>() }.toSet(),
             )
 
         return memberRepository.save(member).id
