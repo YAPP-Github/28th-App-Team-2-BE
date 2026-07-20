@@ -21,6 +21,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -124,7 +125,9 @@ public class MemberJpaEntity extends BaseEntity {
                 providerId,
                 job,
                 relationshipStatus,
-                favoriteFortuneCategories
+                // @ElementCollection(LAZY)인 PersistentSet을 도메인에 그대로 넘기면 세션 종료(OSIV off) 후
+                // 접근 시 LazyInitializationException이 난다. 트랜잭션 안에서 방어적 복사로 초기화 + 프록시 분리.
+                new HashSet<>(favoriteFortuneCategories)
         );
     }
 }
