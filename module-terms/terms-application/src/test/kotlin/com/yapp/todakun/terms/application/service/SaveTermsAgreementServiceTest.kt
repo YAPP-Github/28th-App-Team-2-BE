@@ -20,7 +20,9 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
 
+@ExperimentalUuidApi
 class SaveTermsAgreementServiceTest :
     DescribeSpec(
         {

@@ -14,7 +14,7 @@ class SaveTermsAgreementService(
     private val termsRepository: TermsRepository,
     private val memberTermsAgreementRepository: MemberTermsAgreementRepository,
 ) : SaveTermsAgreementUseCase {
-    @OptIn(ExperimentalUuidApi::class)
+    @ExperimentalUuidApi
     override fun save(command: SaveTermsAgreementCommand): List<MemberTermsAgreement> {
         val catalog = termsRepository.findAll()
         val submittedTermsIds = command.items.map { it.termsId }
