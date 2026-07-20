@@ -11,6 +11,7 @@ import com.yapp.todakun.member.CalendarType
 import com.yapp.todakun.member.Gender
 import com.yapp.todakun.member.Job
 import com.yapp.todakun.member.RelationshipStatus
+import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.OauthProvider
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -178,6 +179,8 @@ class AuthControllerIntegrationTest(
                     gender = Gender.MALE.name,
                     job = Job.STUDENT.name,
                     relationshipStatus = RelationshipStatus.SOLO.name,
+                    favoriteFortuneCategories =
+                        listOf(FortuneCategory.RELATIONSHIP.name, FortuneCategory.MONEY.name, FortuneCategory.HEALTH.name),
                 ).toJson()
         }
 

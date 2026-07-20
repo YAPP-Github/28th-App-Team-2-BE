@@ -53,7 +53,9 @@ class SignupServiceTest :
 
                         shouldThrow<OnboardingTokenInvalidException> { signupService.signup(command) }
 
-                        verify(exactly = 0) { createMemberPort.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+                        verify(exactly = 0) {
+                            createMemberPort.create(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                        }
                     }
                 }
 
@@ -71,6 +73,7 @@ class SignupServiceTest :
                                 gender = command.gender,
                                 job = command.job,
                                 relationshipStatus = command.relationshipStatus,
+                                favoriteFortuneCategories = command.favoriteFortuneCategories,
                             )
                         } returns memberId
                         every {
