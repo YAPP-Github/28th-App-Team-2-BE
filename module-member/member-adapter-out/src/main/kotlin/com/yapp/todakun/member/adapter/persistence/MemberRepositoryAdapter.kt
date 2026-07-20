@@ -25,4 +25,8 @@ class MemberRepositoryAdapter(
         oauthProvider: OauthProvider,
         providerId: String,
     ): UUID? = memberJpaRepository.findByOauthProviderAndProviderId(oauthProvider, providerId)?.id
+
+    override fun deleteById(id: UUID) {
+        memberJpaRepository.deleteById(id)
+    }
 }
