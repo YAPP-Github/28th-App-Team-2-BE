@@ -105,5 +105,17 @@ class MemberRepositoryAdapterTest(
                     }
                 }
             }
+
+            describe("deleteById") {
+                context("저장된 회원을 삭제하면") {
+                    it("더 이상 조회되지 않는다") {
+                        val member = savedMember()
+
+                        adapter.deleteById(member.id)
+
+                        adapter.findById(member.id).shouldBeNull()
+                    }
+                }
+            }
         },
     )
