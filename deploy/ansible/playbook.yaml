@@ -129,19 +129,30 @@
       changed_when: "'already exists' not in net_create.stderr"
       failed_when: net_create.rc != 0 and 'already exists' not in net_create.stderr
 
-    - name: 초기 Caddyfile 렌더링 (첫 배포 전, blue 업스트림)
+    # Caddyfile은 active color 상태를 담는 파일이라 switch.sh가 소유한다(배포 성공 시 idle color로
+    # 재렌더 + `caddy reload`). provision이 매 실행마다 blue로 덮으면, health 실패로 롤백된 배포
+    # 뒤에는 disk=blue(이미 제거된 컨테이너)로 남아 Caddy 재시작/재생성 시 전체 502가 된다.
+    # → 파일이 아직 없을 때(최초 1회)만 부트스트랩 렌더하고, 이후 상태는 switch.sh에 맡긴다.
+    - name: 기존 렌더된 Caddyfile 존재 확인
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/caddy/Caddyfile"
+      register: caddyfile_stat
+
+    - name: 초기 Caddyfile 렌더링 (최초 1회만, blue 업스트림)
       ansible.builtin.command: >
         sed "s|__APP_UPSTREAM__|todakun-app-blue:8080|"
         {{ app_dir }}/caddy/Caddyfile.template
       register: caddy_rendered
       changed_when: "false"
+      when: not caddyfile_stat.stat.exists
 
-    - name: Caddyfile 저장
+    - name: Caddyfile 저장 (최초 1회만)
       ansible.builtin.copy:
         content: "{{ caddy_rendered.stdout }}\n"
         dest: "{{ app_dir }}/caddy/Caddyfile"
         owner: "{{ ansible_user }}"
         mode: "0644"
+      when: not caddyfile_stat.stat.exists
 
     - name: SOPS 시크릿 → /opt/todakun/.env 렌더링
       ansible.builtin.import_tasks: tasks/render_env.yaml

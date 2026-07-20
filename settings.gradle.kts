@@ -24,6 +24,12 @@ include("saju:domain")
 include("saju:application")
 include("saju:adapter-out")
 
+// terms 도메인 (:terms 하위에 nested된 4개 모듈, leaf는 레이어명만)
+include("terms:domain")
+include("terms:application")
+include("terms:adapter-in")
+include("terms:adapter-out")
+
 // 모듈 디렉터리는 `module-*` 접두사를 쓰므로 프로젝트 경로를 매핑한다.
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
@@ -50,3 +56,9 @@ project(":saju").projectDir = file("module-saju")
 project(":saju:domain").projectDir = file("module-saju/saju-domain")
 project(":saju:application").projectDir = file("module-saju/saju-application")
 project(":saju:adapter-out").projectDir = file("module-saju/saju-adapter-out")
+
+project(":terms").projectDir = file("module-terms")
+project(":terms:domain").projectDir = file("module-terms/terms-domain")
+project(":terms:application").projectDir = file("module-terms/terms-application")
+project(":terms:adapter-in").projectDir = file("module-terms/terms-adapter-in")
+project(":terms:adapter-out").projectDir = file("module-terms/terms-adapter-out")
