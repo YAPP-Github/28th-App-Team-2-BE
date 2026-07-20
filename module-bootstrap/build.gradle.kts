@@ -15,6 +15,7 @@ dependencies {
     implementation(project(":member:adapter-out"))
     implementation(project(":saju:domain"))
     implementation(project(":saju:application"))
+    implementation(project(":saju:adapter-in"))
     implementation(project(":saju:adapter-out"))
     implementation(project(":terms:domain"))
     implementation(project(":terms:application"))

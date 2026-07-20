@@ -19,9 +19,10 @@ include("member:application")
 include("member:adapter-in")
 include("member:adapter-out")
 
-// saju 도메인 (REST 미노출: 크로스 도메인 내부 기능이라 adapter-in 없음)
+// saju 도메인 (:saju 하위에 nested된 4개 모듈, leaf는 레이어명만)
 include("saju:domain")
 include("saju:application")
+include("saju:adapter-in")
 include("saju:adapter-out")
 
 // terms 도메인 (:terms 하위에 nested된 4개 모듈, leaf는 레이어명만)
@@ -55,6 +56,7 @@ project(":member:adapter-out").projectDir = file("module-member/member-adapter-o
 project(":saju").projectDir = file("module-saju")
 project(":saju:domain").projectDir = file("module-saju/saju-domain")
 project(":saju:application").projectDir = file("module-saju/saju-application")
+project(":saju:adapter-in").projectDir = file("module-saju/saju-adapter-in")
 project(":saju:adapter-out").projectDir = file("module-saju/saju-adapter-out")
 
 project(":terms").projectDir = file("module-terms")

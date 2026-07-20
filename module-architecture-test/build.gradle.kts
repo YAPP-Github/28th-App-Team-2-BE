@@ -8,5 +8,6 @@ dependencies {
 
     testImplementation(project(":saju:domain"))
     testImplementation(project(":saju:application"))
+    testImplementation(project(":saju:adapter-in"))
     testImplementation(project(":saju:adapter-out"))
 }
