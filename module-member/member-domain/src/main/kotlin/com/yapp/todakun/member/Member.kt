@@ -22,6 +22,36 @@ data class Member(
     val relationshipStatus: RelationshipStatus,
     val favoriteFortuneCategories: Set<FortuneCategory>,
 ) {
+    /**
+     * 내 정보 수정. 생년 정보(성별·양음력·생년월일·태어난 시간)와 관심 주제·현재 상황(직업·연애 상태)을 교체한다.
+     * 이름·역할·소셜 로그인 식별자는 수정 대상이 아니다.
+     */
+    fun update(
+        gender: Gender,
+        calendarType: CalendarType,
+        birthDate: LocalDate,
+        birthTime: BirthTime,
+        job: Job,
+        relationshipStatus: RelationshipStatus,
+        favoriteFortuneCategories: Set<FortuneCategory>,
+    ): Member =
+        copy(
+            gender = gender,
+            calendarType = calendarType,
+            birthDate = birthDate,
+            birthTime = birthTime,
+            job = job,
+            relationshipStatus = relationshipStatus,
+            favoriteFortuneCategories = favoriteFortuneCategories,
+        )
+
+    /** 사주 명식 계산에 영향을 주는 입력(성별·양음력·생년월일·태어난 시간)이 [other]와 동일한지 여부. */
+    fun sajuInputEquals(other: Member): Boolean =
+        gender == other.gender &&
+            calendarType == other.calendarType &&
+            birthDate == other.birthDate &&
+            birthTime == other.birthTime
+
     companion object {
         @ExperimentalUuidApi
         fun create(
