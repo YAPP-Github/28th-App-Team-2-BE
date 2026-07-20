@@ -120,10 +120,18 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
-@OptIn(ExperimentalUuidApi::class)
+@ExperimentalUuidApi
 val id: UUID = Uuid.generateV7().toJavaUuid()  // domain entity / value object
 ```
 > `UUID.ofVersion7()` does not exist in the JDK (do not use it). Always use `Uuid.generateV7()`.
+
+### `@ExperimentalUuidApi` (opt-in) rule
+
+`Uuid.generateV7()` is still an experimental stdlib API ([Kotlin docs](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.uuid/-uuid/-companion/generate-v7.html)), so every declaration that (transitively) calls it must opt in. **Use the propagating marker `@ExperimentalUuidApi`, not `@OptIn(ExperimentalUuidApi::class)`.**
+
+- **Why propagate instead of `@OptIn`**: `@OptIn` swallows the experimental requirement at that spot; `@ExperimentalUuidApi` re-exposes it so callers make the same conscious choice. This keeps the whole UUIDv7 chain honest and is the established convention (`Member.create`, `SajuChart.create`, `CreateSajuChartService.create`).
+- **Where it goes**: the domain factory (`companion object { @ExperimentalUuidApi fun create(...) }`), the service **override** that calls it, and any **concrete-type** caller such as a `*ServiceTest` class (annotate the test class).
+- **Where it does NOT go**: the inbound `*UseCase`/`shared` **port interfaces stay un-annotated** — that's the propagation boundary, so controllers/other domains calling through the interface type need no opt-in (see `CreateSajuChartPort` ← `SignupService`).
 
 ## Cross-Domain References
 

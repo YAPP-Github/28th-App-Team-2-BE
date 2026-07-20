@@ -83,7 +83,7 @@ import java.util.UUID
         import kotlin.uuid.Uuid
         import kotlin.uuid.toJavaUuid
 
-        @OptIn(ExperimentalUuidApi::class)
+        @ExperimentalUuidApi  // UUIDv7는 실험적 stdlib API → @OptIn이 아니라 전파형 @ExperimentalUuidApi 사용 (architecture 스킬 참고)
         data class {Domain}(
 val id: UUID = Uuid.generateV7().toJavaUuid(),
 // domain fields

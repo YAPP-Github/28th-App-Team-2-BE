@@ -28,6 +28,7 @@ You are the code-review specialist agent for the todakun project.
 
 ### DB / JPA
 - [ ] PKs use `Uuid.generateV7().toJavaUuid()` (no v4 `randomUUID()` or fake `ofVersion7()`)
+- [ ] UUIDv7 opt-in uses the propagating `@ExperimentalUuidApi`, not `@OptIn(ExperimentalUuidApi::class)` (port/UseCase interfaces stay un-annotated)
 - [ ] OSIV setting (`open-in-view: false`) preserved
 - [ ] Query services are `@QueryService` (readOnly), mutations are `@CommandService`
 - [ ] Checked for potential N+1 problems
