@@ -5,4 +5,6 @@ import java.util.UUID
 
 interface SajuPillarJpaRepository : JpaRepository<SajuPillarJpaEntity, UUID> {
     fun findByChartId(chartId: UUID): List<SajuPillarJpaEntity>
+
+    fun deleteByChartIdIn(chartIds: Collection<UUID>)
 }
