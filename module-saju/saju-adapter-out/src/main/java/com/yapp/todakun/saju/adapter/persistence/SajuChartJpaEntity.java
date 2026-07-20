@@ -16,25 +16,18 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-/** 사주 명식 계산 결과 헤더. 본인/타인(궁합 상대 등) 입력을 모두 이 테이블로 처리한다(is_self로 구분). */
+/** 사주 명식 계산 결과 헤더(순수 계산 결과만 보유). 소유권(본인/상대)은 member_saju_chart가 관리한다. */
 @Entity
 @Table(name = "saju_chart")
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class SajuChartJpaEntity extends BaseEntity {
-
-    @Column
-    private UUID memberId;
-
-    @Column(nullable = false)
-    private boolean isSelf;
 
     @Column
     private String name;
@@ -70,8 +63,6 @@ public class SajuChartJpaEntity extends BaseEntity {
     public static SajuChartJpaEntity fromDomain(SajuChart chart) {
         return SajuChartJpaEntity.builder()
                 .id(chart.getId())
-                .memberId(chart.getMemberId())
-                .isSelf(chart.isSelf())
                 .name(chart.getName())
                 .gender(chart.getGender())
                 .calendarType(chart.getCalendarType())
@@ -87,8 +78,6 @@ public class SajuChartJpaEntity extends BaseEntity {
     public SajuChart toDomain(List<SajuPillar> pillars, List<OhaengCount> ohaeng, List<SipseongCount> sipseong) {
         return SajuChart.reconstitute(
                 getId(),
-                memberId,
-                isSelf,
                 name,
                 gender,
                 calendarType,

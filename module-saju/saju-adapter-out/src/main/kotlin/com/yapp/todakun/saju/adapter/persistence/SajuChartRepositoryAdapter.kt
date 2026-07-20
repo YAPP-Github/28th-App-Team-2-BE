@@ -43,6 +43,16 @@ class SajuChartRepositoryAdapter(
         )
     }
 
+    override fun deleteById(id: UUID) = deleteAllByIds(listOf(id))
+
+    override fun deleteAllByIds(ids: Collection<UUID>) {
+        if (ids.isEmpty()) return
+        pillarJpaRepository.deleteByChartIdIn(ids)
+        ohaengJpaRepository.deleteByChartIdIn(ids)
+        sipseongJpaRepository.deleteByChartIdIn(ids)
+        chartJpaRepository.deleteAllById(ids)
+    }
+
     @ExperimentalUuidApi
     private fun newId(): UUID = Uuid.generateV7().toJavaUuid()
 }
