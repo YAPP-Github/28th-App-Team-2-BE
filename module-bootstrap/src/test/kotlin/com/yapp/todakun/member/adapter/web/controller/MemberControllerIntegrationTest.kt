@@ -155,11 +155,25 @@ class MemberControllerIntegrationTest(
                             delete("/api/v1/members/me")
                                 .with(authentication(UsernamePasswordAuthenticationToken(MEMBER_ID, null, emptyList())))
                                 .contentType("application/json")
-                                .content(objectMapper.writeValueAsString(mapOf("reason" to "NOT_USING"))),
+                                .content(objectMapper.writeValueAsString(mapOf("reason" to "LOW_USAGE"))),
                         ).andExpect(status().isOk)
 
                     commandSlot.captured.memberId shouldBe MEMBER_ID
-                    commandSlot.captured.reason.name shouldBe "NOT_USING"
+                    commandSlot.captured.reason.name shouldBe "LOW_USAGE"
+                }
+            }
+
+            context("사유가 기타(ETC)인데 상세 사유가 비어 있으면") {
+                it("400을 반환하고 탈퇴 처리하지 않는다") {
+                    mockMvc
+                        .perform(
+                            delete("/api/v1/members/me")
+                                .with(authentication(UsernamePasswordAuthenticationToken(MEMBER_ID, null, emptyList())))
+                                .contentType("application/json")
+                                .content(objectMapper.writeValueAsString(mapOf("reason" to "ETC"))),
+                        ).andExpect(status().isBadRequest)
+
+                    verify(exactly = 0) { withdrawUseCase.withdraw(any()) }
                 }
             }
 
@@ -169,7 +183,7 @@ class MemberControllerIntegrationTest(
                         .perform(
                             delete("/api/v1/members/me")
                                 .contentType("application/json")
-                                .content(objectMapper.writeValueAsString(mapOf("reason" to "NOT_USING"))),
+                                .content(objectMapper.writeValueAsString(mapOf("reason" to "LOW_USAGE"))),
                         ).andExpect(status().isUnauthorized)
                 }
             }

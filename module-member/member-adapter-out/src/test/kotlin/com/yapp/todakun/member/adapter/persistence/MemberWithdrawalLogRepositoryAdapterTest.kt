@@ -8,7 +8,6 @@ import io.kotest.matchers.shouldBe
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
-import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 @ExperimentalUuidApi
@@ -20,17 +19,17 @@ class MemberWithdrawalLogRepositoryAdapterTest(
 ) : DescribeSpec(
         {
             val adapter = MemberWithdrawalLogRepositoryAdapter(memberWithdrawalLogJpaRepository)
-            val memberId = UUID.fromString("018f0000-0000-7000-8000-000000000001")
 
             describe("save") {
                 context("탈퇴 사유 로그를 저장하면") {
-                    it("저장된 로그를 반환하고 조회된다") {
-                        val log = MemberWithdrawalLog.create(memberId, WithdrawalReason.NOT_USING, "자주 안 써요")
+                    it("계정 식별자 없이 사유·상세만 저장하고 조회된다") {
+                        val log = MemberWithdrawalLog.create(WithdrawalReason.LOW_USAGE, "자주 안 써요")
 
                         val saved = adapter.save(log)
 
                         saved.id shouldBe log.id
-                        saved.reason shouldBe WithdrawalReason.NOT_USING
+                        saved.reason shouldBe WithdrawalReason.LOW_USAGE
+                        saved.detail shouldBe "자주 안 써요"
                         memberWithdrawalLogJpaRepository.findById(log.id).isPresent shouldBe true
                     }
                 }
