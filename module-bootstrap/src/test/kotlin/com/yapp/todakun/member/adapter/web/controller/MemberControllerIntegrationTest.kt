@@ -13,7 +13,7 @@ import com.yapp.todakun.member.RelationshipStatus
 import com.yapp.todakun.member.Role
 import com.yapp.todakun.member.port.inbound.GetMyProfileUseCase
 import com.yapp.todakun.member.port.inbound.UpdateMemberUseCase
-import com.yapp.todakun.member.port.inbound.WithdrawCommand
+import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
 import com.yapp.todakun.member.port.inbound.WithdrawMemberUseCase
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.OauthProvider
@@ -153,7 +153,7 @@ class MemberControllerIntegrationTest(
         describe("DELETE /api/v1/members/me") {
             context("인증된 회원이 탈퇴 사유와 함께 요청하면") {
                 it("200을 반환하고 사유로 탈퇴 처리한다") {
-                    val commandSlot = slot<WithdrawCommand>()
+                    val commandSlot = slot<WithdrawMemberCommand>()
                     every { accessTokenPort.parse(ACCESS_TOKEN) } returns AccessTokenClaims(MEMBER_ID, "test-jti", 300L)
                     every { withdrawMemberUseCase.withdraw(capture(commandSlot)) } just Runs
 

@@ -3,7 +3,7 @@ package com.yapp.todakun.member.application.service
 import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.member.MemberWithdrawalLog
 import com.yapp.todakun.member.exception.MemberNotFoundException
-import com.yapp.todakun.member.port.inbound.WithdrawCommand
+import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
 import com.yapp.todakun.member.port.inbound.WithdrawMemberUseCase
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
@@ -19,7 +19,7 @@ import kotlin.uuid.ExperimentalUuidApi
  * 사주·토큰 정리와 재가입 제한 등록은 크로스 도메인 포트로 위임한다(member는 saju·auth 내부 구조를 모른다).
  */
 @CommandService
-class WithdrawService(
+class WithdrawMemberService(
     private val memberRepository: MemberRepository,
     private val memberWithdrawalLogRepository: MemberWithdrawalLogRepository,
     private val deleteMemberSajusPort: DeleteMemberSajusPort,
@@ -27,7 +27,7 @@ class WithdrawService(
     private val registerWithdrawnAccountPort: RegisterWithdrawnAccountPort,
 ) : WithdrawMemberUseCase {
     @ExperimentalUuidApi
-    override fun withdraw(command: WithdrawCommand) {
+    override fun withdraw(command: WithdrawMemberCommand) {
         val member = memberRepository.findById(command.memberId) ?: throw MemberNotFoundException()
 
         memberWithdrawalLogRepository.save(
