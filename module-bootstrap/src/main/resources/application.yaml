@@ -41,3 +41,8 @@ oauth:
     issuers:
       - https://accounts.google.com
       - accounts.google.com
+
+# 회원 탈퇴 정책 v1.0 — 탈퇴 후 재가입 제한/SNS 식별자 보관 기간(90일). 환경 무관 고정값.
+account:
+  withdrawal:
+    restriction-seconds: 7776000  # 90일
