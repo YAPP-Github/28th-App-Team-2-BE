@@ -187,4 +187,28 @@ class ArchitectureTest {
                 adapter.dependsOn(application, domain)
             }
     }
+
+    @Test
+    fun `Firebase 타입은 adapter 패키지에서만 임포트한다`() {
+        scope
+            .classes()
+            .filter { clazz -> clazz.containingFile.imports.any { it.name.startsWith("com.google.firebase") } }
+            .forEach { clazz ->
+                check(clazz.resideInPackage("..adapter..")) {
+                    "${clazz.name}: com.google.firebase 임포트는 .adapter 패키지에서만 허용된다"
+                }
+            }
+    }
+
+    @Test
+    fun `Fcm 어댑터는 adapter_fcm 패키지에만 위치한다`() {
+        scope
+            .classes()
+            .filter { it.name.startsWith("Fcm") && it.name.endsWith("Adapter") }
+            .forEach { clazz ->
+                check(clazz.resideInPackage("..adapter.fcm..")) {
+                    "${clazz.name}는 .adapter.fcm 패키지에 위치해야 한다"
+                }
+            }
+    }
 }
