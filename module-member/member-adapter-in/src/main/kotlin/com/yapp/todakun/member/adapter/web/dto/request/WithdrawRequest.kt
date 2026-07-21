@@ -48,10 +48,13 @@ data class WithdrawRequest(
     val isEtcDetailProvided: Boolean
         get() = reason != WithdrawalReason.ETC.name || !detail.isNullOrBlank()
 
-    fun toCommand(memberId: UUID) =
-        WithdrawCommand(
-            memberId = memberId,
-            reason = reason.toMemberEnum<WithdrawalReason>(),
-            detail = detail?.takeIf { it.isNotBlank() },
-        )
+    fun toCommand(
+        memberId: UUID,
+        accessToken: String,
+    ) = WithdrawCommand(
+        memberId = memberId,
+        reason = reason.toMemberEnum<WithdrawalReason>(),
+        detail = detail?.takeIf { it.isNotBlank() },
+        accessToken = accessToken,
+    )
 }

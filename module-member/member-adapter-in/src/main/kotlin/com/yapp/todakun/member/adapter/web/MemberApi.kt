@@ -4,6 +4,7 @@ import com.yapp.todakun.member.adapter.web.dto.request.UpdateMemberRequest
 import com.yapp.todakun.member.adapter.web.dto.request.WithdrawRequest
 import com.yapp.todakun.member.adapter.web.dto.response.GetMyProfileResponse
 import com.yapp.todakun.web.response.CommonResponse
+import com.yapp.todakun.web.security.annotation.BearerToken
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -49,6 +50,8 @@ interface MemberApi {
     fun withdraw(
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
+        @Parameter(hidden = true)
+        @BearerToken accessToken: String,
         @RequestBody @Valid request: WithdrawRequest,
     ): ResponseEntity<CommonResponse<Unit>>
 }

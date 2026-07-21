@@ -6,7 +6,7 @@ import com.yapp.todakun.member.fixture.MemberFixture
 import com.yapp.todakun.member.port.inbound.WithdrawCommand
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
-import com.yapp.todakun.shared.DeleteMemberSajuDataPort
+import com.yapp.todakun.shared.DeleteMemberSajusPort
 import com.yapp.todakun.shared.RegisterWithdrawnAccountPort
 import com.yapp.todakun.shared.RevokeMemberTokensPort
 import io.kotest.assertions.throwables.shouldThrow
@@ -24,14 +24,14 @@ import kotlin.uuid.ExperimentalUuidApi
 class WithdrawServiceTest : DescribeSpec({
     val memberRepository = mockk<MemberRepository>()
     val memberWithdrawalLogRepository = mockk<MemberWithdrawalLogRepository>()
-    val deleteMemberSajuDataPort = mockk<DeleteMemberSajuDataPort>()
+    val deleteMemberSajusPort = mockk<DeleteMemberSajusPort>()
     val revokeMemberTokensPort = mockk<RevokeMemberTokensPort>()
     val registerWithdrawnAccountPort = mockk<RegisterWithdrawnAccountPort>()
     val service =
         WithdrawService(
             memberRepository,
             memberWithdrawalLogRepository,
-            deleteMemberSajuDataPort,
+            deleteMemberSajusPort,
             revokeMemberTokensPort,
             registerWithdrawnAccountPort,
         )
@@ -40,13 +40,14 @@ class WithdrawServiceTest : DescribeSpec({
         clearMocks(
             memberRepository,
             memberWithdrawalLogRepository,
-            deleteMemberSajuDataPort,
+            deleteMemberSajusPort,
             revokeMemberTokensPort,
             registerWithdrawnAccountPort,
         )
     }
 
-    val command = WithdrawCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null)
+    val accessToken = "test-access-token"
+    val command = WithdrawCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null, accessToken = accessToken)
 
     describe("withdraw") {
         context("회원이 존재하면") {
@@ -54,8 +55,8 @@ class WithdrawServiceTest : DescribeSpec({
                 val member = MemberFixture.member()
                 every { memberRepository.findById(MemberFixture.MEMBER_ID) } returns member
                 every { memberWithdrawalLogRepository.save(any()) } answers { firstArg() }
-                every { deleteMemberSajuDataPort.deleteByMemberId(MemberFixture.MEMBER_ID) } just Runs
-                every { revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID) } just Runs
+                every { deleteMemberSajusPort.deleteByMemberId(MemberFixture.MEMBER_ID) } just Runs
+                every { revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, accessToken) } just Runs
                 every { registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId) } just Runs
                 every { memberRepository.deleteById(MemberFixture.MEMBER_ID) } just Runs
 
@@ -63,8 +64,8 @@ class WithdrawServiceTest : DescribeSpec({
 
                 verifyOrder {
                     memberWithdrawalLogRepository.save(any())
-                    deleteMemberSajuDataPort.deleteByMemberId(MemberFixture.MEMBER_ID)
-                    revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID)
+                    deleteMemberSajusPort.deleteByMemberId(MemberFixture.MEMBER_ID)
+                    revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, accessToken)
                     registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
                     memberRepository.deleteById(MemberFixture.MEMBER_ID)
                 }
@@ -78,7 +79,7 @@ class WithdrawServiceTest : DescribeSpec({
                 shouldThrow<MemberNotFoundException> { service.withdraw(command) }
 
                 verify(exactly = 0) { memberRepository.deleteById(any()) }
-                verify(exactly = 0) { deleteMemberSajuDataPort.deleteByMemberId(any()) }
+                verify(exactly = 0) { deleteMemberSajusPort.deleteByMemberId(any()) }
                 verify(exactly = 0) { registerWithdrawnAccountPort.register(any(), any()) }
             }
         }

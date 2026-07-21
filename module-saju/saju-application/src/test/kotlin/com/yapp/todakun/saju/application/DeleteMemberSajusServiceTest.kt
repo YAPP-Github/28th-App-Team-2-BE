@@ -12,10 +12,10 @@ import io.mockk.mockk
 import io.mockk.verify
 import java.util.UUID
 
-class DeleteMemberSajuDataServiceTest : DescribeSpec({
+class DeleteMemberSajusServiceTest : DescribeSpec({
     val sajuChartRepository = mockk<SajuChartRepository>()
     val memberSajuLinkRepository = mockk<MemberSajuLinkRepository>()
-    val service = DeleteMemberSajuDataService(sajuChartRepository, memberSajuLinkRepository)
+    val service = DeleteMemberSajusService(sajuChartRepository, memberSajuLinkRepository)
 
     afterTest { clearMocks(sajuChartRepository, memberSajuLinkRepository) }
 
