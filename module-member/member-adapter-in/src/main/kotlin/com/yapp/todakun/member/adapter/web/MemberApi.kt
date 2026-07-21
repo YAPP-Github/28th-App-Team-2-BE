@@ -41,7 +41,9 @@ interface MemberApi {
 
     @Operation(
         summary = "회원 탈퇴",
-        description = "회원을 탈퇴(하드 삭제)한다. 사유는 통계 목적으로 로그에 보관하고, 회원·사주 데이터·인증 토큰은 모두 삭제한다.",
+        description =
+            "회원을 탈퇴(하드 삭제)한다. 복구 유예 없이 즉시 확정 처리되며, 회원·사주 데이터·인증 토큰은 모두 삭제된다. " +
+                "탈퇴 사유는 계정 식별 정보와 분리한 비식별 로그로 보관(통계·VOC)하고, 탈퇴한 SNS 계정은 90일간 재가입이 제한된다.",
     )
     @DeleteMapping("api/v1/members/me")
     fun withdraw(
