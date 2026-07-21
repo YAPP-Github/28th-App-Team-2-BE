@@ -39,6 +39,7 @@ import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
+private val PARTNER_SAJU_ID = UUID.fromString("018f0000-0000-7000-8000-0000000000d1")
 
 @ExperimentalUuidApi
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -152,8 +153,7 @@ class SajuControllerIntegrationTest(
             context("인증된 회원이 유효한 값으로 요청하면") {
                 it("201로 생성하고 인증 주체의 memberId로 등록한다") {
                     val commandSlot = slot<RegisterPartnerSajuCommand>()
-                    every { registerPartnerSajuUseCase.register(capture(commandSlot)) } returns
-                        UUID.fromString("018f0000-0000-7000-8000-0000000000d1")
+                    every { registerPartnerSajuUseCase.register(capture(commandSlot)) } returns PARTNER_SAJU_ID
 
                     mockMvc
                         .perform(

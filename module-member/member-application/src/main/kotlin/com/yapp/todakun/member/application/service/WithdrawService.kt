@@ -4,10 +4,10 @@ import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.member.MemberWithdrawalLog
 import com.yapp.todakun.member.exception.MemberNotFoundException
 import com.yapp.todakun.member.port.inbound.WithdrawCommand
-import com.yapp.todakun.member.port.inbound.WithdrawUseCase
+import com.yapp.todakun.member.port.inbound.WithdrawMemberUseCase
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
-import com.yapp.todakun.shared.DeleteMemberSajuDataPort
+import com.yapp.todakun.shared.DeleteMemberSajusPort
 import com.yapp.todakun.shared.RegisterWithdrawnAccountPort
 import com.yapp.todakun.shared.RevokeMemberTokensPort
 import kotlin.uuid.ExperimentalUuidApi
@@ -22,10 +22,10 @@ import kotlin.uuid.ExperimentalUuidApi
 class WithdrawService(
     private val memberRepository: MemberRepository,
     private val memberWithdrawalLogRepository: MemberWithdrawalLogRepository,
-    private val deleteMemberSajuDataPort: DeleteMemberSajuDataPort,
+    private val deleteMemberSajusPort: DeleteMemberSajusPort,
     private val revokeMemberTokensPort: RevokeMemberTokensPort,
     private val registerWithdrawnAccountPort: RegisterWithdrawnAccountPort,
-) : WithdrawUseCase {
+) : WithdrawMemberUseCase {
     @ExperimentalUuidApi
     override fun withdraw(command: WithdrawCommand) {
         val member = memberRepository.findById(command.memberId) ?: throw MemberNotFoundException()
@@ -33,8 +33,8 @@ class WithdrawService(
         memberWithdrawalLogRepository.save(
             MemberWithdrawalLog.create(reason = command.reason, detail = command.detail),
         )
-        deleteMemberSajuDataPort.deleteByMemberId(member.id)
-        revokeMemberTokensPort.revokeAll(member.id)
+        deleteMemberSajusPort.deleteByMemberId(member.id)
+        revokeMemberTokensPort.revokeAll(member.id, command.accessToken)
         registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
         memberRepository.deleteById(member.id)
     }

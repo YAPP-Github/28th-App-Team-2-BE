@@ -6,7 +6,7 @@ import com.yapp.todakun.member.adapter.web.dto.request.WithdrawRequest
 import com.yapp.todakun.member.adapter.web.dto.response.GetMyProfileResponse
 import com.yapp.todakun.member.port.inbound.GetMyProfileUseCase
 import com.yapp.todakun.member.port.inbound.UpdateMemberUseCase
-import com.yapp.todakun.member.port.inbound.WithdrawUseCase
+import com.yapp.todakun.member.port.inbound.WithdrawMemberUseCase
 import com.yapp.todakun.web.response.CommonResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
@@ -16,7 +16,7 @@ import java.util.UUID
 class MemberController(
     private val getMyProfileUseCase: GetMyProfileUseCase,
     private val updateMemberUseCase: UpdateMemberUseCase,
-    private val withdrawUseCase: WithdrawUseCase,
+    private val withdrawMemberUseCase: WithdrawMemberUseCase,
 ) : MemberApi {
     override fun getMyProfile(memberId: UUID): ResponseEntity<CommonResponse<GetMyProfileResponse>> =
         CommonResponse.retrieved(GetMyProfileResponse.from(getMyProfileUseCase.getProfile(memberId)))
@@ -32,9 +32,10 @@ class MemberController(
 
     override fun withdraw(
         memberId: UUID,
+        accessToken: String,
         request: WithdrawRequest,
     ): ResponseEntity<CommonResponse<Unit>> {
-        withdrawUseCase.withdraw(request.toCommand(memberId))
+        withdrawMemberUseCase.withdraw(request.toCommand(memberId, accessToken))
 
         return CommonResponse.deleted()
     }

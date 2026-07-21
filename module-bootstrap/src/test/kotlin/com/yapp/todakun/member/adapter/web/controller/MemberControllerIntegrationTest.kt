@@ -1,6 +1,8 @@
 package com.yapp.todakun.member.adapter.web.controller
 
 import com.ninjasquad.springmockk.MockkBean
+import com.yapp.todakun.auth.claims.AccessTokenClaims
+import com.yapp.todakun.auth.port.outbound.AccessTokenPort
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.member.BirthTime
 import com.yapp.todakun.member.CalendarType
@@ -12,7 +14,7 @@ import com.yapp.todakun.member.Role
 import com.yapp.todakun.member.port.inbound.GetMyProfileUseCase
 import com.yapp.todakun.member.port.inbound.UpdateMemberUseCase
 import com.yapp.todakun.member.port.inbound.WithdrawCommand
-import com.yapp.todakun.member.port.inbound.WithdrawUseCase
+import com.yapp.todakun.member.port.inbound.WithdrawMemberUseCase
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.OauthProvider
 import io.kotest.core.spec.style.DescribeSpec
@@ -38,6 +40,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
+private const val ACCESS_TOKEN = "test-access-token"
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -53,10 +56,13 @@ class MemberControllerIntegrationTest(
     private lateinit var updateMemberUseCase: UpdateMemberUseCase
 
     @MockkBean
-    private lateinit var withdrawUseCase: WithdrawUseCase
+    private lateinit var withdrawMemberUseCase: WithdrawMemberUseCase
+
+    @MockkBean
+    private lateinit var accessTokenPort: AccessTokenPort
 
     init {
-        afterTest { clearMocks(getMyProfileUseCase, updateMemberUseCase, withdrawUseCase) }
+        afterTest { clearMocks(getMyProfileUseCase, updateMemberUseCase, withdrawMemberUseCase, accessTokenPort) }
 
         fun member(): Member =
             Member.reconstitute(
@@ -148,32 +154,36 @@ class MemberControllerIntegrationTest(
             context("인증된 회원이 탈퇴 사유와 함께 요청하면") {
                 it("200을 반환하고 사유로 탈퇴 처리한다") {
                     val commandSlot = slot<WithdrawCommand>()
-                    every { withdrawUseCase.withdraw(capture(commandSlot)) } just Runs
+                    every { accessTokenPort.parse(ACCESS_TOKEN) } returns AccessTokenClaims(MEMBER_ID, "test-jti", 300L)
+                    every { withdrawMemberUseCase.withdraw(capture(commandSlot)) } just Runs
 
                     mockMvc
                         .perform(
                             delete("/api/v1/members/me")
-                                .with(authentication(UsernamePasswordAuthenticationToken(MEMBER_ID, null, emptyList())))
+                                .header("Authorization", "Bearer $ACCESS_TOKEN")
                                 .contentType("application/json")
                                 .content(objectMapper.writeValueAsString(mapOf("reason" to "LOW_USAGE"))),
                         ).andExpect(status().isOk)
 
                     commandSlot.captured.memberId shouldBe MEMBER_ID
                     commandSlot.captured.reason.name shouldBe "LOW_USAGE"
+                    commandSlot.captured.accessToken shouldBe ACCESS_TOKEN
                 }
             }
 
             context("사유가 기타(ETC)인데 상세 사유가 비어 있으면") {
                 it("400을 반환하고 탈퇴 처리하지 않는다") {
+                    every { accessTokenPort.parse(ACCESS_TOKEN) } returns AccessTokenClaims(MEMBER_ID, "test-jti", 300L)
+
                     mockMvc
                         .perform(
                             delete("/api/v1/members/me")
-                                .with(authentication(UsernamePasswordAuthenticationToken(MEMBER_ID, null, emptyList())))
+                                .header("Authorization", "Bearer $ACCESS_TOKEN")
                                 .contentType("application/json")
                                 .content(objectMapper.writeValueAsString(mapOf("reason" to "ETC"))),
                         ).andExpect(status().isBadRequest)
 
-                    verify(exactly = 0) { withdrawUseCase.withdraw(any()) }
+                    verify(exactly = 0) { withdrawMemberUseCase.withdraw(any()) }
                 }
             }
 
