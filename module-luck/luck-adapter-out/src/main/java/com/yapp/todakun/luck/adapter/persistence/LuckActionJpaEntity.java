@@ -65,7 +65,7 @@ public class LuckActionJpaEntity extends BaseEntity {
                 .build();
     }
 
-    public LuckAction toDomain() { 
+    public LuckAction toDomain() {
         return LuckAction.reconstitute(
                 getId(),
                 memberId,
