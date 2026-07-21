@@ -1,3 +1,9 @@
+server:
+  # 리버스 프록시(Cloudflare→Caddy) 뒤에서 X-Forwarded-Proto/Host를 반영한다.
+  # 미설정 시 서블릿이 뒷단 http 스킴만 보고 springdoc이 servers를 http://로 생성 →
+  # https Swagger 페이지에서 mixed-content/CORS 차단. 프록시 없는 local은 헤더가 없어 no-op.
+  forward-headers-strategy: framework
+
 spring:
   application:
     name: todakun
