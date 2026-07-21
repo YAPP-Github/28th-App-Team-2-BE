@@ -21,11 +21,8 @@ data class LuckAction(
     val content: String,
     val achieved: Boolean,
 ) {
-    /** 달성으로 체크한 새 인스턴스를 반환한다(불변). */
-    fun achieve(): LuckAction = copy(achieved = true)
-
-    /** 달성 체크를 취소(실패로 되돌림)한 새 인스턴스를 반환한다(불변). */
-    fun fail(): LuckAction = copy(achieved = false)
+    /** 현재 달성 여부의 반대로 전환한 새 인스턴스를 반환한다(불변). */
+    fun toggle(): LuckAction = if (achieved) copy(achieved = false) else copy(achieved = true)
 
     companion object {
         @ExperimentalUuidApi
