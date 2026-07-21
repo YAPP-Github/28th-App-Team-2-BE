@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(project(":terms:domain"))
     implementation(project(":common-persistence"))
     implementation(libs.spring.boot.starter.data.jpa)
