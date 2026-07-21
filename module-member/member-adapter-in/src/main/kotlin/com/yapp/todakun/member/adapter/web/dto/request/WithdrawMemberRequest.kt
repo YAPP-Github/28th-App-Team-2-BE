@@ -2,7 +2,7 @@ package com.yapp.todakun.member.adapter.web.dto.request
 
 import com.yapp.todakun.member.WithdrawalReason
 import com.yapp.todakun.member.adapter.web.dto.toMemberEnum
-import com.yapp.todakun.member.port.inbound.WithdrawCommand
+import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
@@ -14,7 +14,7 @@ import java.util.UUID
  * 회원 탈퇴 요청. [reason]은 필수(단일 선택, 9종). [detail]은 상세 사유(최대 200자)로,
  * 사유가 기타(ETC)이면 필수이고 그 외에는 선택이다(탈퇴 정책 v1.0 — 6장).
  */
-data class WithdrawRequest(
+data class WithdrawMemberRequest(
     @field:Schema(
         description = "탈퇴 사유(단일 선택)",
         example = "LOW_USAGE",
@@ -51,7 +51,7 @@ data class WithdrawRequest(
     fun toCommand(
         memberId: UUID,
         accessToken: String,
-    ) = WithdrawCommand(
+    ) = WithdrawMemberCommand(
         memberId = memberId,
         reason = reason.toMemberEnum<WithdrawalReason>(),
         detail = detail?.takeIf { it.isNotBlank() },

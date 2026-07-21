@@ -3,7 +3,7 @@ package com.yapp.todakun.member.application.service
 import com.yapp.todakun.member.WithdrawalReason
 import com.yapp.todakun.member.exception.MemberNotFoundException
 import com.yapp.todakun.member.fixture.MemberFixture
-import com.yapp.todakun.member.port.inbound.WithdrawCommand
+import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
 import com.yapp.todakun.shared.DeleteMemberSajusPort
@@ -21,14 +21,14 @@ import io.mockk.verifyOrder
 import kotlin.uuid.ExperimentalUuidApi
 
 @ExperimentalUuidApi
-class WithdrawServiceTest : DescribeSpec({
+class WithdrawMemberServiceTest : DescribeSpec({
     val memberRepository = mockk<MemberRepository>()
     val memberWithdrawalLogRepository = mockk<MemberWithdrawalLogRepository>()
     val deleteMemberSajusPort = mockk<DeleteMemberSajusPort>()
     val revokeMemberTokensPort = mockk<RevokeMemberTokensPort>()
     val registerWithdrawnAccountPort = mockk<RegisterWithdrawnAccountPort>()
     val service =
-        WithdrawService(
+        WithdrawMemberService(
             memberRepository,
             memberWithdrawalLogRepository,
             deleteMemberSajusPort,
@@ -47,7 +47,7 @@ class WithdrawServiceTest : DescribeSpec({
     }
 
     val accessToken = "test-access-token"
-    val command = WithdrawCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null, accessToken = accessToken)
+    val command = WithdrawMemberCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null, accessToken = accessToken)
 
     describe("withdraw") {
         context("회원이 존재하면") {

@@ -1,7 +1,7 @@
 package com.yapp.todakun.member.adapter.web
 
 import com.yapp.todakun.member.adapter.web.dto.request.UpdateMemberRequest
-import com.yapp.todakun.member.adapter.web.dto.request.WithdrawRequest
+import com.yapp.todakun.member.adapter.web.dto.request.WithdrawMemberRequest
 import com.yapp.todakun.member.adapter.web.dto.response.GetMyProfileResponse
 import com.yapp.todakun.web.response.CommonResponse
 import com.yapp.todakun.web.security.annotation.BearerToken
@@ -52,6 +52,6 @@ interface MemberApi {
         @AuthenticationPrincipal memberId: UUID,
         @Parameter(hidden = true)
         @BearerToken accessToken: String,
-        @RequestBody @Valid request: WithdrawRequest,
+        @RequestBody @Valid request: WithdrawMemberRequest,
     ): ResponseEntity<CommonResponse<Unit>>
 }

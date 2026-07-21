@@ -2,7 +2,7 @@ package com.yapp.todakun.member.adapter.web.controller
 
 import com.yapp.todakun.member.adapter.web.MemberApi
 import com.yapp.todakun.member.adapter.web.dto.request.UpdateMemberRequest
-import com.yapp.todakun.member.adapter.web.dto.request.WithdrawRequest
+import com.yapp.todakun.member.adapter.web.dto.request.WithdrawMemberRequest
 import com.yapp.todakun.member.adapter.web.dto.response.GetMyProfileResponse
 import com.yapp.todakun.member.port.inbound.GetMyProfileUseCase
 import com.yapp.todakun.member.port.inbound.UpdateMemberUseCase
@@ -33,7 +33,7 @@ class MemberController(
     override fun withdraw(
         memberId: UUID,
         accessToken: String,
-        request: WithdrawRequest,
+        request: WithdrawMemberRequest,
     ): ResponseEntity<CommonResponse<Unit>> {
         withdrawMemberUseCase.withdraw(request.toCommand(memberId, accessToken))
 
