@@ -1,7 +1,7 @@
 package com.yapp.todakun.luck.repository
 
 import com.yapp.todakun.luck.LuckAction
-import com.yapp.todakun.shared.FortuneCategory
+import java.time.LocalDate
 import java.util.UUID
 
 interface LuckActionRepository {
@@ -9,10 +9,8 @@ interface LuckActionRepository {
 
     fun findById(id: UUID): LuckAction?
 
-    fun findByMemberIdAndFortuneCategory(
+    fun findAllByMemberIdAndFortuneDate(
         memberId: UUID,
-        fortuneCategory: FortuneCategory,
-    ): LuckAction?
-
-    fun findAllByMemberId(memberId: UUID): List<LuckAction>
+        fortuneDate: LocalDate,
+    ): List<LuckAction>
 }

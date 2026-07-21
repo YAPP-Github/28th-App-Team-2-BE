@@ -1,6 +1,7 @@
 package com.yapp.todakun.luck.port.inbound
 
 import com.yapp.todakun.shared.FortuneCategory
+import java.time.LocalDate
 import java.util.UUID
 
 interface CreateLuckActionUseCase {
@@ -10,6 +11,7 @@ interface CreateLuckActionUseCase {
 data class CreateLuckActionCommand(
     val memberId: UUID,
     val fortuneCategory: FortuneCategory,
+    val fortuneDate: LocalDate,
     val score: Int,
     val title: String,
     val content: String,
