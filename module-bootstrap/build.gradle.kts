@@ -20,6 +20,10 @@ dependencies {
     implementation(project(":terms:application"))
     implementation(project(":terms:adapter-in"))
     implementation(project(":terms:adapter-out"))
+    implementation(project(":notification:domain"))
+    implementation(project(":notification:application"))
+    implementation(project(":notification:adapter-in"))
+    implementation(project(":notification:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.data.jpa)

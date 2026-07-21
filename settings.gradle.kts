@@ -30,6 +30,12 @@ include("terms:application")
 include("terms:adapter-in")
 include("terms:adapter-out")
 
+// notification 도메인 (:notification 하위에 nested된 4개 모듈, leaf는 레이어명만)
+include("notification:domain")
+include("notification:application")
+include("notification:adapter-in")
+include("notification:adapter-out")
+
 // 모듈 디렉터리는 `module-*` 접두사를 쓰므로 프로젝트 경로를 매핑한다.
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
@@ -62,3 +68,9 @@ project(":terms:domain").projectDir = file("module-terms/terms-domain")
 project(":terms:application").projectDir = file("module-terms/terms-application")
 project(":terms:adapter-in").projectDir = file("module-terms/terms-adapter-in")
 project(":terms:adapter-out").projectDir = file("module-terms/terms-adapter-out")
+
+project(":notification").projectDir = file("module-notification")
+project(":notification:domain").projectDir = file("module-notification/notification-domain")
+project(":notification:application").projectDir = file("module-notification/notification-application")
+project(":notification:adapter-in").projectDir = file("module-notification/notification-adapter-in")
+project(":notification:adapter-out").projectDir = file("module-notification/notification-adapter-out")
