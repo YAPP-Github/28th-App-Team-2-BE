@@ -7,6 +7,7 @@ import com.yapp.todakun.member.port.inbound.WithdrawCommand
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
 import com.yapp.todakun.shared.DeleteMemberSajuDataPort
+import com.yapp.todakun.shared.RegisterWithdrawnAccountPort
 import com.yapp.todakun.shared.RevokeMemberTokensPort
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -25,22 +26,37 @@ class WithdrawServiceTest : DescribeSpec({
     val memberWithdrawalLogRepository = mockk<MemberWithdrawalLogRepository>()
     val deleteMemberSajuDataPort = mockk<DeleteMemberSajuDataPort>()
     val revokeMemberTokensPort = mockk<RevokeMemberTokensPort>()
+    val registerWithdrawnAccountPort = mockk<RegisterWithdrawnAccountPort>()
     val service =
-        WithdrawService(memberRepository, memberWithdrawalLogRepository, deleteMemberSajuDataPort, revokeMemberTokensPort)
+        WithdrawService(
+            memberRepository,
+            memberWithdrawalLogRepository,
+            deleteMemberSajuDataPort,
+            revokeMemberTokensPort,
+            registerWithdrawnAccountPort,
+        )
 
     afterTest {
-        clearMocks(memberRepository, memberWithdrawalLogRepository, deleteMemberSajuDataPort, revokeMemberTokensPort)
+        clearMocks(
+            memberRepository,
+            memberWithdrawalLogRepository,
+            deleteMemberSajuDataPort,
+            revokeMemberTokensPort,
+            registerWithdrawnAccountPort,
+        )
     }
 
-    val command = WithdrawCommand(MemberFixture.MEMBER_ID, WithdrawalReason.NOT_USING, detail = null)
+    val command = WithdrawCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null)
 
     describe("withdraw") {
         context("회원이 존재하면") {
-            it("사유 로그 저장 → 사주 삭제 → 토큰 폐기 → 회원 삭제 순서로 처리한다") {
-                every { memberRepository.findById(MemberFixture.MEMBER_ID) } returns MemberFixture.member()
+            it("사유 로그 저장 → 사주 삭제 → 토큰 폐기 → 재가입 제한 등록 → 회원 삭제 순서로 처리한다") {
+                val member = MemberFixture.member()
+                every { memberRepository.findById(MemberFixture.MEMBER_ID) } returns member
                 every { memberWithdrawalLogRepository.save(any()) } answers { firstArg() }
                 every { deleteMemberSajuDataPort.deleteByMemberId(MemberFixture.MEMBER_ID) } just Runs
                 every { revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID) } just Runs
+                every { registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId) } just Runs
                 every { memberRepository.deleteById(MemberFixture.MEMBER_ID) } just Runs
 
                 service.withdraw(command)
@@ -49,6 +65,7 @@ class WithdrawServiceTest : DescribeSpec({
                     memberWithdrawalLogRepository.save(any())
                     deleteMemberSajuDataPort.deleteByMemberId(MemberFixture.MEMBER_ID)
                     revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID)
+                    registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
                     memberRepository.deleteById(MemberFixture.MEMBER_ID)
                 }
             }
@@ -62,6 +79,7 @@ class WithdrawServiceTest : DescribeSpec({
 
                 verify(exactly = 0) { memberRepository.deleteById(any()) }
                 verify(exactly = 0) { deleteMemberSajuDataPort.deleteByMemberId(any()) }
+                verify(exactly = 0) { registerWithdrawnAccountPort.register(any(), any()) }
             }
         }
     }
