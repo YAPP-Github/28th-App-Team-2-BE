@@ -1,6 +1,7 @@
 package com.yapp.todakun.terms.adapter.persistence
 
 import com.yapp.todakun.terms.Terms
+import com.yapp.todakun.terms.TermsType
 import com.yapp.todakun.terms.repository.TermsRepository
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Repository
@@ -14,4 +15,6 @@ class TermsRepositoryAdapter(
         termsJpaRepository
             .findAll(Sort.by(Sort.Order.desc("required"), Sort.Order.asc("type")))
             .map { it.toDomain() }
+
+    override fun findAllByType(type: TermsType): List<Terms> = termsJpaRepository.findAllByType(type).map { it.toDomain() }
 }

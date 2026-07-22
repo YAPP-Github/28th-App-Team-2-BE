@@ -92,6 +92,8 @@ dependencies {
 
 `*-application` holds only the `*Service` classes that implement `port.inbound` interfaces — no port interfaces or command/result models live there.
 
+> **One inbound port per file, and never mix a Query port with a Command port in the same file.** The `@QueryService`/`@CommandService` (CQRS) split must be visible in the file layout, not buried inside a shared `*UseCases.kt` (`GetXUseCase` and `ReadXUseCase` → two files). Likewise split exceptions and DTOs one-per-file. (Details in `code-style` §2 "File organization".)
+
 `*-adapter-out` separates sub-packages by technology.
 
 | Sub-package | Purpose | Example class |
@@ -109,6 +111,8 @@ When adding a new technology adapter, create a new sub-package named after the t
 
 - **Domain entity** (`*-domain`, Kotlin): owns business rules, no `@Entity`, Spring/JPA imports forbidden
 - **JPA entity** (`*-adapter-out`, Java): uses `@Entity`, `*JpaEntity` suffix, works around Kotlin immutability/JPA proxy compatibility
+- **Mark every logically-required column `@Column(nullable = false)`** (recurring review point). Columns that are invariants (`id`, `name`, enum-backed fields such as `solarTermName`/`cheonganSipseong`, …) must declare `nullable = false` so the DDL constraint matches the domain invariant — don't leave them implicitly nullable.
+- The `*JpaEntity` naming is deliberate: exposing the persistence tech in the name is fine (and encouraged) at the **adapter** layer — it signals a persistence-only object and prevents accidental use of a JPA entity in the domain layer. (The "don't leak the tech into the name" rule applies to the **domain** layer, not adapters.)
 
 ## DB PK
 
@@ -184,6 +188,8 @@ Rules:
 - Write both `summary` + `description` in `@Operation`.
 - Annotate parameters with `@Parameter(description, example)` for descriptions/examples. (For `@PathVariable`/`@RequestParam`/`@RequestBody` alike.)
 - Response schemas/examples are auto-generated from the return type `CommonResponse<T>`, so do not write `@ApiResponses` by hand.
+- **Hide server-injected parameters** (recurring review point). Params the server fills from the `SecurityContext` — the `@AuthenticationPrincipal memberId`, a `@BearerToken` access token — must carry `@Parameter(hidden = true)`. Otherwise Swagger UI / "Try it out" shows them as client-supplied inputs and clients mistakenly think they have to send them.
+- **Give enum / whitelist string fields an `example`** (recurring review point). For `*Request` fields constrained to a fixed value set (`birthTime`, `calendarType`, `gender`, `job`, `relationshipStatus`, …), a regex/validation message alone doesn't tell the client the valid values — add `@Schema(example = "...")` on the field.
 
 > springdoc `OperationCustomizer` skeleton (bootstrap):
 > ```kotlin

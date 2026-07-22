@@ -10,4 +10,9 @@ dependencies {
     testImplementation(project(":saju:application"))
     testImplementation(project(":saju:adapter-in"))
     testImplementation(project(":saju:adapter-out"))
+
+    testImplementation(project(":notification:domain"))
+    testImplementation(project(":notification:application"))
+    testImplementation(project(":notification:adapter-in"))
+    testImplementation(project(":notification:adapter-out"))
 }
