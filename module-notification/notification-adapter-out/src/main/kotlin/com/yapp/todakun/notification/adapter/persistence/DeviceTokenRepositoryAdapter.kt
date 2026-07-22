@@ -18,4 +18,9 @@ class DeviceTokenRepositoryAdapter(
         deviceTokenJpaRepository.save(DeviceTokenJpaEntity.fromDomain(deviceToken)).toDomain()
 
     override fun deleteByToken(token: String) = deviceTokenJpaRepository.deleteByToken(token)
+
+    override fun deleteByMemberIdAndToken(
+        memberId: UUID,
+        token: String,
+    ) = deviceTokenJpaRepository.deleteByMemberIdAndToken(memberId, token)
 }

@@ -27,7 +27,7 @@ class DeviceTokenController(
         memberId: UUID,
         request: UnregisterDeviceTokenRequest,
     ): ResponseEntity<CommonResponse<Unit>> {
-        unregisterDeviceTokenUseCase.unregister(request.token)
+        unregisterDeviceTokenUseCase.unregister(memberId, request.token)
         return CommonResponse.deleted()
     }
 }

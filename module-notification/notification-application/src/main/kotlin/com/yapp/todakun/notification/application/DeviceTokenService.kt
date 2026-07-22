@@ -6,6 +6,7 @@ import com.yapp.todakun.notification.port.inbound.RegisterDeviceTokenCommand
 import com.yapp.todakun.notification.port.inbound.RegisterDeviceTokenUseCase
 import com.yapp.todakun.notification.port.inbound.UnregisterDeviceTokenUseCase
 import com.yapp.todakun.notification.port.outbound.DeviceTokenRepository
+import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 @CommandService
@@ -22,5 +23,8 @@ class DeviceTokenService(
         deviceTokenRepository.save(deviceToken)
     }
 
-    override fun unregister(token: String) = deviceTokenRepository.deleteByToken(token)
+    override fun unregister(
+        memberId: UUID,
+        token: String,
+    ) = deviceTokenRepository.deleteByMemberIdAndToken(memberId, token)
 }
