@@ -7,4 +7,6 @@ dependencies {
     implementation(project(":notification:domain"))
     // 콘텐츠/동의 확장 포트의 옵셔널 주입(ObjectProvider)을 위해 spring-beans(=spring-context)가 필요.
     implementation(libs.spring.context)
+    // 대상 회원별 발송 실패 로깅(버전은 Boot BOM 관리).
+    implementation(libs.slf4j.api)
 }

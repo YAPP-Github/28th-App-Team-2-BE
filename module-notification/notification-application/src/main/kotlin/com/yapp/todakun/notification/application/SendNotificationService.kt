@@ -74,7 +74,8 @@ class SendNotificationService(
 
     private fun isNight(): Boolean {
         val hour = LocalTime.now(SEOUL_ZONE).hour
-        return hour >= NIGHT_START_HOUR || hour < NIGHT_END_HOUR
+        // 주간(08~20시)의 여집합 = 야간. 두 비교를 range 부정 체크 하나로 합친다.
+        return hour !in NIGHT_END_HOUR until NIGHT_START_HOUR
     }
 
     private fun buildData(
@@ -86,10 +87,8 @@ class SendNotificationService(
             put("notificationId", notificationId.toString())
             command.deepLink?.let { put("deepLink", it) }
         }
-
-    companion object {
-        private val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
-        private const val NIGHT_START_HOUR = 21
-        private const val NIGHT_END_HOUR = 8
-    }
 }
+
+private val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
+private const val NIGHT_START_HOUR = 21
+private const val NIGHT_END_HOUR = 8

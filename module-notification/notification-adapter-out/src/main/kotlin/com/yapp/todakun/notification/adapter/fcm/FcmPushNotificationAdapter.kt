@@ -14,8 +14,9 @@ import com.google.firebase.messaging.Notification as FcmNotification
 
 /**
  * FCM 실제 발송 어댑터. Message 빌드·전송·에러코드 해석은 모두 이 어댑터 안에서 끝난다.
- * 등록 해제/무효 토큰(UNREGISTERED/INVALID_ARGUMENT)은 실패가 아니라 "정리 대상"으로 보고하고(tokenExpired),
- * 그 외 오류만 예외로 승격한다.
+ * 등록 해제/무효 토큰(UNREGISTERED/INVALID_ARGUMENT)은 실패가 아니라 "정리 대상"으로 보고한다(tokenExpired).
+ * 단건([send])은 그 외 오류를 예외로 승격하지만, 배치([sendAll])는 부분 실패가 성공 건의 후속 처리(이력 저장·토큰 정리)를
+ * 롤백시키지 않도록 실패를 예외 대신 결괏값(success=false)으로 반환한다.
  */
 @Component
 @ConditionalOnProperty(prefix = "fcm", name = ["enabled"], havingValue = "true")
@@ -43,7 +44,7 @@ class FcmPushNotificationAdapter(
                 response.isSuccessful -> PushResult(token = notification.token, success = true)
                 response.exception?.isTokenExpired() == true ->
                     PushResult(token = notification.token, success = false, tokenExpired = true)
-                else -> throw PushSendFailedException(response.exception)
+                else -> PushResult(token = notification.token, success = false, tokenExpired = false)
             }
         }
     }

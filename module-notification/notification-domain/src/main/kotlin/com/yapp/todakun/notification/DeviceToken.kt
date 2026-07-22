@@ -21,7 +21,7 @@ data class DeviceToken(
     ): DeviceToken = copy(memberId = memberId, platform = platform)
 
     companion object {
-        @ExperimentalUuidApi
+        @OptIn(ExperimentalUuidApi::class)
         fun create(
             memberId: UUID,
             token: String,

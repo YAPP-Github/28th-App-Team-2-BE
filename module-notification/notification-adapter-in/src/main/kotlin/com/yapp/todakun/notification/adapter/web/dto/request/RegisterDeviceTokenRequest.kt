@@ -15,9 +15,3 @@ data class RegisterDeviceTokenRequest(
 ) {
     fun toCommand(memberId: UUID) = RegisterDeviceTokenCommand(memberId = memberId, token = token, platform = platform)
 }
-
-data class UnregisterDeviceTokenRequest(
-    @field:Schema(description = "해제할 FCM 등록 토큰")
-    @field:NotBlank(message = "토큰을 입력해 주세요.")
-    val token: String,
-)

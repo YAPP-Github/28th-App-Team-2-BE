@@ -30,7 +30,7 @@ import kotlin.uuid.toJavaUuid
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @Import(TestContainersConfig::class)
-class NotificationIntegrationTest(
+class NotificationControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,
     private val sendNotificationPort: SendNotificationPort,

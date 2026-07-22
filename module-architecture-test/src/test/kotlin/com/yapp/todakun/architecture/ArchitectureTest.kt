@@ -190,12 +190,12 @@ class ArchitectureTest {
 
     @Test
     fun `Firebase 타입은 adapter 패키지에서만 임포트한다`() {
-        scope
-            .classes()
-            .filter { clazz -> clazz.containingFile.imports.any { it.name.startsWith("com.google.firebase") } }
-            .forEach { clazz ->
-                check(clazz.resideInPackage("..adapter..")) {
-                    "${clazz.name}: com.google.firebase 임포트는 .adapter 패키지에서만 허용된다"
+        // class뿐 아니라 object/interface만 있는 파일(FcmConfig 등)도 누락 없이 검사하도록 파일 단위로 임포트를 검증한다.
+        scope.files
+            .filter { file -> file.imports.any { it.name.startsWith("com.google.firebase") } }
+            .forEach { file ->
+                check(file.hasPackage("..adapter..")) {
+                    "${file.name}: com.google.firebase 임포트는 .adapter 패키지에서만 허용된다"
                 }
             }
     }

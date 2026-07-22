@@ -19,7 +19,7 @@ class GetPushConsentAdapter(
 ) : GetPushConsentPort {
     override fun isNightPushAllowed(memberId: UUID): Boolean {
         val nightPushTermsIds =
-            termsRepository.findAll().filter { it.type == TermsType.NIGHT_PUSH }.map { it.id }.toSet()
+            termsRepository.findAllByType(TermsType.NIGHT_PUSH).map { it.id }.toSet()
         // 야간 푸시 약관이 정의돼 있지 않으면 별도 제한을 두지 않는다.
         if (nightPushTermsIds.isEmpty()) return true
         return memberTermsAgreementRepository

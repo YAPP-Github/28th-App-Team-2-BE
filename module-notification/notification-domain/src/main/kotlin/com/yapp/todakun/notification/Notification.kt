@@ -27,7 +27,7 @@ data class Notification(
     fun markAsRead(): Notification = if (isRead) this else copy(isRead = true)
 
     companion object {
-        @ExperimentalUuidApi
+        @OptIn(ExperimentalUuidApi::class)
         fun create(
             memberId: UUID,
             type: NotificationType,
