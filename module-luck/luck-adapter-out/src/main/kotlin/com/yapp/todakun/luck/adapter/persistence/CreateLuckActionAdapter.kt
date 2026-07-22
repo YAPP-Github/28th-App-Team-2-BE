@@ -1,7 +1,6 @@
 package com.yapp.todakun.luck.adapter.persistence
 
 import com.yapp.todakun.luck.LuckAction
-import com.yapp.todakun.luck.policy.LuckActionPolicy
 import com.yapp.todakun.luck.repository.LuckActionRepository
 import com.yapp.todakun.shared.CreateLuckActionPort
 import com.yapp.todakun.shared.FortuneCategory
@@ -23,8 +22,6 @@ class CreateLuckActionAdapter(
         title: String,
         content: String,
     ): UUID {
-        LuckActionPolicy.validateLength(title, content)
-
         val luckAction =
             LuckAction.create(
                 memberId = memberId,
