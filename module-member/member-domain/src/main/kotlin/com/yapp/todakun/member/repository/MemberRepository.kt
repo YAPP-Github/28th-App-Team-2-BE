@@ -13,4 +13,6 @@ interface MemberRepository {
         oauthProvider: OauthProvider,
         providerId: String,
     ): UUID?
+
+    fun deleteById(id: UUID)
 }

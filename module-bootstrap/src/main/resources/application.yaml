@@ -1,3 +1,9 @@
+server:
+  # 리버스 프록시(Cloudflare→Caddy) 뒤에서 X-Forwarded-Proto/Host를 반영한다.
+  # 미설정 시 서블릿이 뒷단 http 스킴만 보고 springdoc이 servers를 http://로 생성 →
+  # https Swagger 페이지에서 mixed-content/CORS 차단. 프록시 없는 local은 헤더가 없어 no-op.
+  forward-headers-strategy: framework
+
 spring:
   application:
     name: todakun
@@ -41,3 +47,8 @@ oauth:
     issuers:
       - https://accounts.google.com
       - accounts.google.com
+
+# 회원 탈퇴 정책 v1.0 — 탈퇴 후 재가입 제한/SNS 식별자 보관 기간(90일). 환경 무관 고정값.
+account:
+  withdrawal:
+    restriction-seconds: 7776000  # 90일
