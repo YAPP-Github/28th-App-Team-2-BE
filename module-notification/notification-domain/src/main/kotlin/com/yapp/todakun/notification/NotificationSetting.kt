@@ -46,15 +46,14 @@ data class NotificationSetting(
         }
 
     companion object {
-        val DEFAULT_MORNING_TIME: LocalTime = LocalTime.of(8, 0)
-
-        @OptIn(ExperimentalUuidApi::class)
+        @ExperimentalUuidApi
         fun createDefault(memberId: UUID): NotificationSetting =
             NotificationSetting(
                 id = Uuid.generateV7().toJavaUuid(),
                 memberId = memberId,
                 morningReportEnabled = false,
-                morningReportTime = DEFAULT_MORNING_TIME,
+                // 기본 아침 리포트 시각
+                morningReportTime = LocalTime.of(8, 0),
                 todakiEnabled = false,
                 luckyActionReminderEnabled = false,
             )
