@@ -18,10 +18,10 @@ class LuckActionController(
     private val toggleLuckActionUseCase: ToggleLuckActionUseCase,
 ) : LuckActionApi {
     override fun getById(
-        id: UUID,
+        luckActionId: UUID,
         memberId: UUID,
     ): ResponseEntity<CommonResponse<LuckActionResponse>> {
-        val luckAction = getLuckActionUseCase.getById(id, memberId)
+        val luckAction = getLuckActionUseCase.getById(luckActionId, memberId)
 
         return CommonResponse.retrieved(LuckActionResponse.from(luckAction))
     }
@@ -33,10 +33,10 @@ class LuckActionController(
     }
 
     override fun toggle(
-        id: UUID,
+        luckActionId: UUID,
         memberId: UUID,
     ): ResponseEntity<CommonResponse<LuckActionResponse>> {
-        val toggled = toggleLuckActionUseCase.toggle(id, memberId)
+        val toggled = toggleLuckActionUseCase.toggle(luckActionId, memberId)
 
         return CommonResponse.success(LuckActionResponse.from(toggled))
     }

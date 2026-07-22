@@ -19,10 +19,10 @@ interface LuckActionApi {
         summary = "행운 액션 단건 조회",
         description = "행운 액션을 단건 조회한다.",
     )
-    @GetMapping("api/v1/luck-actions/{id}")
+    @GetMapping("api/v1/luck-actions/{luckActionId}")
     fun getById(
         @Parameter(description = "행운 액션 ID", example = "018f0000-0000-7000-8000-000000000001")
-        @PathVariable id: UUID,
+        @PathVariable luckActionId: UUID,
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
     ): ResponseEntity<CommonResponse<LuckActionResponse>>
@@ -41,10 +41,10 @@ interface LuckActionApi {
         summary = "행운 액션 달성 여부 토글",
         description = "행운 액션의 달성 여부를 현재 상태의 반대로 전환한다.",
     )
-    @PatchMapping("api/v1/luck-actions/{id}/achievement")
+    @PatchMapping("api/v1/luck-actions/{luckActionId}/achievement")
     fun toggle(
         @Parameter(description = "행운 액션 ID", example = "018f0000-0000-7000-8000-000000000001")
-        @PathVariable id: UUID,
+        @PathVariable luckActionId: UUID,
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
     ): ResponseEntity<CommonResponse<LuckActionResponse>>
