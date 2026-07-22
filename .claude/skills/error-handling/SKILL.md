@@ -50,7 +50,12 @@ class UserNotFoundException : NotFoundException(UserErrorCode.USER_NOT_FOUND)
 `GlobalExceptionHandler` (`@RestControllerAdvice`) is placed **only once, in the common-web module**, and is registered globally via bootstrap's component scan.
 
 - **Catch `AppException` alone** and decide the HTTP status from `errorCode.status` (no branching by exception type needed).
-- Map framework exceptions (`MethodArgumentNotValidException`, `MissingServletRequestParameterException`, `MethodArgumentTypeMismatchException`) to `CommonErrorCode`.
+- Map framework exceptions to `CommonErrorCode` with the **correct 4xx status — never let a client error fall through to 500** (recurring review point):
+  - `MethodArgumentNotValidException` (Bean Validation) → 400 `VALIDATION_ERROR`
+  - `HttpMessageNotReadableException` (malformed/broken JSON body) → 400 — this also covers `MissingKotlinParameterException` (a required field absent), since that is a subtype thrown during Jackson deserialization. (Optional enhancement raised in review: give it a dedicated handler that reports the missing field via the same per-field `reason` map, using the exception's `parameter.name`.)
+  - `NoResourceFoundException` (unknown URL) → 404 `NOT_FOUND`
+  - `MissingServletRequestParameterException`, `MethodArgumentTypeMismatchException` → 400
+- **Per-field validation errors use the `reason: Map<String, String>` field** on `CommonResponse` (field → message); `message` is omitted (`String?`) when `reason` is present, so multiple simultaneous field failures are each reported.
 - Log 4xx as `warn`, 5xx as `error` with the stack trace.
 
 Response format — the same `CommonResponse` envelope as success (`success:false`):
@@ -61,6 +66,7 @@ Response format — the same `CommonResponse` envelope as success (`success:fals
 ## Principles
 
 - Do not throw `RuntimeException` directly. Always use `AppException` (or a common/domain subclass).
+- **Never let an exception escape to Spring's default error handling** (recurring review point). A bare `throw`, `error(...)`, or `IllegalStateException` from a domain/adapter bypasses `GlobalExceptionHandler` and returns Spring's default body instead of the `CommonResponse` envelope — breaking the client contract. Wrap the failure in an `AppException` subclass with a domain `*ErrorCode` (e.g. resource load failure in the manseryeok converter → `SajuCalculationException` / `SAJU_CALCULATION_FAILED`).
 - Express the HTTP status **only via `ResponseCode.status`**. Do not hardcode the status in the handler.
 - Write exception messages in Korean.
 - Do not catch business exceptions directly in the Controller layer.
