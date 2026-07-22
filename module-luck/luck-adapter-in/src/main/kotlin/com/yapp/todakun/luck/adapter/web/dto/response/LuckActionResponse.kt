@@ -1,0 +1,26 @@
+package com.yapp.todakun.luck.adapter.web.dto.response
+
+import com.yapp.todakun.luck.LuckAction
+import com.yapp.todakun.shared.FortuneCategory
+import java.util.UUID
+
+data class LuckActionResponse(
+    val id: UUID,
+    val fortuneCategory: FortuneCategory,
+    val score: Int,
+    val title: String,
+    val content: String,
+    val achieved: Boolean,
+) {
+    companion object {
+        fun from(luckAction: LuckAction) =
+            LuckActionResponse(
+                id = luckAction.id,
+                fortuneCategory = luckAction.fortuneCategory,
+                score = luckAction.score,
+                title = luckAction.title,
+                content = luckAction.content,
+                achieved = luckAction.achieved,
+            )
+    }
+}
