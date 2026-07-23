@@ -7,7 +7,7 @@ import com.yapp.todakun.fortune.exception.DailyFortuneNotFoundException
 import com.yapp.todakun.fortune.exception.DailyFortuneTitleTooLongException
 import java.time.LocalDate
 import java.util.UUID
-import kotlin.math.roundToInt
+import kotlin.math.ceil
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -55,7 +55,7 @@ data class DailyFortune(
                 id = Uuid.generateV7().toJavaUuid(),
                 memberId = memberId,
                 fortuneDate = fortuneDate,
-                score = categoryScores.average().roundToInt(),
+                score = ceil(categoryScores.average()).toInt(),
                 title = title,
                 content = content,
                 luckyItems = luckyItems,
