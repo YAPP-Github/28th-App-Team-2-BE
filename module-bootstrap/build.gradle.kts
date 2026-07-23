@@ -30,6 +30,10 @@ dependencies {
     implementation(project(":notification:application"))
     implementation(project(":notification:adapter-in"))
     implementation(project(":notification:adapter-out"))
+    implementation(project(":fortune:domain"))
+    implementation(project(":fortune:application"))
+    implementation(project(":fortune:adapter-in"))
+    implementation(project(":fortune:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.data.jpa)

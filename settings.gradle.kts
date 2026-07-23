@@ -37,6 +37,12 @@ include("luck:application")
 include("luck:adapter-in")
 include("luck:adapter-out")
 
+// fortune 도메인 (:fortune 하위에 nested된 4개 모듈, leaf는 레이어명만)
+include("fortune:domain")
+include("fortune:application")
+include("fortune:adapter-in")
+include("fortune:adapter-out")
+
 // notification 도메인 (:notification 하위에 nested된 4개 모듈, leaf는 레이어명만)
 include("notification:domain")
 include("notification:application")
@@ -88,3 +94,9 @@ project(":notification:domain").projectDir = file("module-notification/notificat
 project(":notification:application").projectDir = file("module-notification/notification-application")
 project(":notification:adapter-in").projectDir = file("module-notification/notification-adapter-in")
 project(":notification:adapter-out").projectDir = file("module-notification/notification-adapter-out")
+
+project(":fortune").projectDir = file("module-fortune")
+project(":fortune:domain").projectDir = file("module-fortune/fortune-domain")
+project(":fortune:application").projectDir = file("module-fortune/fortune-application")
+project(":fortune:adapter-in").projectDir = file("module-fortune/fortune-adapter-in")
+project(":fortune:adapter-out").projectDir = file("module-fortune/fortune-adapter-out")

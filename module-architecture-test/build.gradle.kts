@@ -15,4 +15,9 @@ dependencies {
     testImplementation(project(":notification:application"))
     testImplementation(project(":notification:adapter-in"))
     testImplementation(project(":notification:adapter-out"))
+
+    testImplementation(project(":fortune:domain"))
+    testImplementation(project(":fortune:application"))
+    testImplementation(project(":fortune:adapter-in"))
+    testImplementation(project(":fortune:adapter-out"))
 }
