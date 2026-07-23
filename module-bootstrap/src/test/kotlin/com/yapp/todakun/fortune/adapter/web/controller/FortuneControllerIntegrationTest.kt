@@ -3,15 +3,18 @@ package com.yapp.todakun.fortune.adapter.web.controller
 import com.ninjasquad.springmockk.MockkBean
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.fortune.exception.DailyFortuneNotFoundException
+import com.yapp.todakun.fortune.exception.FortuneHistoryToOutOfRangeException
 import com.yapp.todakun.fortune.fixture.DailyFortuneFixture
 import com.yapp.todakun.fortune.port.inbound.FortuneDetail
+import com.yapp.todakun.fortune.port.inbound.FortuneHistorySummary
+import com.yapp.todakun.fortune.port.inbound.GetFortuneHistoryUseCase
 import com.yapp.todakun.fortune.port.inbound.GetFortuneUseCase
 import com.yapp.todakun.fortune.port.inbound.GetTodayFortuneUseCase
 import com.yapp.todakun.fortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.LuckActionScore
+import com.yapp.todakun.shared.LuckActionSummary
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -47,6 +50,24 @@ private val LUCK_ACTION_SCORES =
             score = 90,
         ),
     )
+private val LUCK_ACTION_SUMMARIES =
+    listOf(
+        LuckActionSummary(
+            id = UUID.fromString("018f0000-0000-7000-8000-000000000007"),
+            fortuneDate = DAILY_FORTUNE.fortuneDate,
+            fortuneCategory = FortuneCategory.HEALTH,
+            title = "건강 챙기기",
+            achieved = true,
+        ),
+    )
+private val FORTUNE_HISTORY_SUMMARY =
+    FortuneHistorySummary(
+        id = DAILY_FORTUNE.id,
+        fortuneDate = DAILY_FORTUNE.fortuneDate,
+        score = DAILY_FORTUNE.score,
+        title = DAILY_FORTUNE.title,
+        luckActions = LUCK_ACTION_SUMMARIES,
+    )
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -61,8 +82,11 @@ class FortuneControllerIntegrationTest(
     @MockkBean
     private lateinit var getFortuneUseCase: GetFortuneUseCase
 
+    @MockkBean
+    private lateinit var getFortuneHistoryUseCase: GetFortuneHistoryUseCase
+
     init {
-        afterTest { clearMocks(getTodayFortuneUseCase, getFortuneUseCase) }
+        afterTest { clearMocks(getTodayFortuneUseCase, getFortuneUseCase, getFortuneHistoryUseCase) }
 
         describe("GET /api/v1/fortunes/today") {
             context("인증 헤더 없이 요청하면") {
@@ -90,18 +114,12 @@ class FortuneControllerIntegrationTest(
                 }
             }
 
-            context("인증된 회원의 오늘의 운세가 아직 생성되지 않았으면") {
-                it("200과 함께 data 없는 응답을 반환한다") {
-                    every { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) } returns null
+            context("인증된 회원의 오늘의 운세가 존재하지 않으면") {
+                it("404를 반환한다") {
+                    every { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) } throws DailyFortuneNotFoundException()
 
-                    val response =
-                        mockMvc.get("/api/v1/fortunes/today") { with(authenticatedMember()) }
-                            .andExpect { status { isOk() } }
-                            .andReturn()
-                            .response.contentAsString
-                            .let(objectMapper::readTree)
-
-                    response["data"].shouldBeNull()
+                    mockMvc.get("/api/v1/fortunes/today") { with(authenticatedMember()) }
+                        .andExpect { status { isNotFound() } }
                 }
             }
         }
@@ -139,6 +157,54 @@ class FortuneControllerIntegrationTest(
                     mockMvc
                         .get("/api/v1/fortunes/${DAILY_FORTUNE.id}") { with(authenticatedMember()) }
                         .andExpect { status { isNotFound() } }
+                }
+            }
+        }
+
+        describe("GET /api/v1/fortunes/history") {
+            context("인증 헤더 없이 요청하면") {
+                it("401을 반환한다") {
+                    mockMvc.get("/api/v1/fortunes/history") { param("to", DAILY_FORTUNE.fortuneDate.toString()) }
+                        .andExpect { status { isUnauthorized() } }
+
+                    verify(exactly = 0) { getFortuneHistoryUseCase.getHistory(any(), any(), any()) }
+                }
+            }
+
+            context("인증된 회원이 요청하면") {
+                it("200과 함께 히스토리 목록을 반환한다") {
+                    every {
+                        getFortuneHistoryUseCase.getHistory(DAILY_FORTUNE.memberId, any(), DAILY_FORTUNE.fortuneDate)
+                    } returns listOf(FORTUNE_HISTORY_SUMMARY)
+
+                    val data =
+                        successData(
+                            mockMvc.get("/api/v1/fortunes/history") {
+                                param("to", DAILY_FORTUNE.fortuneDate.toString())
+                                with(authenticatedMember())
+                            },
+                        )
+
+                    data[0]["id"].asString() shouldBe DAILY_FORTUNE.id.toString()
+                    data[0]["fortuneDate"].asString() shouldBe DAILY_FORTUNE.fortuneDate.toString()
+                    data[0]["score"].asInt() shouldBe DAILY_FORTUNE.score
+                    data[0]["title"].asString() shouldBe DAILY_FORTUNE.title
+                    data[0]["luckActions"][0]["fortuneCategory"].asString() shouldBe FortuneCategory.HEALTH.name
+                    data[0]["luckActions"][0]["achieved"].asBoolean() shouldBe true
+                    verify(exactly = 1) { getFortuneHistoryUseCase.getHistory(DAILY_FORTUNE.memberId, any(), DAILY_FORTUNE.fortuneDate) }
+                }
+            }
+
+            context("to가 허용 범위를 벗어나면") {
+                it("400을 반환한다") {
+                    every { getFortuneHistoryUseCase.getHistory(any(), any(), any()) } throws FortuneHistoryToOutOfRangeException()
+
+                    mockMvc
+                        .get("/api/v1/fortunes/history") {
+                            param("to", DAILY_FORTUNE.fortuneDate.toString())
+                            with(authenticatedMember())
+                        }
+                        .andExpect { status { isBadRequest() } }
                 }
             }
         }

@@ -9,4 +9,10 @@ interface DailyFortuneJpaRepository : JpaRepository<DailyFortuneJpaEntity, UUID>
         memberId: UUID,
         fortuneDate: LocalDate,
     ): DailyFortuneJpaEntity?
+
+    fun findAllByMemberIdAndFortuneDateBetweenOrderByFortuneDateAsc(
+        memberId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<DailyFortuneJpaEntity>
 }

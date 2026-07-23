@@ -11,4 +11,5 @@ enum class DailyFortuneErrorCode(
     DAILY_FORTUNE_TITLE_TOO_LONG("FORTUNE-400", "제목은 최대 30자까지 입력할 수 있습니다.", 400),
     DAILY_FORTUNE_CONTENT_TOO_LONG("FORTUNE-400", "내용은 최대 800자까지 입력할 수 있습니다.", 400),
     DAILY_FORTUNE_ITEM_COUNT_MISMATCH("FORTUNE-400", "행운 아이템과 주의 아이템은 각각 5개여야 합니다.", 400),
+    FORTUNE_HISTORY_TO_OUT_OF_RANGE("FORTUNE-400", "조회 가능한 기간이 아닙니다. 지난달 1일부터 오늘까지만 조회할 수 있습니다.", 400),
 }

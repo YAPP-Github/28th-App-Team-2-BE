@@ -19,4 +19,11 @@ class DailyFortuneRepositoryAdapter(
         memberId: UUID,
         fortuneDate: LocalDate,
     ): DailyFortune? = dailyFortuneJpaRepository.findByMemberIdAndFortuneDate(memberId, fortuneDate)?.toDomain()
+
+    override fun findAllByMemberIdBetweenFortuneDates(
+        memberId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<DailyFortune> =
+        dailyFortuneJpaRepository.findAllByMemberIdAndFortuneDateBetweenOrderByFortuneDateAsc(memberId, from, to).map { it.toDomain() }
 }

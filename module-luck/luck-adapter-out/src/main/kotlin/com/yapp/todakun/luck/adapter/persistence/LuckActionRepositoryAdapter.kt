@@ -19,4 +19,11 @@ class LuckActionRepositoryAdapter(
         memberId: UUID,
         fortuneDate: LocalDate,
     ): List<LuckAction> = luckActionJpaRepository.findAllByMemberIdAndFortuneDate(memberId, fortuneDate).map { it.toDomain() }
+
+    override fun findAllByMemberIdBetweenFortuneDates(
+        memberId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<LuckAction> =
+        luckActionJpaRepository.findAllByMemberIdAndFortuneDateBetweenOrderByFortuneDateAsc(memberId, from, to).map { it.toDomain() }
 }

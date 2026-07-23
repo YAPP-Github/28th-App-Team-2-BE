@@ -13,4 +13,10 @@ interface DailyFortuneRepository {
         memberId: UUID,
         fortuneDate: LocalDate,
     ): DailyFortune?
+
+    fun findAllByMemberIdBetweenFortuneDates(
+        memberId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<DailyFortune>
 }

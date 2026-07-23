@@ -1,4 +1,4 @@
-package com.yapp.todakun.fortune
+package com.yapp.todakun.shared
 
 import java.time.LocalDate
 import java.time.LocalDateTime
