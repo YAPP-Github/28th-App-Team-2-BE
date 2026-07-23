@@ -2,8 +2,8 @@ package com.yapp.todakun.fortune.port.inbound
 
 import java.util.UUID
 
-interface GetFortuneDetailUseCase {
-    fun getDetail(
+interface GetFortuneUseCase {
+    fun getById(
         id: UUID,
         memberId: UUID,
     ): FortuneDetail
