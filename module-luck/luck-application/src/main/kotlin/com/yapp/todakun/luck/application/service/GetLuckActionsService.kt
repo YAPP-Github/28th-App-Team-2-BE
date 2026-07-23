@@ -11,6 +11,8 @@ import java.util.UUID
 class GetLuckActionsService(
     private val luckActionRepository: LuckActionRepository,
 ) : GetLuckActionsUseCase {
-    override fun getTodayLuckActions(memberId: UUID): List<LuckAction> =
-        luckActionRepository.findAllByMemberIdAndFortuneDate(memberId, LocalDate.now())
+    override fun getTodayLuckActions(
+        memberId: UUID,
+        fortuneDate: LocalDate,
+    ): List<LuckAction> = luckActionRepository.findAllByMemberIdAndFortuneDate(memberId, fortuneDate)
 }
