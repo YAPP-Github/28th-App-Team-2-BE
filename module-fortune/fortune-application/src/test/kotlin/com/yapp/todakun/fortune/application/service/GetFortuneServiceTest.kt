@@ -42,6 +42,7 @@ class GetFortuneServiceTest :
                         val detail = getFortuneService.getById(dailyFortune.id, dailyFortune.memberId)
 
                         detail.id shouldBe dailyFortune.id
+                        detail.fortuneDate shouldBe dailyFortune.fortuneDate
                         detail.score shouldBe dailyFortune.score
                         detail.title shouldBe dailyFortune.title
                         detail.content shouldBe dailyFortune.content
