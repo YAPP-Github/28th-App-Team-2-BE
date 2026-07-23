@@ -20,8 +20,8 @@ import lombok.experimental.SuperBuilder;
 @Table(
         name = "luck_action",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_luck_action_member_id_fortune_category_fortune_date",
-                columnNames = {"member_id", "fortune_category", "fortune_date"}
+                name = "uk_luck_action_member_id_fortune_date_fortune_category",
+                columnNames = {"member_id", "fortune_date", "fortune_category"}
         )
 )
 @SuperBuilder
