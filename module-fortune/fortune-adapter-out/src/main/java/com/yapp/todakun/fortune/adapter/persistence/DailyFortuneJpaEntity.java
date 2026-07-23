@@ -58,7 +58,7 @@ public class DailyFortuneJpaEntity extends BaseEntity {
             )
     )
     @OrderColumn(name = "item_order")
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private List<String> luckyItems;
 
     @ElementCollection
@@ -71,7 +71,7 @@ public class DailyFortuneJpaEntity extends BaseEntity {
             )
     )
     @OrderColumn(name = "item_order")
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private List<String> cautionaryItems;
 
     public static DailyFortuneJpaEntity fromDomain(DailyFortune dailyFortune) {
