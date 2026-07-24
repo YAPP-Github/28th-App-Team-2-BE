@@ -72,7 +72,7 @@ private val FORTUNE_HISTORY_SUMMARY =
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @Import(TestContainersConfig::class)
-class FortuneControllerIntegrationTest(
+class DailyFortuneControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,
 ) : DescribeSpec() {
@@ -88,10 +88,10 @@ class FortuneControllerIntegrationTest(
     init {
         afterTest { clearMocks(getTodayFortuneUseCase, getFortuneUseCase, getFortuneHistoryUseCase) }
 
-        describe("GET /api/v1/fortunes/today") {
+        describe("GET /api/v1/daily-fortunes/today") {
             context("인증 헤더 없이 요청하면") {
                 it("401을 반환한다") {
-                    mockMvc.get("/api/v1/fortunes/today")
+                    mockMvc.get("/api/v1/daily-fortunes/today")
                         .andExpect { status { isUnauthorized() } }
 
                     verify(exactly = 0) { getTodayFortuneUseCase.getToday(any(), any()) }
@@ -103,7 +103,7 @@ class FortuneControllerIntegrationTest(
                     val summary = TodayFortuneSummary.from(DAILY_FORTUNE, LUCK_ACTION_SCORES)
                     every { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) } returns summary
 
-                    val data = successData(mockMvc.get("/api/v1/fortunes/today") { with(authenticatedMember()) })
+                    val data = successData(mockMvc.get("/api/v1/daily-fortunes/today") { with(authenticatedMember()) })
 
                     data["id"].asString() shouldBe DAILY_FORTUNE.id.toString()
                     data["fortuneDate"].asString() shouldBe DAILY_FORTUNE.fortuneDate.toString()
@@ -118,16 +118,16 @@ class FortuneControllerIntegrationTest(
                 it("404를 반환한다") {
                     every { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) } throws DailyFortuneNotFoundException()
 
-                    mockMvc.get("/api/v1/fortunes/today") { with(authenticatedMember()) }
+                    mockMvc.get("/api/v1/daily-fortunes/today") { with(authenticatedMember()) }
                         .andExpect { status { isNotFound() } }
                 }
             }
         }
 
-        describe("GET /api/v1/fortunes/{fortuneId}") {
+        describe("GET /api/v1/daily-fortunes/{dailyFortuneId}") {
             context("인증 헤더 없이 요청하면") {
                 it("401을 반환한다") {
-                    mockMvc.get("/api/v1/fortunes/${DAILY_FORTUNE.id}")
+                    mockMvc.get("/api/v1/daily-fortunes/${DAILY_FORTUNE.id}")
                         .andExpect { status { isUnauthorized() } }
 
                     verify(exactly = 0) { getFortuneUseCase.getById(any(), any()) }
@@ -139,7 +139,7 @@ class FortuneControllerIntegrationTest(
                     val detail = DailyFortuneDetail.from(DAILY_FORTUNE, LUCK_ACTION_SCORES)
                     every { getFortuneUseCase.getById(DAILY_FORTUNE.id, DAILY_FORTUNE.memberId) } returns detail
 
-                    val data = successData(mockMvc.get("/api/v1/fortunes/${DAILY_FORTUNE.id}") { with(authenticatedMember()) })
+                    val data = successData(mockMvc.get("/api/v1/daily-fortunes/${DAILY_FORTUNE.id}") { with(authenticatedMember()) })
 
                     data["id"].asString() shouldBe DAILY_FORTUNE.id.toString()
                     data["fortuneDate"].asString() shouldBe DAILY_FORTUNE.fortuneDate.toString()
@@ -155,16 +155,16 @@ class FortuneControllerIntegrationTest(
                     every { getFortuneUseCase.getById(DAILY_FORTUNE.id, DAILY_FORTUNE.memberId) } throws DailyFortuneNotFoundException()
 
                     mockMvc
-                        .get("/api/v1/fortunes/${DAILY_FORTUNE.id}") { with(authenticatedMember()) }
+                        .get("/api/v1/daily-fortunes/${DAILY_FORTUNE.id}") { with(authenticatedMember()) }
                         .andExpect { status { isNotFound() } }
                 }
             }
         }
 
-        describe("GET /api/v1/fortunes/history") {
+        describe("GET /api/v1/daily-fortunes/history") {
             context("인증 헤더 없이 요청하면") {
                 it("401을 반환한다") {
-                    mockMvc.get("/api/v1/fortunes/history") { param("to", DAILY_FORTUNE.fortuneDate.toString()) }
+                    mockMvc.get("/api/v1/daily-fortunes/history") { param("to", DAILY_FORTUNE.fortuneDate.toString()) }
                         .andExpect { status { isUnauthorized() } }
 
                     verify(exactly = 0) { getFortuneHistoryUseCase.getHistory(any(), any(), any()) }
@@ -179,7 +179,7 @@ class FortuneControllerIntegrationTest(
 
                     val data =
                         successData(
-                            mockMvc.get("/api/v1/fortunes/history") {
+                            mockMvc.get("/api/v1/daily-fortunes/history") {
                                 param("to", DAILY_FORTUNE.fortuneDate.toString())
                                 with(authenticatedMember())
                             },
@@ -200,7 +200,7 @@ class FortuneControllerIntegrationTest(
                     every { getFortuneHistoryUseCase.getHistory(any(), any(), any()) } throws DailyFortuneHistoryToOutOfRangeException()
 
                     mockMvc
-                        .get("/api/v1/fortunes/history") {
+                        .get("/api/v1/daily-fortunes/history") {
                             param("to", DAILY_FORTUNE.fortuneDate.toString())
                             with(authenticatedMember())
                         }

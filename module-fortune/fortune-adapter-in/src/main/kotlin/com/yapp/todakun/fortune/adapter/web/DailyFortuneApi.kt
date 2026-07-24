@@ -1,7 +1,7 @@
 package com.yapp.todakun.fortune.adapter.web
 
-import com.yapp.todakun.fortune.adapter.web.dto.response.FortuneDetailResponse
-import com.yapp.todakun.fortune.adapter.web.dto.response.FortuneHistoryResponse
+import com.yapp.todakun.fortune.adapter.web.dto.response.DailyFortuneHistoryResponse
+import com.yapp.todakun.fortune.adapter.web.dto.response.DailyFortuneResponse
 import com.yapp.todakun.fortune.adapter.web.dto.response.TodayFortuneResponse
 import com.yapp.todakun.web.response.CommonResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -16,7 +16,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Tag(name = "Fortune", description = "오늘의 운세 API")
-interface FortuneApi {
+interface DailyFortuneApi {
     @Operation(
         summary = "오늘의 운세 요약 조회",
         description =
@@ -26,7 +26,7 @@ interface FortuneApi {
                 온보딩 시 오늘의 운세가 항상 생성되므로, 존재하지 않으면 404를 반환한다.
             """,
     )
-    @GetMapping("api/v1/fortunes/today")
+    @GetMapping("api/v1/daily-fortunes/today")
     fun getToday(
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
@@ -36,13 +36,13 @@ interface FortuneApi {
         summary = "오늘의 운세 상세 조회",
         description = "오늘의 운세를 단건 상세 조회한다.",
     )
-    @GetMapping("api/v1/fortunes/{fortuneId}")
+    @GetMapping("api/v1/daily-fortunes/{dailyFortuneId}")
     fun getById(
         @Parameter(description = "오늘의 운세 ID", example = "018f0000-0000-7000-8000-000000000003")
-        @PathVariable fortuneId: UUID,
+        @PathVariable dailyFortuneId: UUID,
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
-    ): ResponseEntity<CommonResponse<FortuneDetailResponse>>
+    ): ResponseEntity<CommonResponse<DailyFortuneResponse>>
 
     @Operation(
         summary = "오늘의 운세 히스토리 조회",
@@ -52,11 +52,11 @@ interface FortuneApi {
                 to는 지난달 1일부터 오늘까지만 허용한다(그 이전 조회 불가).
             """,
     )
-    @GetMapping("api/v1/fortunes/history")
+    @GetMapping("api/v1/daily-fortunes/history")
     fun getHistory(
         @Parameter(description = "조회 종료일", example = "2026-07-22")
         @RequestParam to: LocalDate,
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
-    ): ResponseEntity<CommonResponse<List<FortuneHistoryResponse>>>
+    ): ResponseEntity<CommonResponse<List<DailyFortuneHistoryResponse>>>
 }

@@ -4,7 +4,7 @@ import com.yapp.todakun.fortune.port.inbound.DailyFortuneDetail
 import java.time.LocalDate
 import java.util.UUID
 
-data class FortuneDetailResponse(
+data class DailyFortuneResponse(
     val id: UUID,
     val fortuneDate: LocalDate,
     val score: Int,
@@ -16,7 +16,7 @@ data class FortuneDetailResponse(
 ) {
     companion object {
         fun from(detail: DailyFortuneDetail) =
-            FortuneDetailResponse(
+            DailyFortuneResponse(
                 id = detail.id,
                 fortuneDate = detail.fortuneDate,
                 score = detail.score,

@@ -1,8 +1,8 @@
 package com.yapp.todakun.fortune.adapter.web.controller
 
-import com.yapp.todakun.fortune.adapter.web.FortuneApi
-import com.yapp.todakun.fortune.adapter.web.dto.response.FortuneDetailResponse
-import com.yapp.todakun.fortune.adapter.web.dto.response.FortuneHistoryResponse
+import com.yapp.todakun.fortune.adapter.web.DailyFortuneApi
+import com.yapp.todakun.fortune.adapter.web.dto.response.DailyFortuneHistoryResponse
+import com.yapp.todakun.fortune.adapter.web.dto.response.DailyFortuneResponse
 import com.yapp.todakun.fortune.adapter.web.dto.response.TodayFortuneResponse
 import com.yapp.todakun.fortune.port.inbound.GetDailyFortuneHistoryUseCase
 import com.yapp.todakun.fortune.port.inbound.GetDailyFortuneUseCase
@@ -15,11 +15,11 @@ import java.time.LocalDate
 import java.util.UUID
 
 @RestController
-class FortuneController(
+class DailyFortuneController(
     private val getTodayFortuneUseCase: GetTodayFortuneUseCase,
     private val getFortuneUseCase: GetDailyFortuneUseCase,
     private val getFortuneHistoryUseCase: GetDailyFortuneHistoryUseCase,
-) : FortuneApi {
+) : DailyFortuneApi {
     override fun getToday(memberId: UUID): ResponseEntity<CommonResponse<TodayFortuneResponse>> {
         val summary = getTodayFortuneUseCase.getToday(memberId, currentFortuneServiceDate())
 
@@ -27,20 +27,20 @@ class FortuneController(
     }
 
     override fun getById(
-        fortuneId: UUID,
+        dailyFortuneId: UUID,
         memberId: UUID,
-    ): ResponseEntity<CommonResponse<FortuneDetailResponse>> {
-        val detail = getFortuneUseCase.getById(fortuneId, memberId)
+    ): ResponseEntity<CommonResponse<DailyFortuneResponse>> {
+        val detail = getFortuneUseCase.getById(dailyFortuneId, memberId)
 
-        return CommonResponse.retrieved(FortuneDetailResponse.from(detail))
+        return CommonResponse.retrieved(DailyFortuneResponse.from(detail))
     }
 
     override fun getHistory(
         to: LocalDate,
         memberId: UUID,
-    ): ResponseEntity<CommonResponse<List<FortuneHistoryResponse>>> {
+    ): ResponseEntity<CommonResponse<List<DailyFortuneHistoryResponse>>> {
         val history = getFortuneHistoryUseCase.getHistory(memberId, currentFortuneServiceDate(), to)
 
-        return CommonResponse.retrieved(history.map(FortuneHistoryResponse::from))
+        return CommonResponse.retrieved(history.map(DailyFortuneHistoryResponse::from))
     }
 }
