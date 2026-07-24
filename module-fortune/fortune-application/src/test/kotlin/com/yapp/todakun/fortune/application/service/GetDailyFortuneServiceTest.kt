@@ -17,12 +17,12 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 @ExperimentalUuidApi
-class GetFortuneServiceTest :
+class GetDailyFortuneServiceTest :
     DescribeSpec(
         {
             val dailyFortuneRepository = mockk<DailyFortuneRepository>()
             val getLuckActionScoresPort = mockk<GetLuckActionScoresPort>()
-            val getFortuneService = GetFortuneService(dailyFortuneRepository, getLuckActionScoresPort)
+            val getFortuneService = GetDailyFortuneService(dailyFortuneRepository, getLuckActionScoresPort)
 
             afterTest { clearMocks(dailyFortuneRepository, getLuckActionScoresPort) }
 

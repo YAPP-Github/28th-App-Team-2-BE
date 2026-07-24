@@ -2,13 +2,13 @@ package com.yapp.todakun.fortune.adapter.web.controller
 
 import com.ninjasquad.springmockk.MockkBean
 import com.yapp.todakun.config.TestContainersConfig
+import com.yapp.todakun.fortune.exception.DailyFortuneHistoryToOutOfRangeException
 import com.yapp.todakun.fortune.exception.DailyFortuneNotFoundException
-import com.yapp.todakun.fortune.exception.FortuneHistoryToOutOfRangeException
 import com.yapp.todakun.fortune.fixture.DailyFortuneFixture
-import com.yapp.todakun.fortune.port.inbound.FortuneDetail
-import com.yapp.todakun.fortune.port.inbound.FortuneHistorySummary
-import com.yapp.todakun.fortune.port.inbound.GetFortuneHistoryUseCase
-import com.yapp.todakun.fortune.port.inbound.GetFortuneUseCase
+import com.yapp.todakun.fortune.port.inbound.DailyFortuneDetail
+import com.yapp.todakun.fortune.port.inbound.DailyFortuneHistorySummary
+import com.yapp.todakun.fortune.port.inbound.GetDailyFortuneHistoryUseCase
+import com.yapp.todakun.fortune.port.inbound.GetDailyFortuneUseCase
 import com.yapp.todakun.fortune.port.inbound.GetTodayFortuneUseCase
 import com.yapp.todakun.fortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.FortuneCategory
@@ -61,7 +61,7 @@ private val LUCK_ACTION_SUMMARIES =
         ),
     )
 private val FORTUNE_HISTORY_SUMMARY =
-    FortuneHistorySummary(
+    DailyFortuneHistorySummary(
         id = DAILY_FORTUNE.id,
         fortuneDate = DAILY_FORTUNE.fortuneDate,
         score = DAILY_FORTUNE.score,
@@ -80,10 +80,10 @@ class FortuneControllerIntegrationTest(
     private lateinit var getTodayFortuneUseCase: GetTodayFortuneUseCase
 
     @MockkBean
-    private lateinit var getFortuneUseCase: GetFortuneUseCase
+    private lateinit var getFortuneUseCase: GetDailyFortuneUseCase
 
     @MockkBean
-    private lateinit var getFortuneHistoryUseCase: GetFortuneHistoryUseCase
+    private lateinit var getFortuneHistoryUseCase: GetDailyFortuneHistoryUseCase
 
     init {
         afterTest { clearMocks(getTodayFortuneUseCase, getFortuneUseCase, getFortuneHistoryUseCase) }
@@ -136,7 +136,7 @@ class FortuneControllerIntegrationTest(
 
             context("인증된 회원이 존재하는 id로 조회하면") {
                 it("200과 함께 오늘의 운세 상세를 반환한다") {
-                    val detail = FortuneDetail.from(DAILY_FORTUNE, LUCK_ACTION_SCORES)
+                    val detail = DailyFortuneDetail.from(DAILY_FORTUNE, LUCK_ACTION_SCORES)
                     every { getFortuneUseCase.getById(DAILY_FORTUNE.id, DAILY_FORTUNE.memberId) } returns detail
 
                     val data = successData(mockMvc.get("/api/v1/fortunes/${DAILY_FORTUNE.id}") { with(authenticatedMember()) })
@@ -197,7 +197,7 @@ class FortuneControllerIntegrationTest(
 
             context("to가 허용 범위를 벗어나면") {
                 it("400을 반환한다") {
-                    every { getFortuneHistoryUseCase.getHistory(any(), any(), any()) } throws FortuneHistoryToOutOfRangeException()
+                    every { getFortuneHistoryUseCase.getHistory(any(), any(), any()) } throws DailyFortuneHistoryToOutOfRangeException()
 
                     mockMvc
                         .get("/api/v1/fortunes/history") {

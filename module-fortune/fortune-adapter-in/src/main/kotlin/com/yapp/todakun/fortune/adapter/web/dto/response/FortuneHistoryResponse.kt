@@ -1,6 +1,6 @@
 package com.yapp.todakun.fortune.adapter.web.dto.response
 
-import com.yapp.todakun.fortune.port.inbound.FortuneHistorySummary
+import com.yapp.todakun.fortune.port.inbound.DailyFortuneHistorySummary
 import java.time.LocalDate
 import java.util.UUID
 
@@ -12,7 +12,7 @@ data class FortuneHistoryResponse(
     val luckActions: List<LuckActionSummaryResponse>,
 ) {
     companion object {
-        fun from(summary: FortuneHistorySummary) =
+        fun from(summary: DailyFortuneHistorySummary) =
             FortuneHistoryResponse(
                 id = summary.id,
                 fortuneDate = summary.fortuneDate,

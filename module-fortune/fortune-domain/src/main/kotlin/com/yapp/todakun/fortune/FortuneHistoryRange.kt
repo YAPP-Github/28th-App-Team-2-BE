@@ -1,6 +1,6 @@
 package com.yapp.todakun.fortune
 
-import com.yapp.todakun.fortune.exception.FortuneHistoryToOutOfRangeException
+import com.yapp.todakun.fortune.exception.DailyFortuneHistoryToOutOfRangeException
 import java.time.LocalDate
 
 /**
@@ -12,7 +12,7 @@ fun fortuneHistoryRange(
     to: LocalDate,
 ): ClosedRange<LocalDate> {
     if (to !in today.minusMonths(1).withDayOfMonth(1)..today) { // 1일 ~ today
-        throw FortuneHistoryToOutOfRangeException()
+        throw DailyFortuneHistoryToOutOfRangeException()
     }
 
     return to.withDayOfMonth(1)..to
