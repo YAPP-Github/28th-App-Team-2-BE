@@ -50,7 +50,7 @@ interface AuthApi {
     ): ResponseEntity<CommonResponse<Unit>>
 
     @Operation(
-        summary = "토큰 재발급",
+        summary = "리프레시",
         description = "유효한 refresh token으로 access/refresh 토큰을 재발급한다. 기존 refresh token은 즉시 폐기된다.",
     )
     @DisableSwaggerSecurity

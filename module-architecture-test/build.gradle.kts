@@ -16,8 +16,8 @@ dependencies {
     testImplementation(project(":notification:adapter-in"))
     testImplementation(project(":notification:adapter-out"))
 
-    testImplementation(project(":fortune:domain"))
-    testImplementation(project(":fortune:application"))
-    testImplementation(project(":fortune:adapter-in"))
-    testImplementation(project(":fortune:adapter-out"))
+    testImplementation(project(":daily-fortune:domain"))
+    testImplementation(project(":daily-fortune:application"))
+    testImplementation(project(":daily-fortune:adapter-in"))
+    testImplementation(project(":daily-fortune:adapter-out"))
 }
