@@ -6,6 +6,7 @@ import com.yapp.todakun.luck.adapter.web.dto.response.TodayLuckActionResponse
 import com.yapp.todakun.luck.port.inbound.GetLuckActionUseCase
 import com.yapp.todakun.luck.port.inbound.GetLuckActionsUseCase
 import com.yapp.todakun.luck.port.inbound.ToggleLuckActionUseCase
+import com.yapp.todakun.shared.currentFortuneServiceDate
 import com.yapp.todakun.web.response.CommonResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
@@ -27,7 +28,7 @@ class LuckActionController(
     }
 
     override fun getToday(memberId: UUID): ResponseEntity<CommonResponse<List<TodayLuckActionResponse>>> {
-        val luckActions = getLuckActionsUseCase.getTodayLuckActions(memberId)
+        val luckActions = getLuckActionsUseCase.getTodayLuckActions(memberId, currentFortuneServiceDate())
 
         return CommonResponse.retrieved(luckActions.map(TodayLuckActionResponse::from))
     }

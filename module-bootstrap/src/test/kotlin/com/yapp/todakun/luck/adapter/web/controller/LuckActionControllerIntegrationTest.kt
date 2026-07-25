@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import java.time.LocalDate
 
 private val LUCK_ACTION = LuckActionFixture.create()
 
@@ -88,13 +89,13 @@ class LuckActionControllerIntegrationTest(
                     mockMvc.get("/api/v1/luck-actions/today")
                         .andExpect { status { isUnauthorized() } }
 
-                    verify(exactly = 0) { getLuckActionsUseCase.getTodayLuckActions(any()) }
+                    verify(exactly = 0) { getLuckActionsUseCase.getTodayLuckActions(any(), any()) }
                 }
             }
 
             context("인증된 회원이 요청하면") {
                 it("200과 함께 오늘자 행운 액션 목록을 반환한다") {
-                    every { getLuckActionsUseCase.getTodayLuckActions(LUCK_ACTION.memberId) } returns listOf(LUCK_ACTION)
+                    every { getLuckActionsUseCase.getTodayLuckActions(LUCK_ACTION.memberId, any<LocalDate>()) } returns listOf(LUCK_ACTION)
 
                     val data = successData(mockMvc.get("/api/v1/luck-actions/today") { with(authenticatedMember()) })
 
@@ -104,7 +105,7 @@ class LuckActionControllerIntegrationTest(
                     data[0]["title"].asString() shouldBe LUCK_ACTION.title
                     data[0]["achieved"].asBoolean() shouldBe LUCK_ACTION.achieved
                     data[0].has("content") shouldBe false
-                    verify(exactly = 1) { getLuckActionsUseCase.getTodayLuckActions(LUCK_ACTION.memberId) }
+                    verify(exactly = 1) { getLuckActionsUseCase.getTodayLuckActions(LUCK_ACTION.memberId, any<LocalDate>()) }
                 }
             }
         }

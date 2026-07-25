@@ -1,5 +1,6 @@
 package com.yapp.todakun.luck
 
+import com.yapp.todakun.common.validation.validateMaxLength
 import com.yapp.todakun.luck.exception.LuckActionContentTooLongException
 import com.yapp.todakun.luck.exception.LuckActionNotFoundException
 import com.yapp.todakun.luck.exception.LuckActionTitleTooLongException
@@ -87,12 +88,8 @@ data class LuckAction(
             title: String,
             content: String,
         ) {
-            if (title.length > TITLE_MAX_LENGTH) {
-                throw LuckActionTitleTooLongException()
-            }
-            if (content.length > CONTENT_MAX_LENGTH) {
-                throw LuckActionContentTooLongException()
-            }
+            validateMaxLength(title, TITLE_MAX_LENGTH) { throw LuckActionTitleTooLongException() }
+            validateMaxLength(content, CONTENT_MAX_LENGTH) { throw LuckActionContentTooLongException() }
         }
     }
 }

@@ -13,4 +13,10 @@ interface LuckActionRepository {
         memberId: UUID,
         fortuneDate: LocalDate,
     ): List<LuckAction>
+
+    fun findAllByMemberIdBetweenFortuneDates(
+        memberId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<LuckAction>
 }

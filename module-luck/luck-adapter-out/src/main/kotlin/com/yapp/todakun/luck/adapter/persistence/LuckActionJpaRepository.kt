@@ -9,4 +9,10 @@ interface LuckActionJpaRepository : JpaRepository<LuckActionJpaEntity, UUID> {
         memberId: UUID,
         fortuneDate: LocalDate,
     ): List<LuckActionJpaEntity>
+
+    fun findAllByMemberIdAndFortuneDateBetweenOrderByFortuneDateAsc(
+        memberId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<LuckActionJpaEntity>
 }

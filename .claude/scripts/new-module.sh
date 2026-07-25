@@ -12,7 +12,7 @@ if [[ -z "$DOMAIN" ]]; then
     exit 1
 fi
 
-ROOT="/Users/tisckd/Documents/code/yapp/28th-App-Team-2-BE"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BASE="com/yapp/todakun"
 # nested 도메인은 외부 래퍼 디렉터리에만 `module-` 접두사를 붙인다 (내부 레이어 모듈은 평이한 이름 유지)
 DOMAIN_DIR="$ROOT/module-$DOMAIN"
