@@ -14,9 +14,7 @@ class RefreshService(
     private val refreshTokenPort: RefreshTokenPort,
 ) : RefreshUseCase {
     override fun refresh(command: RefreshCommand): RefreshResult {
-        val memberId = refreshTokenPort.findMemberId(command.refreshToken) ?: throw RefreshTokenInvalidException()
-
-        refreshTokenPort.revoke(command.refreshToken)
+        val memberId = refreshTokenPort.consume(command.refreshToken) ?: throw RefreshTokenInvalidException()
 
         return RefreshResult(
             accessToken = accessTokenPort.generate(memberId),

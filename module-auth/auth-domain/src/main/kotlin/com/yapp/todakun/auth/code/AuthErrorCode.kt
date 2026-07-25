@@ -7,8 +7,8 @@ enum class AuthErrorCode(
     override val message: String,
     override val status: Int,
 ) : ResponseCode {
-    ACCESS_TOKEN_EXPIRED("AUTH-401", "만료된 엑세스 토큰입니다.", 401),
-    ACCESS_TOKEN_INVALID("AUTH-401", "유효하지 않은 엑세스 토큰입니다.", 401),
+    ACCESS_TOKEN_EXPIRED("AUTH-401", "만료된 액세스 토큰입니다.", 401),
+    ACCESS_TOKEN_INVALID("AUTH-401", "유효하지 않은 액세스 토큰입니다.", 401),
     TOKEN_BLACKLISTED("AUTH-401", "로그아웃된 토큰입니다.", 401),
     AUTHENTICATION_REQUIRED("AUTH-401", "인증이 필요합니다.", 401),
     ACCESS_DENIED("AUTH-403", "접근 권한이 없습니다.", 403),

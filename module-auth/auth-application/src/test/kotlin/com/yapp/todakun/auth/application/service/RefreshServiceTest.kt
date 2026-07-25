@@ -10,9 +10,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.verify
 
 class RefreshServiceTest :
@@ -35,9 +33,8 @@ class RefreshServiceTest :
 
             describe("refresh") {
                 context("refreshToken이 유효하면") {
-                    it("기존 refreshToken을 폐기하고 access/refresh 토큰을 새로 발급한다") {
-                        every { refreshTokenPort.findMemberId(command.refreshToken) } returns memberId
-                        every { refreshTokenPort.revoke(command.refreshToken) } just runs
+                    it("기존 refreshToken을 소비하고 access/refresh 토큰을 새로 발급한다") {
+                        every { refreshTokenPort.consume(command.refreshToken) } returns memberId
                         every { accessTokenPort.generate(memberId) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
 
@@ -45,17 +42,17 @@ class RefreshServiceTest :
 
                         result.accessToken shouldBe issuedAccessToken
                         result.refreshToken shouldBe issuedRefreshToken
-                        verify(exactly = 1) { refreshTokenPort.revoke(command.refreshToken) }
+                        verify(exactly = 1) { refreshTokenPort.consume(command.refreshToken) }
                     }
                 }
 
-                context("refreshToken이 유효하지 않으면") {
+                context("refreshToken이 유효하지 않거나 이미 소비되었으면") {
                     it("RefreshTokenInvalidException을 던진다") {
-                        every { refreshTokenPort.findMemberId(command.refreshToken) } returns null
+                        every { refreshTokenPort.consume(command.refreshToken) } returns null
 
                         shouldThrow<RefreshTokenInvalidException> { refreshService.refresh(command) }
 
-                        verify(exactly = 0) { refreshTokenPort.revoke(any()) }
+                        verify(exactly = 0) { refreshTokenPort.issue(any()) }
                     }
                 }
             }
