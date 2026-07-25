@@ -1,8 +1,10 @@
 package com.yapp.todakun.auth.adapter.web
 
 import com.yapp.todakun.auth.adapter.web.dto.request.LoginRequest
+import com.yapp.todakun.auth.adapter.web.dto.request.RefreshRequest
 import com.yapp.todakun.auth.adapter.web.dto.request.SignupRequest
 import com.yapp.todakun.auth.adapter.web.dto.response.LoginResponse
+import com.yapp.todakun.auth.adapter.web.dto.response.RefreshResponse
 import com.yapp.todakun.auth.adapter.web.dto.response.SignupResponse
 import com.yapp.todakun.web.openapi.annotation.DisableSwaggerSecurity
 import com.yapp.todakun.web.response.CommonResponse
@@ -46,4 +48,14 @@ interface AuthApi {
         @Parameter(hidden = true)
         @BearerToken accessToken: String,
     ): ResponseEntity<CommonResponse<Unit>>
+
+    @Operation(
+        summary = "토큰 재발급",
+        description = "유효한 refresh token으로 access/refresh 토큰을 재발급한다. 기존 refresh token은 즉시 폐기된다.",
+    )
+    @DisableSwaggerSecurity
+    @PostMapping("api/v1/auth/refresh")
+    fun refresh(
+        @RequestBody @Valid request: RefreshRequest,
+    ): ResponseEntity<CommonResponse<RefreshResponse>>
 }

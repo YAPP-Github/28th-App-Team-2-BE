@@ -54,32 +54,32 @@ class AccessTokenAdapterTest :
                 }
 
                 context("만료된 토큰이면") {
-                    it("TOKEN_EXPIRED로 UnauthorizedException을 던진다") {
+                    it("ACCESS_TOKEN_EXPIRED로 UnauthorizedException을 던진다") {
                         val expiredAdapter = AccessTokenAdapter(properties.copy(expirySeconds = -10L))
                         val expiredToken = expiredAdapter.generate(memberId).value
 
                         val exception = shouldThrow<UnauthorizedException> { accessTokenAdapter.parse(expiredToken) }
 
-                        exception.errorCode shouldBe AuthErrorCode.TOKEN_EXPIRED
+                        exception.errorCode shouldBe AuthErrorCode.ACCESS_TOKEN_EXPIRED
                     }
                 }
 
                 context("JWT 형식이 아닌 토큰이면") {
-                    it("TOKEN_INVALID로 UnauthorizedException을 던진다") {
+                    it("ACCESS_TOKEN_INVALID로 UnauthorizedException을 던진다") {
                         val exception = shouldThrow<UnauthorizedException> { accessTokenAdapter.parse(MALFORMED_TOKEN) }
 
-                        exception.errorCode shouldBe AuthErrorCode.TOKEN_INVALID
+                        exception.errorCode shouldBe AuthErrorCode.ACCESS_TOKEN_INVALID
                     }
                 }
 
                 context("서명이 위조된 토큰이면") {
-                    it("TOKEN_INVALID로 UnauthorizedException을 던진다") {
+                    it("ACCESS_TOKEN_INVALID로 UnauthorizedException을 던진다") {
                         val otherAdapter = AccessTokenAdapter(properties.copy(secret = OTHER_SECRET))
                         val tamperedToken = otherAdapter.generate(memberId).value
 
                         val exception = shouldThrow<UnauthorizedException> { accessTokenAdapter.parse(tamperedToken) }
 
-                        exception.errorCode shouldBe AuthErrorCode.TOKEN_INVALID
+                        exception.errorCode shouldBe AuthErrorCode.ACCESS_TOKEN_INVALID
                     }
                 }
             }
