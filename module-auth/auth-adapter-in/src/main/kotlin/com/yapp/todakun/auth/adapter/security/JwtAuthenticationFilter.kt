@@ -37,7 +37,7 @@ class JwtAuthenticationFilter(
                 AuthenticationFailureHolder.set(request, e)
             } catch (e: Exception) {
                 SecurityContextHolder.clearContext()
-                AuthenticationFailureHolder.set(request, UnauthorizedException(AuthErrorCode.TOKEN_INVALID))
+                AuthenticationFailureHolder.set(request, UnauthorizedException(AuthErrorCode.ACCESS_TOKEN_INVALID))
             }
         }
 

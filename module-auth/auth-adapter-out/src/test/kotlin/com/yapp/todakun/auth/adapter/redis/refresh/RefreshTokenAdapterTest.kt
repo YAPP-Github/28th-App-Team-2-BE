@@ -7,6 +7,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
 import org.springframework.boot.data.redis.test.autoconfigure.DataRedisTest
 import org.springframework.context.annotation.Import
+import org.springframework.data.redis.core.StringRedisTemplate
+import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -16,10 +21,11 @@ import kotlin.uuid.toJavaUuid
 @Import(TestContainersConfig::class)
 class RefreshTokenAdapterTest(
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val redisTemplate: StringRedisTemplate,
 ) : DescribeSpec(
         {
             val properties = RefreshTokenProperties(expirySeconds = 86400L)
-            val adapter = RefreshTokenAdapter(refreshTokenRepository, properties)
+            val adapter = RefreshTokenAdapter(refreshTokenRepository, properties, redisTemplate)
             val memberId = Uuid.generateV7().toJavaUuid()
 
             describe("issue") {
@@ -29,29 +35,63 @@ class RefreshTokenAdapterTest(
 
                         issued.value.shouldNotBeBlank()
                         issued.expiresInSeconds shouldBe properties.expirySeconds
-                        adapter.findMemberId(issued.value) shouldBe memberId
+                        refreshTokenRepository.findById(issued.value).get().memberId shouldBe memberId.toString()
                     }
                 }
             }
 
-            describe("findMemberId") {
+            describe("consume") {
+                context("존재하는 토큰이면") {
+                    it("memberId를 반환하고 토큰을 폐기한다") {
+                        val issued = adapter.issue(memberId)
+
+                        val consumed = adapter.consume(issued.value)
+
+                        consumed shouldBe memberId
+                        refreshTokenRepository.findById(issued.value).isPresent shouldBe false
+                    }
+                }
+
                 context("존재하지 않는 토큰이면") {
                     it("null을 반환한다") {
                         val nonExistentToken = Uuid.generateV7().toJavaUuid().toString()
 
-                        adapter.findMemberId(nonExistentToken).shouldBeNull()
+                        adapter.consume(nonExistentToken).shouldBeNull()
                     }
                 }
-            }
 
-            describe("revoke") {
-                context("존재하는 토큰이면") {
-                    it("삭제한다") {
+                context("이미 소비된 토큰이면") {
+                    it("null을 반환한다") {
                         val issued = adapter.issue(memberId)
+                        adapter.consume(issued.value)
 
-                        adapter.revoke(issued.value)
+                        adapter.consume(issued.value).shouldBeNull()
+                    }
+                }
 
-                        adapter.findMemberId(issued.value).shouldBeNull()
+                context("동일한 토큰으로 동시에 요청하면") {
+                    it("한 요청만 성공한다") {
+                        val issued = adapter.issue(memberId)
+                        val requestCount = 10
+                        val executor = Executors.newFixedThreadPool(requestCount)
+                        val readyLatch = CountDownLatch(requestCount)
+                        val startLatch = CountDownLatch(1)
+                        val results =
+                            (1..requestCount).map {
+                                executor.submit<UUID?> {
+                                    readyLatch.countDown()
+                                    startLatch.await()
+                                    adapter.consume(issued.value)
+                                }
+                            }
+
+                        readyLatch.await()
+                        startLatch.countDown()
+                        val consumedResults = results.map { it.get(5, TimeUnit.SECONDS) }
+                        executor.shutdown()
+
+                        consumedResults.count { it == memberId } shouldBe 1
+                        consumedResults.count { it == null } shouldBe requestCount - 1
                     }
                 }
             }
@@ -64,8 +104,8 @@ class RefreshTokenAdapterTest(
 
                         adapter.revokeAll(memberId)
 
-                        adapter.findMemberId(first.value).shouldBeNull()
-                        adapter.findMemberId(second.value).shouldBeNull()
+                        refreshTokenRepository.findById(first.value).isPresent shouldBe false
+                        refreshTokenRepository.findById(second.value).isPresent shouldBe false
                     }
                 }
             }

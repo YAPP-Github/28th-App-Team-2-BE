@@ -63,8 +63,8 @@ class AccessTokenAdapter(
                 .parseSignedClaims(token)
                 .payload
         } catch (_: ExpiredJwtException) {
-            throw UnauthorizedException(AuthErrorCode.TOKEN_EXPIRED)
+            throw UnauthorizedException(AuthErrorCode.ACCESS_TOKEN_EXPIRED)
         } catch (_: JwtException) {
-            throw UnauthorizedException(AuthErrorCode.TOKEN_INVALID)
+            throw UnauthorizedException(AuthErrorCode.ACCESS_TOKEN_INVALID)
         }
 }

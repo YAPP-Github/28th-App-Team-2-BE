@@ -3,6 +3,7 @@ package com.yapp.todakun.auth.adapter.web.controller
 import com.ninjasquad.springmockk.MockkBean
 import com.yapp.todakun.auth.OauthMemberProfile
 import com.yapp.todakun.auth.adapter.web.dto.request.LoginRequest
+import com.yapp.todakun.auth.adapter.web.dto.request.RefreshRequest
 import com.yapp.todakun.auth.adapter.web.dto.request.SignupRequest
 import com.yapp.todakun.auth.port.outbound.OauthPort
 import com.yapp.todakun.config.TestContainersConfig
@@ -39,6 +40,9 @@ private const val INVALID_ONBOARDING_TOKEN = "invalid-onboarding-token"
 
 // 존재/형식 여부만 중요하고 값 자체는 의미가 없는 액세스 토큰(파싱 실패 유도용)
 private const val INVALID_ACCESS_TOKEN = "invalid-access-token"
+
+// 존재/형식 여부만 중요하고 값 자체는 의미가 없는 refresh 토큰(조회 실패 유도용)
+private const val INVALID_REFRESH_TOKEN = "invalid-refresh-token"
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -148,6 +152,27 @@ class AuthControllerIntegrationTest(
                 }
             }
         }
+
+        describe("POST /api/v1/auth/refresh") {
+            context("유효한 refreshToken이 주어지면") {
+                it("access/refresh 토큰을 재발급하고, 기존 refreshToken은 더 이상 사용할 수 없다") {
+                    val refreshToken = issueRefreshToken()
+
+                    val response = refresh(refreshToken).andExpect { status { isOk() } }.andReturn().response
+                    val data = objectMapper.readTree(response.contentAsString)["data"]
+
+                    data["accessToken"].asString().shouldNotBeBlank()
+                    data["refreshToken"].asString().shouldNotBeBlank()
+                    refresh(refreshToken).andExpect { status { isUnauthorized() } }
+                }
+            }
+
+            context("존재하지 않는 refreshToken이면") {
+                it("401을 반환한다") {
+                    refresh(INVALID_REFRESH_TOKEN).andExpect { status { isUnauthorized() } }
+                }
+            }
+        }
     }
 
     private fun login(
@@ -189,6 +214,12 @@ class AuthControllerIntegrationTest(
             header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
         }
 
+    private fun refresh(refreshToken: String): ResultActionsDsl =
+        mockMvc.post("/api/v1/auth/refresh") {
+            contentType = MediaType.APPLICATION_JSON
+            content = RefreshRequest(refreshToken = refreshToken).toJson()
+        }
+
     /** 매 호출마다 고유한 OAuth 프로필을 스텁으로 등록하고, 그 프로필로 로그인할 때 사용할 oauthAccessToken을 반환한다. */
     private fun stubNewOauthProfile(provider: OauthProvider = OauthProvider.KAKAO): String {
         val oauthAccessToken = "oauth-token-${UUID.randomUUID()}"
@@ -206,6 +237,15 @@ class AuthControllerIntegrationTest(
         signup(onboardingToken).andExpect { status { isCreated() } }
 
         return login(oauthAccessToken)["accessToken"].asString()
+    }
+
+    /** 신규 OAuth 프로필로 회원가입까지 마친 뒤, 로그인해서 발급받은 refreshToken을 반환한다. */
+    private fun issueRefreshToken(): String {
+        val oauthAccessToken = stubNewOauthProfile()
+        val onboardingToken = login(oauthAccessToken)["onboardingToken"].asString()
+        signup(onboardingToken).andExpect { status { isCreated() } }
+
+        return login(oauthAccessToken)["refreshToken"].asString()
     }
 
     private fun Any.toJson(): String = objectMapper.writeValueAsString(this)

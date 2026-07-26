@@ -6,9 +6,7 @@ import java.util.UUID
 interface RefreshTokenPort {
     fun issue(memberId: UUID): IssuedRefreshToken
 
-    fun findMemberId(token: String): UUID?
-
-    fun revoke(token: String)
+    fun consume(token: String): UUID?
 
     fun revokeAll(memberId: UUID)
 }
