@@ -17,6 +17,15 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID}
+          location: ${VERTEX_AI_LOCATION}
+          chat:
+            options:
+              model: ${VERTEX_AI_CHAT_MODEL}
 
 # GCP Cloud Storage (raw 클라이언트). 로컬은 gcloud ADC(gcloud auth application-default login) 또는 키 파일로 인증.
 gcp:

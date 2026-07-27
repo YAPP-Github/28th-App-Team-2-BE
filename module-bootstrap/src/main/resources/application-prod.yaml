@@ -12,6 +12,15 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     show-sql: false
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID}
+          location: ${VERTEX_AI_LOCATION}
+          chat:
+            options:
+              model: ${VERTEX_AI_CHAT_MODEL}
 
 # GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
 gcp:

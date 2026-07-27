@@ -14,6 +14,15 @@ spring:
     show-sql: false
     hibernate:
       ddl-auto: update  # 자동 스키마 생성 사용
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID}
+          location: ${VERTEX_AI_LOCATION}
+          chat:
+            options:
+              model: ${VERTEX_AI_CHAT_MODEL}
 
 # GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
 gcp:
