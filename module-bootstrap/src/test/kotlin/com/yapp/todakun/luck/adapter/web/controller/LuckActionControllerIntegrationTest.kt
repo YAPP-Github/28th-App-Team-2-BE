@@ -1,6 +1,7 @@
 package com.yapp.todakun.luck.adapter.web.controller
 
 import com.ninjasquad.springmockk.MockkBean
+import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.luck.exception.LuckActionNotFoundException
 import com.yapp.todakun.luck.fixture.LuckActionFixture
@@ -29,7 +30,7 @@ private val LUCK_ACTION = LuckActionFixture.create()
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class LuckActionControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,

@@ -1,6 +1,7 @@
 package com.yapp.todakun.dailyfortune.adapter.web.controller
 
 import com.ninjasquad.springmockk.MockkBean
+import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneHistoryToOutOfRangeException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
@@ -71,7 +72,7 @@ private val FORTUNE_HISTORY_SUMMARY =
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class DailyFortuneControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,

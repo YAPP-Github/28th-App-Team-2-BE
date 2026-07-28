@@ -3,6 +3,7 @@ package com.yapp.todakun.member.adapter.web.controller
 import com.ninjasquad.springmockk.MockkBean
 import com.yapp.todakun.auth.claims.AccessTokenClaims
 import com.yapp.todakun.auth.port.outbound.AccessTokenPort
+import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.member.BirthTime
 import com.yapp.todakun.member.CalendarType
@@ -44,7 +45,7 @@ private const val ACCESS_TOKEN = "test-access-token"
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class MemberControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,

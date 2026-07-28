@@ -6,7 +6,11 @@ import com.yapp.todakun.auth.adapter.web.dto.request.LoginRequest
 import com.yapp.todakun.auth.adapter.web.dto.request.RefreshRequest
 import com.yapp.todakun.auth.adapter.web.dto.request.SignupRequest
 import com.yapp.todakun.auth.port.outbound.OauthPort
+import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
+import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
+import com.yapp.todakun.dailyfortune.port.outbound.GeneratedCategoryFortune
+import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
 import com.yapp.todakun.member.BirthTime
 import com.yapp.todakun.member.CalendarType
 import com.yapp.todakun.member.Gender
@@ -46,16 +50,18 @@ private const val INVALID_REFRESH_TOKEN = "invalid-refresh-token"
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class AuthControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,
+    private val dailyFortuneAiPort: DailyFortuneAiPort,
 ) : DescribeSpec() {
     @MockkBean
     private lateinit var oauthPort: OauthPort
 
     init {
-        afterTest { clearMocks(oauthPort) }
+        beforeTest { every { dailyFortuneAiPort.generate(any(), any(), any()) } returns FAKE_GENERATED_DAILY_FORTUNE }
+        afterTest { clearMocks(oauthPort, dailyFortuneAiPort) }
 
         describe("POST /api/v1/auth/login") {
             context("신규 회원이면") {
@@ -250,3 +256,21 @@ class AuthControllerIntegrationTest(
 
     private fun Any.toJson(): String = objectMapper.writeValueAsString(this)
 }
+
+/** 회원가입 시 자동 생성되는 오늘의 운세용 AI 응답 스텁(내용 자체는 이 테스트의 검증 대상이 아니다). */
+private val FAKE_GENERATED_DAILY_FORTUNE =
+    GeneratedDailyFortune(
+        title = "오늘은 활기찬 하루가 될 거예요",
+        content = "전반적으로 운이 상승하는 하루입니다.",
+        luckyItems = listOf("노란색", "마스크", "운동화", "셔츠", "안경"),
+        cautionaryItems = listOf("검정색", "체크무늬", "라면", "시계", "우산"),
+        categoryFortunes =
+            FortuneCategory.entries.map {
+                GeneratedCategoryFortune(
+                    fortuneCategory = it,
+                    score = 70,
+                    title = "오늘의 액션",
+                    content = "상세 해석",
+                )
+            },
+    )

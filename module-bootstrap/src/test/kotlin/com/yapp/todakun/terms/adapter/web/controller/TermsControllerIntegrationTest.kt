@@ -1,6 +1,7 @@
 package com.yapp.todakun.terms.adapter.web.controller
 
 import com.ninjasquad.springmockk.MockkBean
+import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.terms.MemberTermsAgreement
 import com.yapp.todakun.terms.Terms
@@ -33,7 +34,7 @@ private val AGREEMENT_ID = UUID.fromString("018f0000-0000-7000-8000-0000000000b1
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class TermsControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,

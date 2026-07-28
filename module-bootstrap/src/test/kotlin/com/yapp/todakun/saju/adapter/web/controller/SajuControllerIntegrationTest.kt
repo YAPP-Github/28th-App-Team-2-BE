@@ -1,6 +1,7 @@
 package com.yapp.todakun.saju.adapter.web.controller
 
 import com.ninjasquad.springmockk.MockkBean
+import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.saju.BirthTime
 import com.yapp.todakun.saju.CalendarType
@@ -44,7 +45,7 @@ private val PARTNER_SAJU_ID = UUID.fromString("018f0000-0000-7000-8000-000000000
 @ExperimentalUuidApi
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class SajuControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,
