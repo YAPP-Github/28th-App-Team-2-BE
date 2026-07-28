@@ -55,7 +55,7 @@ class VertexAiDailyFortuneAdapter(
         - 성별: ${profile.gender}
         - 직업: ${profile.job}
         - 연애 상태: ${profile.relationshipStatus}
-        - 관심 있는 운세 카테고리: ${profile.favoriteFortuneCategories.joinToString()}
+        - 관심 있는 운세 카테고리: ${profile.favoriteFortuneCategories.joinToString { it.label }}
 
         [사주 명식]
         - 일간: ${profile.dayMaster}
