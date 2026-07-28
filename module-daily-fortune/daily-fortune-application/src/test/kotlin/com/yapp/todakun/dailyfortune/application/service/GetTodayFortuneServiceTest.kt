@@ -52,13 +52,40 @@ class GetTodayFortuneServiceTest :
                     }
                 }
 
-                context("해당 날짜의 오늘의 운세가 존재하지 않으면") {
+                context("서비스 데이·실제 캘린더 날짜 어느 쪽으로도 오늘의 운세가 존재하지 않으면") {
                     it("DailyFortuneNotFoundException을 던진다") {
                         val memberId = Uuid.generateV7().toJavaUuid()
                         val fortuneDate = LocalDate.of(2026, 6, 24)
                         every { dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, fortuneDate) } returns null
+                        every { dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, any()) } returns null
 
                         shouldThrow<DailyFortuneNotFoundException> { getTodayFortuneService.getToday(memberId, fortuneDate) }
+                    }
+                }
+
+                context("서비스 데이 기준으론 없지만 실제 캘린더 날짜로 생성된 오늘의 운세가 있으면") {
+                    it("실제 캘린더 날짜 기준으로 조회해 반환하고, 행운 액션 점수도 같은 날짜로 조회한다") {
+                        val serviceDate = LocalDate.of(2026, 6, 23)
+                        val dailyFortune = DailyFortuneFixture.create(fortuneDate = LocalDate.of(2026, 6, 24))
+                        val luckActionScores =
+                            listOf(
+                                LuckActionScore(id = Uuid.generateV7().toJavaUuid(), fortuneCategory = FortuneCategory.HEALTH, score = 80),
+                            )
+                        every {
+                            dailyFortuneRepository.findByMemberIdAndFortuneDate(dailyFortune.memberId, any())
+                        } returns dailyFortune
+                        every {
+                            dailyFortuneRepository.findByMemberIdAndFortuneDate(dailyFortune.memberId, serviceDate)
+                        } returns null
+                        every {
+                            getLuckActionScoresPort.getScores(dailyFortune.memberId, dailyFortune.fortuneDate)
+                        } returns luckActionScores
+
+                        val summary = getTodayFortuneService.getToday(dailyFortune.memberId, serviceDate)
+
+                        summary.id shouldBe dailyFortune.id
+                        summary.fortuneDate shouldBe dailyFortune.fortuneDate
+                        summary.luckActionScores shouldBe luckActionScores
                     }
                 }
             }
