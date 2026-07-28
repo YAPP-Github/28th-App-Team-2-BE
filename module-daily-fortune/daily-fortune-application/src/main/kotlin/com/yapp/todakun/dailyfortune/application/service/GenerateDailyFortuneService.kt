@@ -9,6 +9,7 @@ import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
 import com.yapp.todakun.dailyfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dailyfortune.port.outbound.Pillar
 import com.yapp.todakun.dailyfortune.repository.DailyFortuneRepository
+import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.CreateLuckActionPort
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetDailyPillarPort
@@ -20,10 +21,10 @@ import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
- * [GenerateDailyFortuneUseCase] 구현체.
+ * [GenerateDailyFortuneUseCase] 구현체이자 크로스 도메인 포트 [CreateDailyFortunePort] 구현체.
  * AI 생성 입력 조립 → AI 호출 → DailyFortune/LuckAction 저장까지 한 트랜잭션으로 처리한다.
+ * 두 인터페이스의 메서드 이름(generate/create)이 달라 시그니처 충돌 없이 한 클래스로 구현 가능하다.
  */
-@ExperimentalUuidApi
 @CommandService
 class GenerateDailyFortuneService(
     private val dailyFortuneRepository: DailyFortuneRepository,
@@ -32,7 +33,8 @@ class GenerateDailyFortuneService(
     private val getDailyPillarPort: GetDailyPillarPort,
     private val dailyFortuneAiPort: DailyFortuneAiPort,
     private val createLuckActionPort: CreateLuckActionPort,
-) : GenerateDailyFortuneUseCase {
+) : GenerateDailyFortuneUseCase, CreateDailyFortunePort {
+    @ExperimentalUuidApi
     override fun generate(
         memberId: UUID,
         fortuneDate: LocalDate,
@@ -68,6 +70,12 @@ class GenerateDailyFortuneService(
 
         return saved
     }
+
+    @ExperimentalUuidApi
+    override fun create(
+        memberId: UUID,
+        fortuneDate: LocalDate,
+    ): UUID = generate(memberId, fortuneDate).id
 
     private fun requestGeneration(
         memberId: UUID,

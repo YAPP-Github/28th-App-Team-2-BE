@@ -8,14 +8,17 @@ import com.yapp.todakun.auth.port.outbound.AccessTokenPort
 import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.common.annotation.CommandService
+import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.CreateMemberPort
 import com.yapp.todakun.shared.CreateSajuChartPort
+import com.yapp.todakun.shared.currentDate
 
 @CommandService
 class SignupService(
     private val onboardingTokenPort: OnboardingTokenPort,
     private val createMemberPort: CreateMemberPort,
     private val createSajuChartPort: CreateSajuChartPort,
+    private val createDailyFortunePort: CreateDailyFortunePort,
     private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
 ) : SignupUseCase {
@@ -51,6 +54,13 @@ class SignupService(
                 birthDate = command.birthDate,
                 birthTime = command.birthTime,
                 isLeapMonth = false,
+            )
+
+            // 신규 회원의 당일 운세도 같은 트랜잭션에서 생성해 원자성을 보장한다(실패 시 회원가입 전체 롤백).
+            // 신규 가입자는 이전 서비스 데이의 연속성을 지킬 필요가 없으므로 롤오버 규칙 대신 실제 캘린더 날짜를 쓴다.
+            createDailyFortunePort.create(
+                memberId = memberId,
+                fortuneDate = currentDate(),
             )
 
             return SignupResult(
