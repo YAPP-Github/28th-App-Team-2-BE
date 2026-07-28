@@ -117,6 +117,19 @@ class GenerateDailyFortuneServiceTest :
                 }
             }
         }
+
+        describe("create") {
+            context("크로스 도메인 호출자(CreateDailyFortunePort)가 오늘의 운세 생성을 요청하면") {
+                it("generate()에 위임하고 생성된 ID만 반환한다") {
+                    val existing = DailyFortuneFixture.create(memberId = MEMBER_ID, fortuneDate = fortuneDate)
+                    every { dailyFortuneRepository.findByMemberIdAndFortuneDate(MEMBER_ID, fortuneDate) } returns existing
+
+                    val result = service.create(MEMBER_ID, fortuneDate)
+
+                    result shouldBe existing.id
+                }
+            }
+        }
     })
 
 private fun pillarSummary(): PillarSummary =
