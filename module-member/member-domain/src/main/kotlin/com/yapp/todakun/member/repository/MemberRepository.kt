@@ -14,5 +14,7 @@ interface MemberRepository {
         providerId: String,
     ): UUID?
 
+    fun findIds(): List<UUID>
+
     fun deleteById(id: UUID)
 }

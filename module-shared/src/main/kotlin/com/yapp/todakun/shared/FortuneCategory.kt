@@ -1,6 +1,5 @@
 package com.yapp.todakun.shared
 
-/** 운세 카테고리. [label] 한글 표기. */
 enum class FortuneCategory(
     val label: String,
 ) {
