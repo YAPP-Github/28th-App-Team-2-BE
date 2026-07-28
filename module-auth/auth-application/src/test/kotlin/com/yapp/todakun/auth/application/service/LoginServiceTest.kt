@@ -8,7 +8,7 @@ import com.yapp.todakun.auth.port.outbound.OauthPort
 import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.auth.port.outbound.WithdrawnAccountPort
-import com.yapp.todakun.shared.GetMemberPort
+import com.yapp.todakun.shared.GetMemberIdPort
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
@@ -22,7 +22,7 @@ class LoginServiceTest :
     DescribeSpec(
         {
             val oauthPort = mockk<OauthPort>()
-            val getMemberPort = mockk<GetMemberPort>()
+            val getMemberIdPort = mockk<GetMemberIdPort>()
             val accessTokenPort = mockk<AccessTokenPort>()
             val refreshTokenPort = mockk<RefreshTokenPort>()
             val onboardingTokenPort = mockk<OnboardingTokenPort>()
@@ -30,7 +30,7 @@ class LoginServiceTest :
             val loginService =
                 LoginService(
                     oauthPort = oauthPort,
-                    getMemberPort = getMemberPort,
+                    getMemberIdPort = getMemberIdPort,
                     accessTokenPort = accessTokenPort,
                     refreshTokenPort = refreshTokenPort,
                     onboardingTokenPort = onboardingTokenPort,
@@ -38,7 +38,7 @@ class LoginServiceTest :
                 )
 
             afterTest {
-                clearMocks(oauthPort, getMemberPort, accessTokenPort, refreshTokenPort, onboardingTokenPort, withdrawnAccountPort)
+                clearMocks(oauthPort, getMemberIdPort, accessTokenPort, refreshTokenPort, onboardingTokenPort, withdrawnAccountPort)
             }
 
             val memberId = AuthFixture.MEMBER_ID
@@ -53,7 +53,7 @@ class LoginServiceTest :
                 context("OauthPort.fetchProfile이 올바른 provider와 oauthAccessToken으로 호출되면") {
                     it("OauthMemberProfile을 가져온다") {
                         every { oauthPort.fetchProfile(command.provider, command.oauthAccessToken) } returns profile
-                        every { getMemberPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
+                        every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
                         every { accessTokenPort.generate(memberId) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
 
@@ -66,7 +66,7 @@ class LoginServiceTest :
                 context("기존 회원이면") {
                     it("isNewMember = false이고 accessToken과 refreshToken이 채워지며 onboardingToken은 null이다") {
                         every { oauthPort.fetchProfile(command.provider, command.oauthAccessToken) } returns profile
-                        every { getMemberPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
+                        every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
                         every { accessTokenPort.generate(memberId) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
 
@@ -87,7 +87,7 @@ class LoginServiceTest :
                 context("신규 회원이고 재가입 제한 대상이 아니면") {
                     it("isNewMember = true이고 onboardingToken이 채워지며 accessToken과 refreshToken은 null이다") {
                         every { oauthPort.fetchProfile(command.provider, command.oauthAccessToken) } returns profile
-                        every { getMemberPort.findIdByOauth(profile.provider, profile.providerId) } returns null
+                        every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns null
                         every { withdrawnAccountPort.isRestricted(profile.provider, profile.providerId) } returns false
                         every { onboardingTokenPort.issue(profile) } returns issuedOnboardingToken
 
@@ -106,7 +106,7 @@ class LoginServiceTest :
                 context("신규 회원이지만 탈퇴 후 재가입 제한 기간(90일) 내이면") {
                     it("ReSignupRestrictedException을 던지고 온보딩 토큰을 발급하지 않는다") {
                         every { oauthPort.fetchProfile(command.provider, command.oauthAccessToken) } returns profile
-                        every { getMemberPort.findIdByOauth(profile.provider, profile.providerId) } returns null
+                        every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns null
                         every { withdrawnAccountPort.isRestricted(profile.provider, profile.providerId) } returns true
 
                         shouldThrow<ReSignupRestrictedException> { loginService.login(command) }
