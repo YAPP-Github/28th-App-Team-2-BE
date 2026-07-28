@@ -28,8 +28,9 @@ class LogoutServiceTest :
 
             afterTest { clearMocks(accessTokenPort, refreshTokenPort, blacklistTokenPort) }
 
+            val memberId = AuthFixture.MEMBER_ID
             val command = AuthFixture.logoutCommand()
-            val claims = TokenFixture.accessTokenClaims()
+            val claims = TokenFixture.accessTokenClaims(memberId)
 
             describe("logout") {
                 context("accessToken이 유효하면") {

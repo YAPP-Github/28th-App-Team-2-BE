@@ -6,7 +6,6 @@ import com.yapp.todakun.auth.token.IssuedOnboardingToken
 import com.yapp.todakun.auth.token.IssuedRefreshToken
 import java.util.UUID
 
-private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000002")
 private const val JTI = "jti-001"
 private const val ACCESS_TOKEN_VALUE = "access-token-value"
 private const val REFRESH_TOKEN_VALUE = "refresh-token-value"
@@ -14,7 +13,7 @@ private const val ONBOARDING_TOKEN_VALUE = "onboarding-token-value"
 
 object TokenFixture {
     fun accessTokenClaims(
-        memberId: UUID = MEMBER_ID,
+        memberId: UUID,
         jti: String = JTI,
         remainingSeconds: Long = 3600L,
     ): AccessTokenClaims =
