@@ -13,4 +13,5 @@ enum class DailyFortuneErrorCode(
     DAILY_FORTUNE_ITEM_COUNT_MISMATCH("DAILY-FORTUNE-400", "행운 아이템과 주의 아이템은 각각 5개여야 합니다.", 400),
     DAILY_FORTUNE_HISTORY_TO_OUT_OF_RANGE("DAILY-FORTUNE-400", "조회 가능한 기간이 아닙니다.", 400),
     DAILY_FORTUNE_GENERATION_FAILED("DAILY-FORTUNE-500", "오늘의 운세 생성에 실패했습니다.", 500),
+    DAILY_FORTUNE_EMPTY_RESPONSE("DAILY-FORTUNE-500", "AI로부터 빈 응답을 받았습니다.", 500),
 }

@@ -32,11 +32,11 @@ class GetDailyPillarService(
                 .first { it.pillarType == PillarType.DAY }
 
         return PillarSummary(
-            stem = dayPillar.stem.name,
-            branch = dayPillar.branch.name,
-            stemSipseong = dayPillar.stemSipseong?.name,
-            branchSipseong = dayPillar.branchSipseong.name,
-            sibiunseong = dayPillar.sibiunseong.name,
+            stem = dayPillar.stem.reading,
+            branch = dayPillar.branch.reading,
+            stemSipseong = dayPillar.stemSipseong?.label,
+            branchSipseong = dayPillar.branchSipseong.label,
+            sibiunseong = dayPillar.sibiunseong.label,
         )
     }
 }

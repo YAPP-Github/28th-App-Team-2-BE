@@ -15,6 +15,7 @@ class GetMemberFortuneProfileAdapter(
         val member = memberRepository.findById(memberId) ?: throw MemberNotFoundException()
 
         return MemberFortuneProfile(
+            name = member.name,
             birthDate = member.birthDate,
             gender = member.gender.name,
             job = member.job.name,

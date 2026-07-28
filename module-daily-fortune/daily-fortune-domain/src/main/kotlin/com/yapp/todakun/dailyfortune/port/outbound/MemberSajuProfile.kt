@@ -9,6 +9,7 @@ import java.time.LocalDate
  * 날짜별로 달라지는 값(오늘 일진 등)은 여기 두지 않고 [DailyFortuneAiPort.generate]의 별도 파라미터로 전달한다.
  */
 data class MemberSajuProfile(
+    val name: String,
     val birthDate: LocalDate,
     val gender: String,
     val job: String,

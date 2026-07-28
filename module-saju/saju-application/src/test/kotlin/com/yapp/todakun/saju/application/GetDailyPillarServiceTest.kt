@@ -32,11 +32,11 @@ class GetDailyPillarServiceTest : DescribeSpec({
 
                 val result = service.getPillar(fortuneDate)
 
-                result.stem shouldBe expectedDayPillar.stem.name
-                result.branch shouldBe expectedDayPillar.branch.name
-                result.stemSipseong shouldBe expectedDayPillar.stemSipseong?.name
-                result.branchSipseong shouldBe expectedDayPillar.branchSipseong.name
-                result.sibiunseong shouldBe expectedDayPillar.sibiunseong.name
+                result.stem shouldBe expectedDayPillar.stem.reading
+                result.branch shouldBe expectedDayPillar.branch.reading
+                result.stemSipseong shouldBe expectedDayPillar.stemSipseong?.label
+                result.branchSipseong shouldBe expectedDayPillar.branchSipseong.label
+                result.sibiunseong shouldBe expectedDayPillar.sibiunseong.label
                 verify(exactly = 1) { manseryeokPort.calculate(fortuneDate, BirthTime.UNKNOWN, CalendarType.SOLAR, false) }
             }
         }

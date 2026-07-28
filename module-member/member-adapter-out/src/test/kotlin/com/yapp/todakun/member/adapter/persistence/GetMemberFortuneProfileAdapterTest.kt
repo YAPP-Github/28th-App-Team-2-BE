@@ -25,6 +25,7 @@ class GetMemberFortuneProfileAdapterTest : DescribeSpec({
 
                 val result = adapter.getProfile(member.id)
 
+                result.name shouldBe member.name
                 result.birthDate shouldBe member.birthDate
                 result.gender shouldBe member.gender.name
                 result.job shouldBe member.job.name

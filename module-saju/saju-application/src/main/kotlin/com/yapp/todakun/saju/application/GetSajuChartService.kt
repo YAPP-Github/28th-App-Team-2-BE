@@ -22,13 +22,13 @@ class GetSajuChartService(
         val chart = sajuChartRepository.findById(link.chartId) ?: throw SajuChartNotFoundException()
 
         return SajuChartSummary(
-            dayMaster = chart.dayMaster.name,
+            dayMaster = chart.dayMaster.reading,
             yearPillar = chart.pillars.summaryOf(PillarType.YEAR),
             monthPillar = chart.pillars.summaryOf(PillarType.MONTH),
             dayPillar = chart.pillars.summaryOf(PillarType.DAY),
             hourPillar = chart.pillars.summaryOfOrNull(PillarType.HOUR),
-            ohaeng = chart.ohaeng.associate { it.element.name to it.count },
-            sipseong = chart.sipseong.associate { it.sipseong.name to it.count },
+            ohaeng = chart.ohaeng.associate { it.element.label to it.count },
+            sipseong = chart.sipseong.associate { it.sipseong.label to it.count },
         )
     }
 
@@ -39,10 +39,10 @@ class GetSajuChartService(
 
     private fun SajuPillar.toSummary(): PillarSummary =
         PillarSummary(
-            stem = stem.name,
-            branch = branch.name,
-            stemSipseong = stemSipseong?.name,
-            branchSipseong = branchSipseong.name,
-            sibiunseong = sibiunseong.name,
+            stem = stem.reading,
+            branch = branch.reading,
+            stemSipseong = stemSipseong?.label,
+            branchSipseong = branchSipseong.label,
+            sibiunseong = sibiunseong.label,
         )
 }

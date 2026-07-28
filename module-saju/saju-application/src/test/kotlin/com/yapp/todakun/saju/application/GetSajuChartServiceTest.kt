@@ -34,14 +34,14 @@ class GetSajuChartServiceTest : DescribeSpec({
 
                 val result = service.getChart(SajuFixture.MEMBER_ID)
 
-                result.dayMaster shouldBe chart.dayMaster.name
+                result.dayMaster shouldBe chart.dayMaster.reading
                 result.yearPillar shouldBe chart.pillars.first { it.pillarType == PillarType.YEAR }.toExpectedSummary()
                 result.monthPillar shouldBe chart.pillars.first { it.pillarType == PillarType.MONTH }.toExpectedSummary()
                 result.dayPillar shouldBe chart.pillars.first { it.pillarType == PillarType.DAY }.toExpectedSummary()
                 result.hourPillar shouldBe chart.pillars.first { it.pillarType == PillarType.HOUR }.toExpectedSummary()
                 result.dayPillar.stemSipseong shouldBe null // 일주 천간은 일원이라 십성 없음
-                result.ohaeng shouldBe chart.ohaeng.associate { it.element.name to it.count }
-                result.sipseong shouldBe chart.sipseong.associate { it.sipseong.name to it.count }
+                result.ohaeng shouldBe chart.ohaeng.associate { it.element.label to it.count }
+                result.sipseong shouldBe chart.sipseong.associate { it.sipseong.label to it.count }
             }
         }
 
@@ -81,9 +81,9 @@ class GetSajuChartServiceTest : DescribeSpec({
 /** [GetSajuChartService]의 private 매핑 로직을 재사용하지 않고 별도로 계산한다. */
 private fun SajuPillar.toExpectedSummary(): PillarSummary =
     PillarSummary(
-        stem = stem.name,
-        branch = branch.name,
-        stemSipseong = stemSipseong?.name,
-        branchSipseong = branchSipseong.name,
-        sibiunseong = sibiunseong.name,
+        stem = stem.reading,
+        branch = branch.reading,
+        stemSipseong = stemSipseong?.label,
+        branchSipseong = branchSipseong.label,
+        sibiunseong = sibiunseong.label,
     )
