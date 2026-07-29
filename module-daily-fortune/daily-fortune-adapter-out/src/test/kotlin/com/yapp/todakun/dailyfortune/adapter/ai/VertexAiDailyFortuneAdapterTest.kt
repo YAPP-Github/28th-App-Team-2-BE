@@ -47,7 +47,7 @@ class VertexAiDailyFortuneAdapterTest : DescribeSpec({
                 val result = adapter.generate(profile, fortuneDate, todayPillar)
 
                 result shouldBe generated
-                promptSlot.captured shouldContain profile.name
+                promptSlot.captured shouldContain profile.gender
                 promptSlot.captured shouldContain profile.dayMaster
                 promptSlot.captured shouldContain fortuneDate.toString()
                 promptSlot.captured shouldContain "연애운"
@@ -112,7 +112,6 @@ private fun pillar(
 
 private fun memberSajuProfile(): MemberSajuProfile =
     MemberSajuProfile(
-        name = "홍길동",
         birthDate = LocalDate.of(1998, 3, 5),
         gender = "MALE",
         job = "WORKER",

@@ -84,7 +84,6 @@ class CreateDailyFortuneService(
         val chart = getSajuChartPort.getChart(memberId)
 
         return MemberSajuProfile(
-            name = memberProfile.name,
             birthDate = memberProfile.birthDate,
             gender = memberProfile.gender,
             job = memberProfile.job,

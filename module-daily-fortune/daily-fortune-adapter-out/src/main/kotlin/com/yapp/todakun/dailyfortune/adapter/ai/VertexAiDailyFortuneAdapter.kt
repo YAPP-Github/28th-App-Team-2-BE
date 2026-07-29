@@ -50,7 +50,6 @@ class VertexAiDailyFortuneAdapter(
         아래 회원 정보를 바탕으로 $fortuneDate 하루치 운세를 작성하세요.
 
         [회원 정보]
-        - 이름: ${profile.name}
         - 생년월일: ${profile.birthDate}
         - 성별: ${profile.gender}
         - 직업: ${profile.job}
