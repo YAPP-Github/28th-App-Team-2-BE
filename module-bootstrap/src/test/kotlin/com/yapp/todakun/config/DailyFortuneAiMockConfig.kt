@@ -1,6 +1,7 @@
 package com.yapp.todakun.config
 
 import com.ninjasquad.springmockk.MockkBean
+import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiPort
 import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
 import org.springframework.boot.test.context.TestConfiguration
@@ -19,4 +20,7 @@ class DailyFortuneAiMockConfig {
 
     @MockkBean
     lateinit var yearSelectionFortuneAiPort: YearSelectionFortuneAiPort
+
+    @MockkBean
+    lateinit var compatibilityAiPort: CompatibilityAiPort
 }
