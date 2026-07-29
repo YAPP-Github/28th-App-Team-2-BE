@@ -9,6 +9,9 @@ import java.util.UUID
 class YearSelectionFortuneRepositoryAdapter(
     private val yearSelectionFortuneJpaRepository: YearSelectionFortuneJpaRepository,
 ) : YearSelectionFortuneRepository {
+    override fun save(yearSelectionFortune: YearSelectionFortune): YearSelectionFortune =
+        yearSelectionFortuneJpaRepository.save(YearSelectionFortuneJpaEntity.fromDomain(yearSelectionFortune)).toDomain()
+
     override fun findByMemberIdAndYear(
         memberId: UUID,
         year: Int,
