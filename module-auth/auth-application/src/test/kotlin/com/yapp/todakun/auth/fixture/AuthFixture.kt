@@ -21,7 +21,6 @@ private const val CALENDAR_TYPE = "SOLAR"
 private const val GENDER = "MALE"
 private const val JOB = "STUDENT"
 private const val RELATIONSHIP_STATUS = "SINGLE"
-private val FAVORITE_FORTUNE_CATEGORIES = listOf("RELATIONSHIP", "MONEY", "HEALTH")
 
 object AuthFixture {
     val MEMBER_ID: UUID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
@@ -44,7 +43,7 @@ object AuthFixture {
         gender: String = GENDER,
         job: String = JOB,
         relationshipStatus: String = RELATIONSHIP_STATUS,
-        favoriteFortuneCategories: List<String> = FAVORITE_FORTUNE_CATEGORIES,
+        favoriteFortuneCategories: List<String> = listOf("RELATIONSHIP", "MONEY", "HEALTH"),
     ): SignupCommand =
         SignupCommand(
             onboardingToken = onboardingToken,

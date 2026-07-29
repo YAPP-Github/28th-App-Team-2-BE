@@ -9,6 +9,10 @@ dependencies {
     implementation(project(":common-persistence"))
     implementation(libs.spring.boot.starter.data.jpa)
 
+    // Spring AI(Vertex AI Gemini) — 오늘의 운세 생성. 버전은 BOM 관리, 이 모듈(adapter-out)에서만 사용.
+    implementation(platform(libs.spring.ai.bom))
+    implementation(libs.spring.ai.starter.model.vertex.ai.gemini)
+
     testImplementation(libs.bundles.testcontainers)
     testImplementation(libs.kotest.extensions.spring)
     testRuntimeOnly(libs.postgresql)

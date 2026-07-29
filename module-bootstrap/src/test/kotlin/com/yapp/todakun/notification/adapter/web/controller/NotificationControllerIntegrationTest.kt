@@ -1,5 +1,6 @@
 package com.yapp.todakun.notification.adapter.web.controller
 
+import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
@@ -29,7 +30,7 @@ import kotlin.uuid.toJavaUuid
 @ExperimentalUuidApi
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class NotificationControllerIntegrationTest(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,

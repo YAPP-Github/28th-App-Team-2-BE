@@ -2,6 +2,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  ai:
+    model:
+      chat: none  # 테스트 컨텍스트에서 Vertex AI 빈 생성 자체를 막는다(project-id 미설정 시 기동 실패 방지, 실제 호출 금지)
 
 token:
   jwt:

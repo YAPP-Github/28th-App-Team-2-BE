@@ -52,6 +52,9 @@ git add inventory/dev/group_vars/all.sops.yaml
 ```
 
 - 이후 수정은 `sops inventory/dev/group_vars/all.sops.yaml` (에디터에서 평문 편집 → 저장 시 재암호화).
+- 키 1개만 스크립트/비대화형으로 추가·변경할 땐 `sops set <file> '["key"]' '"value"'`도 동일하게 기존 recipient로 재암호화된다
+  (에디터 세션 없이 단일 키만 바꿀 때 사용, 예: `sops set inventory/dev/group_vars/all.sops.yaml '["vertex_ai_location"]' '"asia-northeast3"'`).
+  새 키를 추가했다면 `inventory/secrets.sops.yaml.example`에도 `"REPLACE"` 플레이스홀더로 스키마를 함께 갱신한다(실제 값은 넣지 않음).
 - prod도 동일 절차 (`inventory/prod/group_vars/all.sops.yaml`).
 - **Cloudflare Origin 인증서**(`cloudflare_origin_cert`/`cloudflare_origin_key`)도 이 시크릿에 PEM으로 넣으면
   Ansible(`tasks/render_certs.yaml`)이 VM `/opt/todakun/caddy/certs/`로 렌더링한다 — **수동 배치 불필요**.

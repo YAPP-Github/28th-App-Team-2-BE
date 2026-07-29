@@ -106,6 +106,18 @@ class MemberRepositoryAdapterTest(
                 }
             }
 
+            describe("findIds") {
+                context("저장된 회원이 있으면") {
+                    it("전체 회원 ID 목록을 반환한다") {
+                        val member = savedMember()
+
+                        val found = adapter.findIds()
+
+                        found shouldBe listOf(member.id)
+                    }
+                }
+            }
+
             describe("deleteById") {
                 context("저장된 회원을 삭제하면") {
                     it("더 이상 조회되지 않는다") {

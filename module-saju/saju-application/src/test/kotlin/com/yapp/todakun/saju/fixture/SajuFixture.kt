@@ -34,15 +34,16 @@ object SajuFixture {
     fun chart(
         name: String = "토닥이",
         gender: Gender = Gender.FEMALE,
+        birthTime: BirthTime = BirthTime.MISI,
     ): SajuChart =
         SajuChart.create(
             name = name,
             gender = gender,
             calendarType = CalendarType.SOLAR,
             birthDate = LocalDate.of(2001, 5, 30),
-            birthTime = BirthTime.MISI,
+            birthTime = birthTime,
             isLeapMonth = false,
-            fourPillars = fourPillars(),
+            fourPillars = fourPillars().let { if (birthTime == BirthTime.UNKNOWN) it.copy(hour = null) else it },
         )
 
     fun selfLink(

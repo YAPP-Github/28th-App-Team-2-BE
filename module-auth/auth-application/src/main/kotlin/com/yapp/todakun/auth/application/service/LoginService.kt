@@ -10,12 +10,12 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.auth.port.outbound.WithdrawnAccountPort
 import com.yapp.todakun.common.annotation.CommandService
-import com.yapp.todakun.shared.GetMemberPort
+import com.yapp.todakun.shared.GetMemberIdPort
 
 @CommandService
 class LoginService(
     private val oauthPort: OauthPort,
-    private val getMemberPort: GetMemberPort,
+    private val getMemberIdPort: GetMemberIdPort,
     private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
     private val onboardingTokenPort: OnboardingTokenPort,
@@ -23,7 +23,7 @@ class LoginService(
 ) : LoginUseCase {
     override fun login(command: LoginCommand): LoginResult {
         val profile = oauthPort.fetchProfile(command.provider, command.oauthAccessToken)
-        val memberId = getMemberPort.findIdByOauth(profile.provider, profile.providerId)
+        val memberId = getMemberIdPort.findIdByOauth(profile.provider, profile.providerId)
 
         return if (memberId == null) {
             // 신규 회원 분기: 탈퇴 후 재가입 제한(90일) 대상이면 온보딩 발급 없이 즉시 차단한다.

@@ -10,11 +10,11 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 
-class GetMemberAdapterTest :
+class GetMemberIdAdapterTest :
     DescribeSpec(
         {
             val memberRepository = mockk<MemberRepository>()
-            val getMemberAdapter = GetMemberAdapter(memberRepository)
+            val getMemberIdAdapter = GetMemberIdAdapter(memberRepository)
 
             afterTest { clearMocks(memberRepository) }
 
@@ -24,7 +24,7 @@ class GetMemberAdapterTest :
                         val member = MemberFixture.create()
                         every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns member.id
 
-                        val found = getMemberAdapter.findIdByOauth(member.oauthProvider, member.providerId)
+                        val found = getMemberIdAdapter.findIdByOauth(member.oauthProvider, member.providerId)
 
                         found shouldBe member.id
                     }
@@ -35,7 +35,7 @@ class GetMemberAdapterTest :
                         val member = MemberFixture.create(oauthProvider = OauthProvider.KAKAO)
                         every { memberRepository.findIdByOauth(member.oauthProvider, member.providerId) } returns null
 
-                        val found = getMemberAdapter.findIdByOauth(member.oauthProvider, member.providerId)
+                        val found = getMemberIdAdapter.findIdByOauth(member.oauthProvider, member.providerId)
 
                         found.shouldBeNull()
                     }
