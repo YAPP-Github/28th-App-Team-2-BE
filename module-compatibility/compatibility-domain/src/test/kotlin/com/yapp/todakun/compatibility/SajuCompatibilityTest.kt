@@ -55,5 +55,13 @@ class SajuCompatibilityTest : DescribeSpec({
                 shouldThrow<CompatibilityOhaengElementMismatchException> { create(ohaengs = incomplete) }
             }
         }
+
+        context("오행이 6개(중복 포함)로 들어오면") {
+            it("CompatibilityOhaengElementMismatchException을 던진다") {
+                val withDuplicate = fullOhaengs + CompatibilityOhaeng(CompatibilityElement.WATER, 0)
+
+                shouldThrow<CompatibilityOhaengElementMismatchException> { create(ohaengs = withDuplicate) }
+            }
+        }
     }
 })

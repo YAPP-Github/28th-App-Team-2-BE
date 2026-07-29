@@ -20,10 +20,17 @@ class VertexAiCompatibilityAdapter(
 ) : CompatibilityAiPort {
     private val chatClient = chatClientBuilder.build()
 
-    override fun generate(input: CompatibilityAiInput): GeneratedCompatibility =
-        runCatching { callAi(input) }
-            .getOrElse { throw CompatibilityGenerationFailedException(it) }
-            ?: throw CompatibilityEmptyResponseException()
+    override fun generate(input: CompatibilityAiInput): GeneratedCompatibility {
+        // runCatching은 Error(OOM 등)까지 삼키므로, Exception만 잡아 도메인 예외로 변환하고 그 외 JVM 오류는 전파한다.
+        val generated =
+            try {
+                callAi(input)
+            } catch (e: Exception) {
+                throw CompatibilityGenerationFailedException(e)
+            }
+
+        return generated ?: throw CompatibilityEmptyResponseException()
+    }
 
     private fun callAi(input: CompatibilityAiInput): GeneratedCompatibility? =
         chatClient

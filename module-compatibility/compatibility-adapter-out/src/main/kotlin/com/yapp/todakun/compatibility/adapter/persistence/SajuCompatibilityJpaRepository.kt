@@ -12,8 +12,12 @@ interface SajuCompatibilityJpaRepository : JpaRepository<SajuCompatibilityJpaEnt
         partnerChartId: UUID,
     ): SajuCompatibilityJpaEntity?
 
+    // 두 명식 키를 least/greatest로 정렬해 (a,b)·(b,a) 요청이 동일한 락을 잡도록 한다(락 키 순서 무관하게 직렬화).
     @Query(
-        value = "SELECT pg_advisory_xact_lock(hashtext(CAST(:myChartId AS text)), hashtext(CAST(:partnerChartId AS text)))",
+        value =
+            "SELECT pg_advisory_xact_lock(" +
+                "least(hashtext(CAST(:myChartId AS text)), hashtext(CAST(:partnerChartId AS text))), " +
+                "greatest(hashtext(CAST(:myChartId AS text)), hashtext(CAST(:partnerChartId AS text))))",
         nativeQuery = true,
     )
     fun lock(

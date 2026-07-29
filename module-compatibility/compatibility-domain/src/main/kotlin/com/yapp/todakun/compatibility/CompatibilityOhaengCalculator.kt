@@ -1,5 +1,6 @@
 package com.yapp.todakun.compatibility
 
+import com.yapp.todakun.compatibility.exception.CompatibilityOhaengCountNegativeException
 import com.yapp.todakun.compatibility.exception.CompatibilityOhaengEmptyException
 
 /**
@@ -14,6 +15,9 @@ object CompatibilityOhaengCalculator {
         myOhaeng: Map<String, Int>,
         partnerOhaeng: Map<String, Int>,
     ): List<CompatibilityOhaeng> {
+        validateNonNegative(myOhaeng)
+        validateNonNegative(partnerOhaeng)
+
         val counts =
             CompatibilityElement.entries.associateWith { element ->
                 (myOhaeng[element.name] ?: 0) + (partnerOhaeng[element.name] ?: 0)
@@ -24,6 +28,12 @@ object CompatibilityOhaengCalculator {
         }
 
         return normalize(counts, total)
+    }
+
+    private fun validateNonNegative(ohaeng: Map<String, Int>) {
+        if (ohaeng.values.any { it < 0 }) {
+            throw CompatibilityOhaengCountNegativeException()
+        }
     }
 
     private fun normalize(

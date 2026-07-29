@@ -114,7 +114,8 @@ data class SajuCompatibility(
         }
 
         private fun validateOhaengs(ohaengs: List<CompatibilityOhaeng>) {
-            if (ohaengs.map { it.element }.distinct().size != OHAENG_ELEMENT_COUNT) {
+            // 서로 다른 오행이 5개인지뿐 아니라 총 개수도 5개인지 확인한다(중복 포함 6개 이상이 통과하는 것을 막는다).
+            if (ohaengs.size != OHAENG_ELEMENT_COUNT || ohaengs.map { it.element }.distinct().size != OHAENG_ELEMENT_COUNT) {
                 throw CompatibilityOhaengElementMismatchException()
             }
         }
