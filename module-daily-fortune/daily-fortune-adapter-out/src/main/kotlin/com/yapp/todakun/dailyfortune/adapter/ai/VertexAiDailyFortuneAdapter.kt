@@ -46,41 +46,40 @@ class VertexAiDailyFortuneAdapter(
         todayPillar: Pillar,
     ): String =
         """
-        당신은 한국 전통 사주 명리학에 기반해 "오늘의 운세"를 작성하는 콘텐츠 작가입니다.
-        아래 회원 정보를 바탕으로 $fortuneDate 하루치 운세를 작성하세요.
+        You are a content writer producing a "today's fortune" reading based on traditional Korean Saju (Four Pillars) astrology.
+        Using the member info below, write the fortune for $fortuneDate.
 
-        [회원 정보]
-        - 생년월일: ${profile.birthDate}
-        - 성별: ${profile.gender}
-        - 직업: ${profile.job}
-        - 연애 상태: ${profile.relationshipStatus}
-        - 관심 있는 운세 카테고리: ${profile.favoriteFortuneCategories.joinToString { it.label }}
+        [Member Info]
+        - Birth date: ${profile.birthDate}
+        - Gender: ${profile.gender}
+        - Job: ${profile.job}
+        - Relationship status: ${profile.relationshipStatus}
+        - Favorite fortune categories: ${profile.favoriteFortuneCategories.joinToString { it.label }}
 
-        [사주 명식]
-        - 일간: ${profile.dayMaster}
-        - 년주: ${profile.yearPillar.describe()}
-        - 월주: ${profile.monthPillar.describe()}
-        - 일주: ${profile.dayPillar.describe()}
-        - 시주: ${profile.hourPillar?.describe() ?: "모름"}
-        - 오행 분포(글자 수): ${profile.ohaeng.entries.joinToString { "${it.key} ${it.value}개" }}
-        - 십성 분포(글자 수): ${profile.sipseong.entries.joinToString { "${it.key} ${it.value}개" }}
+        [Saju Chart]
+        - Day Master: ${profile.dayMaster}
+        - Year Pillar: ${profile.yearPillar.describe()}
+        - Month Pillar: ${profile.monthPillar.describe()}
+        - Day Pillar: ${profile.dayPillar.describe()}
+        - Hour Pillar: ${profile.hourPillar?.describe() ?: "unknown"}
+        - Ohaeng (Five Elements) distribution (character count): ${profile.ohaeng.entries.joinToString { "${it.key} ${it.value}" }}
+        - Sipseong (Ten Gods) distribution (character count): ${profile.sipseong.entries.joinToString { "${it.key} ${it.value}" }}
 
-        [오늘의 일진]
+        [Today's Pillar]
         - $fortuneDate: ${todayPillar.describe()}
 
-        [작성 규칙]
-        1. title: 오늘의 운세 헤드라인 카피. 30자 이하.
-        2. content: 오늘의 운세 종합 해석. 800자 이하. 회원의 사주 명식과 오늘 일진의 관계를 바탕으로 작성.
-        3. categoryFortunes: RELATIONSHIP(관계운), LOVE(연애운), ACHIEVEMENT(성취운), MONEY(금전운), HEALTH(건강운)
-           5개 카테고리를 정확히 1개씩 포함.
-           - score: 0~100 사이 정수.
-           - title: 오늘의 한 줄 액션 카피. 30자 이하.
-           - content: 상세 해석. 200자 이하.
-        4. luckyItems: 정확히 5개. 각각 8자 이하의 구체적인 명사(색상, 사물 등).
-           회원의 오행 분포 중 오늘 일진 기준으로 부족한 오행을 보완하는 아이템으로 선정.
-        5. cautionaryItems: 정확히 5개. 각각 8자 이하의 구체적인 명사.
-           회원의 오행 분포 중 오늘 일진과 상충하거나 이미 과다한 오행을 자극하는, 오늘 피해야 할 아이템으로 선정.
-        6. 모든 문장은 한국어로, 다정하고 긍정적인 톤을 유지하되 근거 없는 과장은 피하세요.
+        [Writing Rules]
+        1. title: Today's fortune headline copy. 30 characters or fewer.
+        2. content: Overall interpretation of today's fortune. 800 characters or fewer. Base it on the relationship between the member's Saju chart and today's pillar.
+        3. categoryFortunes: RELATIONSHIP, LOVE, ACHIEVEMENT, MONEY, HEALTH — include exactly one of each of the 5 categories.
+           - score: integer between 0 and 100.
+           - title: one-line action copy for today. 30 characters or fewer.
+           - content: detailed interpretation. 200 characters or fewer.
+        4. luckyItems: exactly 5 items. Each a concrete noun (color, object, etc.) of 8 characters or fewer.
+           Choose items that compensate for the element(s) that are lacking in the member's Ohaeng distribution relative to today's pillar.
+        5. cautionaryItems: exactly 5 items. Each a concrete noun of 8 characters or fewer.
+           Choose items to avoid today that clash with today's pillar or aggravate an element already overrepresented in the member's Ohaeng distribution.
+        6. Write all sentences in Korean, keeping a warm and positive tone while avoiding unfounded exaggeration.
         """.trimIndent()
 
     private fun Pillar.describe(): String {
