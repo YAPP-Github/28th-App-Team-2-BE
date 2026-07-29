@@ -34,6 +34,10 @@ dependencies {
     implementation(project(":daily-fortune:application"))
     implementation(project(":daily-fortune:adapter-in"))
     implementation(project(":daily-fortune:adapter-out"))
+    implementation(project(":year-fortune:domain"))
+    implementation(project(":year-fortune:application"))
+    implementation(project(":year-fortune:adapter-in"))
+    implementation(project(":year-fortune:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.data.jpa)

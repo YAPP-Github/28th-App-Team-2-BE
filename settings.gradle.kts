@@ -49,6 +49,12 @@ include("notification:application")
 include("notification:adapter-in")
 include("notification:adapter-out")
 
+// year-fortune 도메인 (:year-fortune 하위에 nested된 4개 모듈, leaf는 레이어명만)
+include("year-fortune:domain")
+include("year-fortune:application")
+include("year-fortune:adapter-in")
+include("year-fortune:adapter-out")
+
 // 모듈 디렉터리는 `module-*` 접두사를 쓰므로 프로젝트 경로를 매핑한다.
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
@@ -100,3 +106,9 @@ project(":daily-fortune:domain").projectDir = file("module-daily-fortune/daily-f
 project(":daily-fortune:application").projectDir = file("module-daily-fortune/daily-fortune-application")
 project(":daily-fortune:adapter-in").projectDir = file("module-daily-fortune/daily-fortune-adapter-in")
 project(":daily-fortune:adapter-out").projectDir = file("module-daily-fortune/daily-fortune-adapter-out")
+
+project(":year-fortune").projectDir = file("module-year-fortune")
+project(":year-fortune:domain").projectDir = file("module-year-fortune/year-fortune-domain")
+project(":year-fortune:application").projectDir = file("module-year-fortune/year-fortune-application")
+project(":year-fortune:adapter-in").projectDir = file("module-year-fortune/year-fortune-adapter-in")
+project(":year-fortune:adapter-out").projectDir = file("module-year-fortune/year-fortune-adapter-out")

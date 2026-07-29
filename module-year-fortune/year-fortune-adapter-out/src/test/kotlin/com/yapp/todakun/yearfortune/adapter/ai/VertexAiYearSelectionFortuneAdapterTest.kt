@@ -1,12 +1,12 @@
-package com.yapp.todakun.dailyfortune.adapter.ai
+package com.yapp.todakun.yearfortune.adapter.ai
 
-import com.yapp.todakun.dailyfortune.exception.DailyFortuneEmptyResponseException
-import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
-import com.yapp.todakun.dailyfortune.port.outbound.GeneratedCategoryFortune
-import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
-import com.yapp.todakun.dailyfortune.port.outbound.MemberSajuProfile
-import com.yapp.todakun.dailyfortune.port.outbound.Pillar
 import com.yapp.todakun.shared.FortuneCategory
+import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneEmptyResponseException
+import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneGenerationFailedException
+import com.yapp.todakun.yearfortune.port.outbound.GeneratedCategoryFortune
+import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
+import com.yapp.todakun.yearfortune.port.outbound.MemberSajuProfile
+import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -21,7 +21,7 @@ import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.retry.NonTransientAiException
 import java.time.LocalDate
 
-class VertexAiDailyFortuneAdapterTest : DescribeSpec({
+class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
     val chatClientBuilder = mockk<ChatClient.Builder>()
     val chatClient = mockk<ChatClient>()
     val requestSpec = mockk<ChatClient.ChatClientRequestSpec>()
@@ -29,10 +29,10 @@ class VertexAiDailyFortuneAdapterTest : DescribeSpec({
 
     every { chatClientBuilder.build() } returns chatClient
 
-    val adapter = VertexAiDailyFortuneAdapter(chatClientBuilder)
+    val adapter = VertexAiYearSelectionFortuneAdapter(chatClientBuilder)
 
-    val fortuneDate = LocalDate.of(2026, 7, 28)
-    val todayPillar = pillar(stem = "병", branch = "오")
+    val year = 2026
+    val yearPillar = pillar(stem = "병", branch = "오")
     val profile = memberSajuProfile()
 
     afterTest { clearMocks(chatClient, requestSpec, callResponseSpec) }
@@ -41,15 +41,15 @@ class VertexAiDailyFortuneAdapterTest : DescribeSpec({
         context("AI가 정상적인 구조화 응답을 반환하면") {
             it("회원 정보를 담은 프롬프트로 AI를 호출하고 그 결과를 반환한다") {
                 val promptSlot = stubChatClient(chatClient, requestSpec, callResponseSpec)
-                val generated = generatedDailyFortune()
-                every { callResponseSpec.entity(GeneratedDailyFortune::class.java) } returns generated
+                val generated = generatedYearSelectionFortune()
+                every { callResponseSpec.entity(GeneratedYearSelectionFortune::class.java) } returns generated
 
-                val result = adapter.generate(profile, fortuneDate, todayPillar)
+                val result = adapter.generate(profile, year, yearPillar)
 
                 result shouldBe generated
                 promptSlot.captured shouldContain profile.gender
                 promptSlot.captured shouldContain profile.dayMaster
-                promptSlot.captured shouldContain fortuneDate.toString()
+                promptSlot.captured shouldContain year.toString()
                 promptSlot.captured shouldContain FortuneCategory.LOVE.label
                 promptSlot.captured shouldContain FortuneCategory.MONEY.label
                 verify(exactly = 1) { requestSpec.call() }
@@ -57,24 +57,24 @@ class VertexAiDailyFortuneAdapterTest : DescribeSpec({
         }
 
         context("AI 호출이 예외를 던지면") {
-            it("DailyFortuneGenerationFailedException으로 감싸 던진다") {
+            it("YearSelectionFortuneGenerationFailedException을 던진다") {
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 val cause = NonTransientAiException("model call failed")
-                every { callResponseSpec.entity(GeneratedDailyFortune::class.java) } throws cause
+                every { callResponseSpec.entity(GeneratedYearSelectionFortune::class.java) } throws cause
 
-                shouldThrow<DailyFortuneGenerationFailedException> {
-                    adapter.generate(profile, fortuneDate, todayPillar)
+                shouldThrow<YearSelectionFortuneGenerationFailedException> {
+                    adapter.generate(profile, year, yearPillar)
                 }.cause shouldBe cause
             }
         }
 
         context("AI가 빈 응답(null)을 반환하면") {
-            it("DailyFortuneEmptyResponseException을 던진다") {
+            it("YearSelectionFortuneEmptyResponseException을 던진다") {
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
-                every { callResponseSpec.entity(GeneratedDailyFortune::class.java) } returns null
+                every { callResponseSpec.entity(GeneratedYearSelectionFortune::class.java) } returns null
 
-                shouldThrow<DailyFortuneEmptyResponseException> {
-                    adapter.generate(profile, fortuneDate, todayPillar)
+                shouldThrow<YearSelectionFortuneEmptyResponseException> {
+                    adapter.generate(profile, year, yearPillar)
                 }
             }
         }
@@ -126,14 +126,15 @@ private fun memberSajuProfile(): MemberSajuProfile =
         sipseong = mapOf("비견" to 2, "정관" to 1),
     )
 
-private fun generatedDailyFortune(): GeneratedDailyFortune =
-    GeneratedDailyFortune(
-        title = "오늘은 새로운 기회가 찾아옵니다",
-        content = "오늘의 운세 종합 해석 내용입니다.",
-        luckyItems = listOf("파란색", "지갑", "커피", "책", "우산"),
-        cautionaryItems = listOf("빨간색", "가위", "동전", "성냥", "칼"),
-        categoryFortunes =
-            FortuneCategory.entries.map {
-                GeneratedCategoryFortune(fortuneCategory = it, score = 70, title = "오늘의 액션", content = "상세 해석")
-            },
+private fun generatedYearSelectionFortune(): GeneratedYearSelectionFortune =
+    GeneratedYearSelectionFortune(
+        title = "새해에는 좋은 기회가 많이 찾아와요",
+        content = "전반적으로 안정적인 한 해가 될 것으로 보입니다.",
+        score = 80,
+        fortuneCategories =
+            listOf(
+                GeneratedCategoryFortune(FortuneCategory.RELATIONSHIP, star = 2),
+                GeneratedCategoryFortune(FortuneCategory.MONEY, star = 3),
+                GeneratedCategoryFortune(FortuneCategory.LOVE, star = 1),
+            ),
     )
