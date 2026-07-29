@@ -5,17 +5,22 @@ import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCategoryCountM
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCategoryDuplicatedException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneContentTooLongException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneNotFoundException
+import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneScoreOutOfRangeException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneStarOutOfRangeException
+import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneTitleTooLongException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneYearOutOfRangeException
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
+private const val TITLE_MAX_LENGTH = 30
 private const val CONTENT_MAX_LENGTH = 500
 private const val REQUIRED_CATEGORY_COUNT = 3
 private const val MIN_STAR = 1
 private const val MAX_STAR = 3
+private const val MIN_SCORE = 0
+private const val MAX_SCORE = 100
 private const val YEAR_RANGE_OFFSET = 5
 
 /**
@@ -49,7 +54,9 @@ data class YearSelectionFortune(
             fortuneCategories: List<FortuneCategoryStar>,
         ): YearSelectionFortune {
             validateYear(year, currentYear)
+            validateMaxLength(title, TITLE_MAX_LENGTH) { throw YearSelectionFortuneTitleTooLongException() }
             validateMaxLength(content, CONTENT_MAX_LENGTH) { throw YearSelectionFortuneContentTooLongException() }
+            validateScore(score)
             validateFortuneCategories(fortuneCategories)
 
             return YearSelectionFortune(
@@ -83,12 +90,19 @@ data class YearSelectionFortune(
                 fortuneCategories = fortuneCategories,
             )
 
+        /** 조회 시점에도 조회 가능 연도 범위(±5년)를 검사할 수 있도록 공개한다. */
         private fun validateYear(
             year: Int,
             currentYear: Int,
         ) {
             if (year !in (currentYear - YEAR_RANGE_OFFSET)..(currentYear + YEAR_RANGE_OFFSET)) {
                 throw YearSelectionFortuneYearOutOfRangeException()
+            }
+        }
+
+        private fun validateScore(score: Int) {
+            if (score !in MIN_SCORE..MAX_SCORE) {
+                throw YearSelectionFortuneScoreOutOfRangeException()
             }
         }
 
