@@ -18,7 +18,8 @@ import java.util.UUID
  * 스케줄 알림(아침 운 리포트/행운 액션 리마인드) 대상 선별·콘텐츠 조달·발송.
  * 콘텐츠 확장 포트([dailyFortunePort]/[luckyActionPort])는 옵셔널 주입 — 구현 빈이 없으면 기본 문구를 사용한다.
  * 소스 도메인이 생기면 같은 포트를 구현하는 빈을 추가하면 자동으로 실제 콘텐츠로 대체된다.
- * 대상 회원별 발송은 예외를 격리해(runCatching) 한 명의 실패가 나머지 회원의 발송을 중단시키지 않는다.
+ * 대상 회원별 발송은 예외를 격리해 한 명의 실패가 나머지 회원의 발송을 중단시키지 않는다.
+ * OutOfMemoryError 등 복구 불가능한 [Error]는 격리 대상이 아니므로 [Exception]만 명시적으로 잡아 전파시킨다.
  */
 @CommandService
 class ScheduledNotificationDispatchService(
@@ -29,22 +30,26 @@ class ScheduledNotificationDispatchService(
 ) : DispatchScheduledNotificationUseCase {
     override fun dispatchMorningReport(slot: LocalTime) {
         notificationSettingRepository.findAllMorningReportTargets(slot).forEach { setting ->
-            runCatching {
+            try {
                 val payload =
                     dailyFortunePort.getIfAvailable()?.getMorningReport(setting.memberId) ?: DEFAULT_MORNING_PAYLOAD
                 dispatch(setting.memberId, NotificationType.FORTUNE, payload)
-            }.onFailure { log.error("아침 운 리포트 발송 실패: memberId=${setting.memberId}", it) }
+            } catch (e: Exception) {
+                log.error("아침 운 리포트 발송 실패: memberId=${setting.memberId}", e)
+            }
         }
     }
 
     override fun dispatchLuckyActionReminder() {
         notificationSettingRepository.findAllLuckyActionReminderTargets().forEach { setting ->
-            runCatching {
+            try {
                 val payload =
                     luckyActionPort.getIfAvailable()?.getLuckyActionReminder(setting.memberId)
                         ?: DEFAULT_LUCKY_ACTION_PAYLOAD
                 dispatch(setting.memberId, NotificationType.LUCKY_ACTION, payload)
-            }.onFailure { log.error("행운 액션 리마인드 발송 실패: memberId=${setting.memberId}", it) }
+            } catch (e: Exception) {
+                log.error("행운 액션 리마인드 발송 실패: memberId=${setting.memberId}", e)
+            }
         }
     }
 
