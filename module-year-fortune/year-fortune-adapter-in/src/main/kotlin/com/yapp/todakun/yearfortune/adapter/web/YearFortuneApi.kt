@@ -7,19 +7,19 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import java.util.UUID
 
 @Tag(name = "YearFortune", description = "연도별 운세 API")
 interface YearFortuneApi {
     @Operation(
-        summary = "연도별 운세 조회",
-        description = "회원이 선택한 연도의 운세를 조회한다.",
+        summary = "연도별 운세 생성",
+        description = "회원이 선택한 연도의 운세를 생성한다. 이미 생성된 연도라면 기존 결과를 반환한다(멱등).",
     )
-    @GetMapping("api/v1/year-fortunes/{year}") // ID로 변경 예정
-    fun getByYear(
-        @Parameter(description = "조회할 연도", example = "2026")
+    @PostMapping("api/v1/year-fortunes/{year}")
+    fun create(
+        @Parameter(description = "생성할 연도", example = "2026")
         @PathVariable year: Int,
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,

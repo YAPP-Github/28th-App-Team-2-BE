@@ -4,7 +4,6 @@ import com.yapp.todakun.common.validation.validateMaxLength
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCategoryCountMismatchException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCategoryDuplicatedException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneContentTooLongException
-import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneNotFoundException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneScoreOutOfRangeException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneStarOutOfRangeException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneTitleTooLongException
@@ -35,13 +34,6 @@ data class YearSelectionFortune(
     val content: String,
     val fortuneCategories: List<FortuneCategoryStar>,
 ) {
-    /** 다른 회원의 연도 선택 운세 존재 여부가 드러나지 않도록 소유자가 다르면 동일하게 404로 처리한다. */
-    fun validateOwner(memberId: UUID) {
-        if (this.memberId != memberId) {
-            throw YearSelectionFortuneNotFoundException()
-        }
-    }
-
     companion object {
         @ExperimentalUuidApi
         fun create(

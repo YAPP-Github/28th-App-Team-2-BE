@@ -50,8 +50,8 @@ class VertexAiDailyFortuneAdapterTest : DescribeSpec({
                 promptSlot.captured shouldContain profile.gender
                 promptSlot.captured shouldContain profile.dayMaster
                 promptSlot.captured shouldContain fortuneDate.toString()
-                promptSlot.captured shouldContain "연애운"
-                promptSlot.captured shouldContain "금전운"
+                promptSlot.captured shouldContain FortuneCategory.LOVE.label
+                promptSlot.captured shouldContain FortuneCategory.MONEY.label
                 verify(exactly = 1) { requestSpec.call() }
             }
         }

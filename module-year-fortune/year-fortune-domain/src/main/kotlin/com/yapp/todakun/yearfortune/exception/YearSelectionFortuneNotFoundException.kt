@@ -1,6 +1,0 @@
-package com.yapp.todakun.yearfortune.exception
-
-import com.yapp.todakun.common.exception.NotFoundException
-import com.yapp.todakun.yearfortune.code.YearSelectionFortuneErrorCode
-
-class YearSelectionFortuneNotFoundException : NotFoundException(YearSelectionFortuneErrorCode.YEAR_SELECTION_FORTUNE_NOT_FOUND)

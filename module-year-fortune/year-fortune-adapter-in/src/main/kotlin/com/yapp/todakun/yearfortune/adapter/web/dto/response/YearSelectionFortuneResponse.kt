@@ -1,6 +1,6 @@
 package com.yapp.todakun.yearfortune.adapter.web.dto.response
 
-import com.yapp.todakun.yearfortune.port.inbound.YearSelectionFortuneDetail
+import com.yapp.todakun.yearfortune.port.inbound.YearSelectionFortuneResult
 import java.util.UUID
 
 data class YearSelectionFortuneResponse(
@@ -12,14 +12,14 @@ data class YearSelectionFortuneResponse(
     val fortuneCategories: List<FortuneCategoryStarResponse>,
 ) {
     companion object {
-        fun from(detail: YearSelectionFortuneDetail) =
+        fun from(result: YearSelectionFortuneResult) =
             YearSelectionFortuneResponse(
-                id = detail.id,
-                year = detail.year,
-                score = detail.score,
-                title = detail.title,
-                content = detail.content,
-                fortuneCategories = detail.fortuneCategories.map(FortuneCategoryStarResponse::from),
+                id = result.id,
+                year = result.year,
+                score = result.score,
+                title = result.title,
+                content = result.content,
+                fortuneCategories = result.fortuneCategories.map(FortuneCategoryStarResponse::from),
             )
     }
 }
