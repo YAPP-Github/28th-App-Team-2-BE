@@ -50,5 +50,16 @@ class YearSelectionFortuneRepositoryAdapterTest(
                     }
                 }
             }
+
+            describe("lock") {
+                context("같은 트랜잭션 내에서 동일한 (memberId, year)로 재호출하면") {
+                    it("재진입 락이므로 예외 없이 통과한다") {
+                        val memberId = Uuid.generateV7().toJavaUuid()
+
+                        adapter.lock(memberId, 2026)
+                        adapter.lock(memberId, 2026)
+                    }
+                }
+            }
         },
     )

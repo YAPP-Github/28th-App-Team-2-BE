@@ -16,4 +16,9 @@ class YearSelectionFortuneRepositoryAdapter(
         memberId: UUID,
         year: Int,
     ): YearSelectionFortune? = yearSelectionFortuneJpaRepository.findByMemberIdAndYear(memberId, year)?.toDomain()
+
+    override fun lock(
+        memberId: UUID,
+        year: Int,
+    ) = yearSelectionFortuneJpaRepository.lock(memberId, year)
 }

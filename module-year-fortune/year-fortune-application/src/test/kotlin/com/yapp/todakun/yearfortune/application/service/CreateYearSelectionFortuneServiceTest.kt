@@ -16,10 +16,13 @@ import com.yapp.todakun.yearfortune.repository.YearSelectionFortuneRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import java.time.LocalDate
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -55,6 +58,10 @@ class CreateYearSelectionFortuneServiceTest :
             )
         }
 
+        beforeTest {
+            every { yearSelectionFortuneRepository.lock(memberId, year) } just Runs
+        }
+
         fun stubGeneration(generated: GeneratedYearSelectionFortune) {
             every { yearSelectionFortuneRepository.findByMemberIdAndYear(memberId, year) } returns null
             every { getMemberFortuneProfilePort.getProfile(memberId) } returns memberFortuneProfile()
@@ -86,6 +93,19 @@ class CreateYearSelectionFortuneServiceTest :
 
                     result.id shouldBe saved.id
                     verify(exactly = 1) { yearSelectionFortuneRepository.save(any()) }
+                }
+
+                it("(memberId, year) 락을 선점한 뒤 조회한다") {
+                    val saved = YearSelectionFortuneFixture.create(memberId = memberId, year = year)
+                    stubGeneration(generatedYearSelectionFortune())
+                    every { yearSelectionFortuneRepository.save(any()) } returns saved
+
+                    service.create(year, memberId)
+
+                    verifyOrder {
+                        yearSelectionFortuneRepository.lock(memberId, year)
+                        yearSelectionFortuneRepository.findByMemberIdAndYear(memberId, year)
+                    }
                 }
             }
 
