@@ -74,7 +74,7 @@ dependencies {
 ```
 
 > **Adapter modules apply only their role plugin** — `todakun.adapter-web` (adapter-in) or `todakun.adapter-persistence` (JPA adapter-out) — and declare **only** their own `project(...)` deps (`{domain}:domain`, `{domain}:application`, and `:shared` **only when the module actually references shared types**) plus **domain-specific** libs (`spring-ai`, `firebase-admin`, …). Never re-list the shared web/JPA/Testcontainers stack per module — it lives in the plugin. `auth-adapter-out` is the exception (Redis/JWT, no JPA → `todakun.spring`).
-
+>
 > External plugin versions are managed in one place, `buildSrc/build.gradle.kts`. If a new external plugin is needed, add its classpath dependency there and then declare it in a convention plugin.
 
 ## Package Structure
