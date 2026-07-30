@@ -1,20 +1,25 @@
 package com.yapp.todakun.compatibility
 
 import com.yapp.todakun.compatibility.exception.CompatibilityOhaengCountNegativeException
+import com.yapp.todakun.compatibility.exception.CompatibilityOhaengElementMismatchException
 import com.yapp.todakun.compatibility.exception.CompatibilityOhaengEmptyException
 
 /**
  * 두 명식의 오행 글자 수를 합산해 100 기준 정수 비율로 정규화한다(5개 오행 합계가 정확히 100).
  * 내림 후 남는 몫은 큰 나머지 방법(largest remainder)으로 소수부가 큰 오행부터 1씩 배분해 반올림 오차를 보정한다.
- * 입력 맵의 key는 오행 코드([CompatibilityElement.name], WOOD/FIRE/EARTH/METAL/WATER)이며, 없는 오행은 0으로 본다.
+ * 입력 맵의 key는 오행 코드([CompatibilityElement.name], WOOD/FIRE/EARTH/METAL/WATER)여야 하며, 없는 오행은 0으로 본다.
+ * 정의되지 않은 오행 코드가 섞이면 조용히 버리지 않고 [CompatibilityOhaengElementMismatchException]으로 거부한다.
  */
 object CompatibilityOhaengCalculator {
     private const val TOTAL_PERCENTAGE = 100
+    private val supportedElementNames = CompatibilityElement.entries.map { it.name }.toSet()
 
     fun combine(
         myOhaeng: Map<String, Int>,
         partnerOhaeng: Map<String, Int>,
     ): List<CompatibilityOhaeng> {
+        validateSupportedElements(myOhaeng)
+        validateSupportedElements(partnerOhaeng)
         validateNonNegative(myOhaeng)
         validateNonNegative(partnerOhaeng)
 
@@ -28,6 +33,12 @@ object CompatibilityOhaengCalculator {
         }
 
         return normalize(counts, total)
+    }
+
+    private fun validateSupportedElements(ohaeng: Map<String, Int>) {
+        if (ohaeng.keys.any { it !in supportedElementNames }) {
+            throw CompatibilityOhaengElementMismatchException()
+        }
     }
 
     private fun validateNonNegative(ohaeng: Map<String, Int>) {

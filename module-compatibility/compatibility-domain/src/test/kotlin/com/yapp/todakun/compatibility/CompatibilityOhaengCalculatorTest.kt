@@ -1,6 +1,7 @@
 package com.yapp.todakun.compatibility
 
 import com.yapp.todakun.compatibility.exception.CompatibilityOhaengCountNegativeException
+import com.yapp.todakun.compatibility.exception.CompatibilityOhaengElementMismatchException
 import com.yapp.todakun.compatibility.exception.CompatibilityOhaengEmptyException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -44,6 +45,14 @@ class CompatibilityOhaengCalculatorTest : DescribeSpec({
             it("CompatibilityOhaengCountNegativeException을 던진다") {
                 shouldThrow<CompatibilityOhaengCountNegativeException> {
                     CompatibilityOhaengCalculator.combine(mapOf("WOOD" to -1), mapOf("FIRE" to 2))
+                }
+            }
+        }
+
+        context("정의되지 않은 오행 코드가 섞이면") {
+            it("조용히 버리지 않고 CompatibilityOhaengElementMismatchException을 던진다") {
+                shouldThrow<CompatibilityOhaengElementMismatchException> {
+                    CompatibilityOhaengCalculator.combine(mapOf("WOD" to 3), mapOf("FIRE" to 2))
                 }
             }
         }
