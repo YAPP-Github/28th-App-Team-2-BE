@@ -82,12 +82,12 @@ class DayFortuneControllerIntegrationTest(
                 }
             }
 
-            context("후보 날짜를 4개 이상 요청하면") {
+            context("후보 날짜를 6개 이상 요청하면") {
                 it("400을 반환한다") {
                     val invalidBody =
                         CreateDaySelectionFortuneRequest(
                             purpose = DAY_SELECTION_FORTUNE.purpose.name,
-                            targetDates = List(4) { DAY_SELECTION_FORTUNE.targetDate.plusDays(it.toLong()) },
+                            targetDates = List(6) { DAY_SELECTION_FORTUNE.targetDate.plusDays(it.toLong()) },
                         )
 
                     request(invalidBody) { with(authenticatedMember()) }

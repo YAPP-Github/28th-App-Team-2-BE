@@ -17,7 +17,7 @@ import java.util.UUID
 interface DayFortuneApi {
     @Operation(
         summary = "택일 운세 생성",
-        description = "회원이 선택한 목적과 후보 날짜(최대 3개)에 대한 택일 운세를 생성한다. 이미 생성된 (목적, 날짜) 조합이 있다면 기존 결과를 반환한다(멱등).",
+        description = "회원이 선택한 목적과 후보 날짜(최대 5개)에 대한 택일 운세를 생성한다. 이미 생성된 (목적, 날짜) 조합이 있다면 기존 결과를 반환한다(멱등).",
     )
     @PostMapping("api/v1/day-fortunes")
     fun create(

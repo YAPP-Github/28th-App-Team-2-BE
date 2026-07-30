@@ -18,8 +18,8 @@ data class CreateDaySelectionFortuneRequest(
         message = "올바른 목적 값이 아닙니다.",
     )
     val purpose: String,
-    @field:Schema(description = "후보 날짜 목록(1~3개, 과거 날짜 불가)", example = """["2026-08-01", "2026-08-15"]""")
-    @field:Size(min = 1, max = 3, message = "후보 날짜는 1~3개 선택해야 합니다.")
+    @field:Schema(description = "후보 날짜 목록(1~5개, 과거 날짜 불가)", example = """["2026-08-01", "2026-08-15"]""")
+    @field:Size(min = 1, max = 5, message = "후보 날짜는 1~5개 선택해야 합니다.")
     val targetDates: List<@NotNull LocalDate>,
 ) {
     fun toPurpose(): DaySelectionPurpose = purpose.toDayFortuneEnum()
