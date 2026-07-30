@@ -79,7 +79,9 @@ class CreateDaySelectionFortuneServiceTest :
             context("이미 그 (목적, 날짜) 조합의 택일 운세가 있으면") {
                 it("AI를 재호출하지 않고, 저장된 택일 운세를 반환한다") {
                     val existing = DaySelectionFortuneFixture.create(memberId = memberId, purpose = purpose, targetDate = targetDate)
-                    every { daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate) } returns existing
+                    every {
+                        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate)
+                    } returns existing
 
                     val result = service.create(purpose, listOf(targetDate), memberId)
 
@@ -120,7 +122,9 @@ class CreateDaySelectionFortuneServiceTest :
                     val newDate = LocalDate.of(2026, 8, 15)
                     val existing = DaySelectionFortuneFixture.create(memberId = memberId, purpose = purpose, targetDate = existingDate)
                     val saved = DaySelectionFortuneFixture.create(memberId = memberId, purpose = purpose, targetDate = newDate)
-                    every { daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, existingDate) } returns existing
+                    every {
+                        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, existingDate)
+                    } returns existing
                     stubGeneration(newDate, generatedDaySelectionFortune())
                     every { daySelectionFortuneRepository.save(any()) } returns saved
 

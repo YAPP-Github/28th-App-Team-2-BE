@@ -23,10 +23,16 @@ class VertexAiYearSelectionFortuneAdapter(
         profile: MemberSajuProfile,
         year: Int,
         yearPillar: Pillar,
-    ): GeneratedYearSelectionFortune =
-        runCatching { callAi(profile, year, yearPillar) }
-            .getOrElse { throw YearSelectionFortuneGenerationFailedException(it) }
-            ?: throw YearSelectionFortuneEmptyResponseException()
+    ): GeneratedYearSelectionFortune {
+        val generated =
+            try {
+                callAi(profile, year, yearPillar)
+            } catch (e: Exception) {
+                throw YearSelectionFortuneGenerationFailedException(e)
+            }
+
+        return generated ?: throw YearSelectionFortuneEmptyResponseException()
+    }
 
     private fun callAi(
         profile: MemberSajuProfile,
