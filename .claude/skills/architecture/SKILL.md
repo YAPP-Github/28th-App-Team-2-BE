@@ -53,10 +53,13 @@ Shared module config (Kotlin/JVM, ktlint, JDK 25 toolchain, Spring BOM, tests) i
 | Convention plugin | Composition | Modules it applies to |
 |-------------------|-------------|-----------------------|
 | `todakun.kotlin-common` | Kotlin/JVM + ktlint + toolchain + BOM + tests | Base for all modules (`*-domain`, `common`, `common-web`, `shared`, `architecture-test`) |
-| `todakun.spring` | `kotlin-common` + `kotlin-spring` (all-open) | Modules needing Spring bean proxies (`*-application`, `*-adapter-in`, `*-adapter-out`) |
+| `todakun.spring` | `kotlin-common` + `kotlin-spring` (all-open) | `*-application`; base for the two adapter plugins below |
+| `todakun.adapter-web` | `todakun.spring` + `common-web` + web/security/validation/springdoc | Inbound web adapters (`*-adapter-in`) |
+| `todakun.adapter-persistence` | `todakun.spring` + `todakun.lombok` + `common-persistence` + spring-data-jpa + Testcontainers/postgresql | JPA outbound adapters (`*-adapter-out`) — **except** `auth-adapter-out` (Redis/JWT, no JPA → applies `todakun.spring` directly) |
 | `todakun.spring-boot` | `todakun.spring` + Spring Boot plugin | The entry point `bootstrap` |
+| `todakun.lombok` | `kotlin-lombok` + Lombok (compileOnly/annotationProcessor) | Java JPA entity modules (`common-persistence`; composed into `adapter-persistence`) |
 
-> **The `kotlin-jpa` (no-arg) plugin is not used.** Since JPA entities are written in **Java** (`*JpaEntity.java`), entities need no no-arg/all-open (→ "Domain entity vs JPA entity"). `kotlin-spring` (all-open) is applied not for entities but for **Kotlin beans proxied by CGLIB** (`@CommandService`/`@QueryService`, `@Repository` adapters, `@SpringBootApplication`); `*-adapter-out` also uses `todakun.spring` for Kotlin `@Repository` adapter proxies.
+> **The `kotlin-jpa` (no-arg) plugin is not used.** Since JPA entities are written in **Java** (`*JpaEntity.java`), entities need no no-arg/all-open (→ "Domain entity vs JPA entity"). `kotlin-spring` (all-open) is applied not for entities but for **Kotlin beans proxied by CGLIB** (`@CommandService`/`@QueryService`, `@Repository` adapters, `@SpringBootApplication`); `*-adapter-out` gets the same proxy support via `todakun.adapter-persistence`, which composes `todakun.spring`.
 
 ```kotlin
 // e.g. {domain}-application/build.gradle.kts
@@ -69,6 +72,8 @@ dependencies {
   implementation(project(":{domain}:domain"))
 }
 ```
+
+> **Adapter modules apply only their role plugin** — `todakun.adapter-web` (adapter-in) or `todakun.adapter-persistence` (JPA adapter-out) — and declare **only** their own `project(...)` deps (`{domain}:domain`, `{domain}:application`, and `:shared` **only when the module actually references shared types**) plus **domain-specific** libs (`spring-ai`, `firebase-admin`, …). Never re-list the shared web/JPA/Testcontainers stack per module — it lives in the plugin. `auth-adapter-out` is the exception (Redis/JWT, no JPA → `todakun.spring`).
 
 > External plugin versions are managed in one place, `buildSrc/build.gradle.kts`. If a new external plugin is needed, add its classpath dependency there and then declare it in a convention plugin.
 

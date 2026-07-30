@@ -41,34 +41,26 @@ dependencies {
 }
 ```
 
-**{domain}-adapter-in:**
+**{domain}-adapter-in:** (apply `todakun.adapter-web` — it bundles `common-web` + web/security/validation/springdoc; declare only your own project deps)
 ```kotlin
 plugins {
-    id("todakun.spring")
+    id("todakun.adapter-web")
 }
 dependencies {
-    implementation(project(":common-web"))
-    implementation(project(":shared"))
+    implementation(project(":shared")) // only if the adapter actually references shared types
     implementation(project(":{domain}:domain"))
     implementation(project(":{domain}:application"))
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.3")
 }
 ```
 
-**{domain}-adapter-out:** (JPA entities are Java, so `kotlin-jpa` is unnecessary. Apply `todakun.spring` for the Kotlin `@Repository` adapter proxy)
+**{domain}-adapter-out:** (apply `todakun.adapter-persistence` — it bundles `common-persistence` + spring-data-jpa + Lombok + Testcontainers/postgresql. JPA entities are Java, so `kotlin-jpa` is unnecessary; the composed `todakun.spring` provides the Kotlin `@Repository` adapter proxy. Add domain-specific libs like `spring-ai`/`firebase-admin` here only.)
 ```kotlin
 plugins {
-    id("todakun.spring")
+    id("todakun.adapter-persistence")
 }
 dependencies {
-    implementation(project(":shared"))
     implementation(project(":{domain}:domain"))
-    implementation(project(":{domain}:application"))
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    runtimeOnly("org.postgresql:postgresql")
-    testImplementation("org.testcontainers:postgresql")
+    implementation(project(":shared")) // only if the adapter actually references shared types
 }
 ```
 
