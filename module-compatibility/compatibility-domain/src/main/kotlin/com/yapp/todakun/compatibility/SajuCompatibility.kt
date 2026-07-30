@@ -24,7 +24,8 @@ private const val DEFAULT_ANALYSIS_BASIS = "사주 팔자 기반"
  * 점수·헤드라인·서브헤드라인·요약·총운은 AI 생성 결과이고, [ohaengs]는 두 명식 오행을 합산·정규화한 결정적 계산 결과(합계 100)다.
  * [relationshipType]은 비교 시점 관계 유형 스냅샷, [analysisBasis]는 분석 근거 표기 문구.
  */
-data class SajuCompatibility(
+@ConsistentCopyVisibility
+data class SajuCompatibility private constructor(
     val id: UUID,
     val memberId: UUID,
     val myChartId: UUID,
