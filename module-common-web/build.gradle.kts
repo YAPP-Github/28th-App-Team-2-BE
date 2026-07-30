@@ -13,6 +13,3 @@ dependencies {
     compileOnly(libs.jackson.module.kotlin) // KotlinInvalidNullException: 필수 파라미터 누락 판별 (런타임은 bootstrap이 제공)
     implementation(kotlin("stdlib"))
 }
-repositories {
-    mavenCentral()
-}
