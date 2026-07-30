@@ -42,6 +42,10 @@ dependencies {
     implementation(project(":compatibility:application"))
     implementation(project(":compatibility:adapter-in"))
     implementation(project(":compatibility:adapter-out"))
+    implementation(project(":day-fortune:domain"))
+    implementation(project(":day-fortune:application"))
+    implementation(project(":day-fortune:adapter-in"))
+    implementation(project(":day-fortune:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.data.jpa)
