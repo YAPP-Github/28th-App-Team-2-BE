@@ -37,6 +37,16 @@ Format: `[#issue-number] type: description`
 Write commit messages in Korean.
 You must pass `./gradlew ktlintCheck` before committing.
 
+## Commit Granularity (keep commits small & atomic)
+
+Prefer many small, single-purpose commits over one large mixed commit. Each commit must be **atomic**: one logical change, self-contained, buildable/passing on its own.
+
+- **One concern per commit.** Never mix a feature, a refactor, a config change, and a formatting fix in one commit — split them by `type` (`feat`/`fix`/`refactor`/`chore`/`docs`/`test`).
+- **Split by module/layer.** In hexagonal work a domain change, its adapter, and its test often warrant separate commits (`domain` → `application` → `adapter-in`/`adapter-out`), unless a piece is too small to stand on its own.
+- **Stage partial changes** with `git add -p` when one file mixes concerns, so each hunk lands in the right commit.
+- **Each commit compiles and passes `ktlintCheck`** independently — never commit a broken intermediate state.
+- **Rule of thumb:** if the commit description needs "그리고"/"and" to cover everything, it's probably two commits.
+
 ## PR Rules
 
 - A feature/fix/chore PR must target the `develop` branch (only the release-promotion PR targets `main`).

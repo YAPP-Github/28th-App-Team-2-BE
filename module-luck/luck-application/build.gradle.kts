@@ -4,5 +4,5 @@ plugins {
 
 dependencies {
     implementation(project(":luck:domain"))
-    implementation(project(":shared"))
+    testImplementation(project(":shared")) // 테스트 픽스처에서만 FortuneCategory 참조
 }

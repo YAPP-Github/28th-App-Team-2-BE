@@ -17,7 +17,7 @@ Perform commit → push → PR creation per the project conventions (`git-workfl
 ```
 
 - **Never commit `.env`**. Check staged files with `git status`.
-- Stage changes split into logical units.
+- **Keep commits small & atomic** — one concern per commit. Split by `type` and by module/layer, using `git add -p` for mixed files. See the "Commit Granularity" section of the `git-workflow` skill.
 
 ## 2. Commit
 

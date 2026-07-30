@@ -4,6 +4,28 @@ Backend server for YAPP 28th App Team 2 (targeting AOS/iOS clients). Domain-orie
 
 > **Language**: All user-facing responses MUST be written in Korean, without exception (code, identifiers, logs, etc. are excluded).
 
+## Agent Harness Design (Software 3.0)
+
+This `.claude/` config is the team's **harness** — an *executable* single source of truth that programs the agent's behavior, not mere documentation. Treat it like source code: layered, single-responsibility, reviewed. It raises the team's floor — every member runs the top performer's workflow via one command. (Refs: [Toss — 팀 생산성을 위한 하네스](https://toss.tech/article/harness-for-team-productivity), [Toss — Software 3.0 시대의 에이전트 개발](https://toss.tech/article/software-3-0-era).)
+
+**Component → layered-architecture mapping** (design each artifact like the layer it maps to):
+
+| Harness artifact | Maps to | Responsibility |
+|------------------|---------|----------------|
+| `CLAUDE.md` | `package.json` / manifest | Small, stable **router**: what exists + when to load it — never the details. |
+| `.claude/commands/*` (`/new-domain`, `/run-checks`) | Controller | Entry point for a user-triggered procedure. |
+| Sub-agents (`domain-scaffolder`, `code-reviewer`, `test-*`) | Service | Orchestrate multi-step work in an isolated context. |
+| `.claude/skills/<name>/SKILL.md` | SRP component | One knowledge domain = the single source for its rules. |
+| MCP servers | Adapter / infra | Abstract external systems (GitHub, Notion, …). |
+| `.claude/scripts/*` (`check-all.sh`) | Deterministic core | Conventions/verification that must NOT vary — run as code, not LLM judgment. |
+
+**Operating principles** (derived from the layers above):
+
+- **필요성 원칙 — need-to-know / progressive disclosure**: load only the context the current task needs. The *Per-Task Loading* table below is the concrete enforcement — don't dump the whole rulebook up front.
+- **Facade**: `SKILL.md` is the entry point; push long detail into `references/`·`examples/` so the skill stays scannable. Avoid the *God Skill* / *Spaghetti CLAUDE.md* anti-patterns.
+- **Deterministic → script, judgment → LLM**: conventions (ktlint, EOF newline, layer rules) live in scripts/Konsist; only non-deterministic decisions are left to the agent.
+- **"Exception → Question"**: hard-to-reverse or outward-facing actions (delete, deploy, force-push, publish) get a confirmation, never a silent guess. A good agent knows *when to ask*.
+
 ## Per-Task Loading (Pre-Task)
 
 Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures in **commands** (`.claude/commands/`), and shared code templates in **examples** (`.claude/examples/`). When one of the tasks below is detected, the skill is **auto-loaded** (manual invocation: `/<name>`).
