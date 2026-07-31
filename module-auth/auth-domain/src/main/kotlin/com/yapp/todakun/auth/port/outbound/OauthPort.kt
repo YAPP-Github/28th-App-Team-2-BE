@@ -7,5 +7,6 @@ interface OauthPort {
     fun fetchProfile(
         provider: OauthProvider,
         token: String,
+        authorizationCode: String? = null,
     ): OauthMemberProfile
 }
