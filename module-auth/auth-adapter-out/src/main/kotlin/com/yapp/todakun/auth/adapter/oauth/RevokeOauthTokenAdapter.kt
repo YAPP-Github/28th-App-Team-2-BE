@@ -1,6 +1,6 @@
 package com.yapp.todakun.auth.adapter.oauth
 
-import com.yapp.todakun.auth.adapter.oauth.apple.AppleTokenClient
+import com.yapp.todakun.auth.adapter.oauth.apple.AppleOauthTokenClient
 import com.yapp.todakun.auth.port.outbound.AppleOauthCredentialPort
 import com.yapp.todakun.shared.OauthProvider
 import com.yapp.todakun.shared.RevokeOauthTokenPort
@@ -16,7 +16,7 @@ private val log = LoggerFactory.getLogger(RevokeOauthTokenAdapter::class.java)
 @Component
 class RevokeOauthTokenAdapter(
     private val appleOauthCredentialPort: AppleOauthCredentialPort,
-    private val appleTokenClient: AppleTokenClient,
+    private val appleOauthTokenClient: AppleOauthTokenClient,
 ) : RevokeOauthTokenPort {
     override fun revokeIfApplicable(
         provider: OauthProvider,
@@ -28,7 +28,7 @@ class RevokeOauthTokenAdapter(
 
         // revoke 실패가 회원 하드 삭제 자체를 막지 않도록 로그만 남긴다(정책 확정).
         try {
-            appleTokenClient.revoke(credential.clientId, credential.refreshToken)
+            appleOauthTokenClient.revoke(credential.clientId, credential.refreshToken)
         } catch (exception: RuntimeException) {
             log.warn("Apple 계정 연결 해제 실패 - providerId: {}", providerId, exception)
         }

@@ -20,7 +20,7 @@ private const val EXPIRATION_SECONDS = 300L
  * 만료 시간이 짧고(5분) 호출 즉시 사용되므로 캐싱하지 않고 매 호출마다 새로 생성한다.
  */
 @Component
-class AppleClientSecretGenerator(
+class AppleOauthClientSecretGenerator(
     private val appleOauthProperties: AppleOauthProperties,
 ) {
     fun generate(clientId: String): String {

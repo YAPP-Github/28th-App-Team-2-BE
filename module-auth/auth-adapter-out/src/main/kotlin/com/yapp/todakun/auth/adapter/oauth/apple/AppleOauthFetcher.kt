@@ -21,7 +21,7 @@ private val log = LoggerFactory.getLogger(AppleOauthFetcher::class.java)
 class AppleOauthFetcher(
     private val appleIdTokenProcessor: ConfigurableJWTProcessor<SecurityContext>,
     private val appleOauthProperties: AppleOauthProperties,
-    private val appleTokenClient: AppleTokenClient,
+    private val appleOauthTokenClient: AppleOauthTokenClient,
     private val appleOauthCredentialPort: AppleOauthCredentialPort,
 ) {
     fun fetchProfile(
@@ -53,7 +53,7 @@ class AppleOauthFetcher(
         authorizationCode: String,
     ) {
         try {
-            val refreshToken = appleTokenClient.exchangeAuthorizationCode(clientId, authorizationCode)
+            val refreshToken = appleOauthTokenClient.exchangeAuthorizationCode(clientId, authorizationCode)
             appleOauthCredentialPort.save(providerId, clientId, refreshToken)
         } catch (exception: RuntimeException) {
             log.warn("Apple credential 저장 실패 - providerId: {}", providerId, exception)

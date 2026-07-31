@@ -4,6 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class AppleTokenResponse(
+data class AppleOauthTokenResponse(
     @JsonProperty("refresh_token") val refreshToken: String,
 )

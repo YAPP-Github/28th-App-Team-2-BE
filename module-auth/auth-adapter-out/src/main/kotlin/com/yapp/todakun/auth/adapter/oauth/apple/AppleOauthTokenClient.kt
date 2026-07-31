@@ -15,10 +15,10 @@ import org.springframework.web.client.requiredBody
  * 로그인/탈퇴 흐름에서 무시할지는 각 정책을 아는 호출자(AppleOauthFetcher/RevokeOauthTokenAdapter)가 결정한다.
  */
 @Component
-class AppleTokenClient(
+class AppleOauthTokenClient(
     private val restClient: RestClient,
     private val appleOauthProperties: AppleOauthProperties,
-    private val appleClientSecretGenerator: AppleClientSecretGenerator,
+    private val appleOauthClientSecretGenerator: AppleOauthClientSecretGenerator,
 ) {
     fun exchangeAuthorizationCode(
         clientId: String,
@@ -30,7 +30,7 @@ class AppleTokenClient(
                 clientId,
                 "grant_type" to "authorization_code",
                 "code" to authorizationCode,
-            ).requiredBody<AppleTokenResponse>().refreshToken
+            ).requiredBody<AppleOauthTokenResponse>().refreshToken
         }
 
     fun revoke(
@@ -71,7 +71,7 @@ class AppleTokenClient(
     ): MultiValueMap<String, String> =
         LinkedMultiValueMap<String, String>().apply {
             add("client_id", clientId)
-            add("client_secret", appleClientSecretGenerator.generate(clientId))
+            add("client_secret", appleOauthClientSecretGenerator.generate(clientId))
             extraParams.forEach { (key, value) -> add(key, value) }
         }
 }
