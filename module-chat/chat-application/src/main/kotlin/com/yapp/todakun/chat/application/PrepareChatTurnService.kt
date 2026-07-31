@@ -27,6 +27,10 @@ import kotlin.uuid.ExperimentalUuidApi
 private const val CONVERSATION_TITLE_MAX_LENGTH = 60
 private const val HISTORY_LIMIT = 20
 
+// 어시스턴트 답변은 길이 제한이 없으므로(자유 형식 생성 결과), 메시지 개수만 제한하면 프롬프트가 무한정 커질 수 있다.
+// 최신 턴을 우선해 이 문자 수 예산 안에서만 히스토리를 채운다(대략적인 토큰 예산 근사치).
+private const val HISTORY_CHAR_BUDGET = 4000
+
 /**
  * 답변 스트리밍 준비 단계(짧은 트랜잭션). 쿼터 예약 → 대화 확보(신규/이어가기) → 사용자 메시지·어시스턴트 placeholder 저장 →
  * AI 프롬프트 컨텍스트 구성까지 처리한다. 실제 AI 스트리밍 호출은 트랜잭션 밖([StreamChatAnswerService])에서 이뤄진다.
@@ -73,12 +77,31 @@ class PrepareChatTurnService(
         return chatConversationRepository.save(ChatConversation.create(command.memberId, title, Instant.now()))
     }
 
-    private fun buildHistory(conversationId: UUID): List<ChatHistoryTurn> =
-        chatMessageRepository
-            .findRecentByConversationId(conversationId, HISTORY_LIMIT)
-            .asReversed()
-            .filter { it.status == ChatMessageStatus.COMPLETED }
-            .map { ChatHistoryTurn(role = it.role, content = it.content) }
+    private fun buildHistory(conversationId: UUID): List<ChatHistoryTurn> {
+        val turns =
+            chatMessageRepository
+                .findRecentByConversationId(conversationId, HISTORY_LIMIT)
+                .asReversed()
+                .filter { it.status == ChatMessageStatus.COMPLETED }
+                .map { ChatHistoryTurn(role = it.role, content = it.content) }
+
+        return trimToCharBudget(turns)
+    }
+
+    private fun trimToCharBudget(turns: List<ChatHistoryTurn>): List<ChatHistoryTurn> {
+        var remaining = HISTORY_CHAR_BUDGET
+        val kept = mutableListOf<ChatHistoryTurn>()
+
+        for (turn in turns.asReversed()) {
+            val cost = turn.content.length
+            // 가장 최근 턴은 예산을 넘더라도 최소 하나는 남겨 직전 맥락이 완전히 사라지지 않게 한다.
+            if (cost > remaining && kept.isNotEmpty()) break
+            kept.add(turn)
+            remaining -= cost
+        }
+
+        return kept.asReversed()
+    }
 
     private fun buildPromptContext(
         memberId: UUID,
