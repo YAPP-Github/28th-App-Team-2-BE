@@ -49,10 +49,8 @@ data class SignupRequest(
     val relationshipStatus: String,
     @field:Schema(description = "관심 운세 카테고리 목록", example = """["RELATIONSHIP", "MONEY"]""")
     @field:Size(min = 1, max = 5, message = "관심 운세는 1~5개 선택해야 합니다.")
-    val favoriteFortuneCategories: List<
-        @ValidEnum(enumClass = FortuneCategory::class, message = "올바른 관심 운세 값이 아닙니다.")
-        String,
-        >,
+    @field:ValidEnum(enumClass = FortuneCategory::class, message = "올바른 관심 운세 값이 아닙니다.")
+    val favoriteFortuneCategories: List<String>,
 ) {
     fun toCommand() =
         SignupCommand(
