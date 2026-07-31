@@ -34,7 +34,7 @@ class CreateDaySelectionFortuneServiceTest :
         describe("create") {
             context("후보 날짜에 중복이 있으면") {
                 it("중복을 제거하고 날짜당 한 번만 위임한다") {
-                    val date = LocalDate.of(2026, 8, 1)
+                    val date = LocalDate.now().plusDays(30)
                     every { createOneDaySelectionFortuneService.createOne(purpose, date, memberId) } returns result(date)
 
                     val results = service.create(purpose, listOf(date, date), memberId)
@@ -46,8 +46,8 @@ class CreateDaySelectionFortuneServiceTest :
 
             context("후보 날짜가 여러 건이면") {
                 it("정렬된 순서대로 날짜별로 위임하고 반환된 순서대로 결과를 모은다") {
-                    val earlier = LocalDate.of(2026, 8, 1)
-                    val later = LocalDate.of(2026, 8, 15)
+                    val earlier = LocalDate.now().plusDays(30)
+                    val later = LocalDate.now().plusDays(45)
                     val earlierResult = result(earlier)
                     val laterResult = result(later)
                     every { createOneDaySelectionFortuneService.createOne(purpose, earlier, memberId) } returns earlierResult

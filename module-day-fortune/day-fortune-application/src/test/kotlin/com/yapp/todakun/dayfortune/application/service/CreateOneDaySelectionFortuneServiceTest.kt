@@ -48,7 +48,7 @@ class CreateOneDaySelectionFortuneServiceTest :
 
         val memberId = Uuid.generateV7().toJavaUuid()
         val purpose = DaySelectionPurpose.TRAVEL
-        val targetDate = LocalDate.of(2026, 8, 1)
+        val targetDate = LocalDate.now().plusDays(30)
 
         afterTest {
             clearMocks(

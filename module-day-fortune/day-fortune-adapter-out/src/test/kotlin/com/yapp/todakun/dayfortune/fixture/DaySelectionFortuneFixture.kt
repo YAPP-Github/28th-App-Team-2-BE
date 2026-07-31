@@ -9,8 +9,7 @@ import java.util.UUID
 
 private val DAY_SELECTION_FORTUNE_ID = UUID.fromString("018f0000-0000-7000-8000-000000000004")
 private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000002")
-private const val TITLE = "이 날은 새로운 시작에 좋은 기운이 감돌아요"
-private const val CONTENT = "전반적으로 안정적인 기운이 흐르는 날입니다. 꾸준히 준비한 만큼 좋은 결과를 기대할 수 있어요."
+private val TARGET_DATE = LocalDate.now().plusDays(30)
 private val FORTUNE_CATEGORIES =
     listOf(
         FortuneCategoryStar(FortuneCategory.RELATIONSHIP, 2),
@@ -23,10 +22,10 @@ object DaySelectionFortuneFixture {
         id: UUID = DAY_SELECTION_FORTUNE_ID,
         memberId: UUID = MEMBER_ID,
         purpose: DaySelectionPurpose = DaySelectionPurpose.TRAVEL,
-        targetDate: LocalDate = LocalDate.of(2026, 8, 1),
+        targetDate: LocalDate = TARGET_DATE,
         score: Int = 80,
-        title: String = TITLE,
-        content: String = CONTENT,
+        title: String = "이 날은 새로운 시작에 좋은 기운이 감돌아요",
+        content: String = "전반적으로 안정적인 기운이 흐르는 날입니다. 꾸준히 준비한 만큼 좋은 결과를 기대할 수 있어요.",
         fortuneCategories: List<FortuneCategoryStar> = FORTUNE_CATEGORIES,
     ): DaySelectionFortune =
         DaySelectionFortune.reconstitute(
