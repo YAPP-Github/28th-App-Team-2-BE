@@ -1,0 +1,87 @@
+package com.yapp.todakun.auth.adapter.oauth.apple
+
+import com.nimbusds.jose.JOSEException
+import com.nimbusds.jose.proc.BadJOSEException
+import com.nimbusds.jose.proc.SecurityContext
+import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.proc.ConfigurableJWTProcessor
+import com.yapp.todakun.auth.OauthMemberProfile
+import com.yapp.todakun.auth.adapter.oauth.parseEmailVerified
+import com.yapp.todakun.auth.adapter.oauth.requireVerifiedEmail
+import com.yapp.todakun.auth.exception.OauthTokenInvalidException
+import com.yapp.todakun.auth.port.outbound.AppleOauthCredentialPort
+import com.yapp.todakun.shared.OauthProvider
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
+import java.text.ParseException
+
+private val log = LoggerFactory.getLogger(AppleOauthFetcher::class.java)
+
+@Component
+class AppleOauthFetcher(
+    private val appleIdTokenProcessor: ConfigurableJWTProcessor<SecurityContext>,
+    private val appleOauthProperties: AppleOauthProperties,
+    private val appleTokenClient: AppleTokenClient,
+    private val appleOauthCredentialPort: AppleOauthCredentialPort,
+) {
+    fun fetchProfile(
+        idToken: String,
+        authorizationCode: String?,
+    ): OauthMemberProfile {
+        val claims = parseVerifiedClaims(idToken)
+        val clientId = matchedClientId(claims)
+        val email = requireVerifiedEmail(extractEmail(claims), parseEmailVerified(claims.getClaim("email_verified")))
+
+        // 로그인 자체엔 불필요하지만, App Store 심사 가이드라인(5.1.1(v))상 탈퇴 시 Apple 계정 연결도 해제(revoke)해야 한다.
+        // 그때 사용할 refresh token을 최초 authorization code 교환 시점에 미리 저장해둔다.
+        if (authorizationCode != null) {
+            exchangeAndSaveCredential(clientId, claims.subject, authorizationCode)
+        }
+
+        return OauthMemberProfile(
+            provider = OauthProvider.APPLE,
+            providerId = claims.subject,
+            email = email,
+        )
+    }
+
+    // Apple 토큰 교환/저장 실패가 로그인 자체를 막지 않도록 예외를 로그로만 남긴다(정책 확정).
+    // 실패 시 credential이 저장되지 않아 이후 탈퇴 시 revoke가 no-op이 될 수 있으나, 로그인 흐름을 우선한다.
+    private fun exchangeAndSaveCredential(
+        clientId: String,
+        providerId: String,
+        authorizationCode: String,
+    ) {
+        try {
+            val refreshToken = appleTokenClient.exchangeAuthorizationCode(clientId, authorizationCode)
+            appleOauthCredentialPort.save(providerId, clientId, refreshToken)
+        } catch (exception: RuntimeException) {
+            log.warn("Apple credential 저장 실패 - providerId: {}", providerId, exception)
+        }
+    }
+
+    private fun matchedClientId(claims: JWTClaimsSet): String =
+        claims.audience.firstOrNull { it in appleOauthProperties.clientIds } ?: throw OauthTokenInvalidException()
+
+    private fun parseVerifiedClaims(idToken: String): JWTClaimsSet =
+        try {
+            appleIdTokenProcessor.process(idToken, null)
+        } catch (_: ParseException) {
+            throw OauthTokenInvalidException()
+        } catch (_: BadJOSEException) {
+            throw OauthTokenInvalidException()
+        } catch (_: JOSEException) {
+            throw OauthTokenInvalidException()
+        }.also { claims ->
+            if (claims.issuer != appleOauthProperties.issuer) {
+                throw OauthTokenInvalidException()
+            }
+        }
+
+    private fun extractEmail(claims: JWTClaimsSet): String? =
+        try {
+            claims.getStringClaim("email")
+        } catch (_: ParseException) {
+            throw OauthTokenInvalidException()
+        }
+}
