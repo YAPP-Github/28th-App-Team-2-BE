@@ -4,6 +4,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.context.annotation.Bean
 import org.testcontainers.containers.GenericContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -14,9 +15,18 @@ class TestContainersConfig {
                 .withExposedPorts(6379)
                 .withReuse(true)
                 .apply { start() }
+
+        val postgres: PostgreSQLContainer =
+            PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg17").asCompatibleSubstituteFor("postgres"))
+                .withReuse(true)
+                .apply { start() }
     }
 
     @Bean
     @ServiceConnection(name = "redis")
     fun redisContainer() = redis
+
+    @Bean
+    @ServiceConnection
+    fun postgresContainer() = postgres
 }
