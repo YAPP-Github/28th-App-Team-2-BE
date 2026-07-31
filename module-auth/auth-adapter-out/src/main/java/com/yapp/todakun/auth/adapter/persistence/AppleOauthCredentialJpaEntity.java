@@ -24,7 +24,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class AppleOauthCredentialJpaEntity extends BaseEntity {
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private String providerId;
 
     @Column(nullable = false)
