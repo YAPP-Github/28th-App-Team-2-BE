@@ -1,7 +1,10 @@
 package com.yapp.todakun.auth.adapter.oauth
 
+import com.nimbusds.jwt.JWTClaimsSet
 import com.yapp.todakun.auth.code.AuthErrorCode
+import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.common.exception.UnauthorizedException
+import java.text.ParseException
 
 internal fun requireVerifiedEmail(
     email: String?,
@@ -14,4 +17,11 @@ internal fun parseEmailVerified(claim: Any?): Boolean =
         is Boolean -> claim
         is String -> claim.toBoolean()
         else -> false
+    }
+
+internal fun extractIdTokenEmail(claims: JWTClaimsSet): String? =
+    try {
+        claims.getStringClaim("email")
+    } catch (_: ParseException) {
+        throw OauthTokenInvalidException()
     }
