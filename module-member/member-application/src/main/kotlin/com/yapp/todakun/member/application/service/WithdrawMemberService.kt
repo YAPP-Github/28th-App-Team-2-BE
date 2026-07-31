@@ -10,13 +10,14 @@ import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
 import com.yapp.todakun.shared.DeleteMemberSajusPort
 import com.yapp.todakun.shared.RegisterWithdrawnAccountPort
 import com.yapp.todakun.shared.RevokeMemberTokensPort
+import com.yapp.todakun.shared.RevokeOauthTokenPort
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
  * 회원 탈퇴 유스케이스(탈퇴 정책 v1.0 — 복구 유예 없이 즉시 확정 처리). 한 트랜잭션에서
  * ① 비식별 사유 로그 저장 → ② 소유 사주 데이터 하드 삭제 → ③ 인증 토큰 폐기 →
- * ④ SNS 식별자를 재가입 제한 목록(90일)에 등록 → ⑤ 회원 하드 삭제 순으로 처리한다.
- * 사주·토큰 정리와 재가입 제한 등록은 크로스 도메인 포트로 위임한다(member는 saju·auth 내부 구조를 모른다).
+ * ④ SNS 식별자를 재가입 제한 목록(90일)에 등록 → ⑤ (Apple만) OAuth 토큰 철회 → ⑥ 회원 하드 삭제 순으로 처리
+ * 사주·토큰 정리, 재가입 제한 등록, OAuth 토큰 철회는 크로스 도메인 포트로 위임한다(member는 saju·auth 내부 구조를 모른다).
  */
 @CommandService
 class WithdrawMemberService(
@@ -25,6 +26,7 @@ class WithdrawMemberService(
     private val deleteMemberSajusPort: DeleteMemberSajusPort,
     private val revokeMemberTokensPort: RevokeMemberTokensPort,
     private val registerWithdrawnAccountPort: RegisterWithdrawnAccountPort,
+    private val revokeOauthTokenPort: RevokeOauthTokenPort,
 ) : WithdrawMemberUseCase {
     @ExperimentalUuidApi
     override fun withdraw(command: WithdrawMemberCommand) {
@@ -36,6 +38,7 @@ class WithdrawMemberService(
         deleteMemberSajusPort.deleteByMemberId(member.id)
         revokeMemberTokensPort.revokeAll(member.id, command.accessToken)
         registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
+        revokeOauthTokenPort.revokeIfApplicable(member.oauthProvider, member.providerId)
         memberRepository.deleteById(member.id)
     }
 }
