@@ -1,5 +1,5 @@
 plugins {
-    id("todakun.spring")
+    id("todakun.adapter-persistence")
 }
 
 dependencies {
@@ -14,5 +14,4 @@ dependencies {
     implementation(libs.nimbus.jose.jwt)
 
     testImplementation(libs.bundles.testcontainers.redis)
-    testImplementation(libs.kotest.extensions.spring)
 }
