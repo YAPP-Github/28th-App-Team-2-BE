@@ -61,6 +61,12 @@ include("compatibility:application")
 include("compatibility:adapter-in")
 include("compatibility:adapter-out")
 
+// day-fortune 도메인 (:day-fortune 하위에 nested된 4개 모듈, leaf는 레이어명만)
+include("day-fortune:domain")
+include("day-fortune:application")
+include("day-fortune:adapter-in")
+include("day-fortune:adapter-out")
+
 // 모듈 디렉터리는 `module-*` 접두사를 쓰므로 프로젝트 경로를 매핑한다.
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
@@ -124,3 +130,9 @@ project(":compatibility:domain").projectDir = file("module-compatibility/compati
 project(":compatibility:application").projectDir = file("module-compatibility/compatibility-application")
 project(":compatibility:adapter-in").projectDir = file("module-compatibility/compatibility-adapter-in")
 project(":compatibility:adapter-out").projectDir = file("module-compatibility/compatibility-adapter-out")
+
+project(":day-fortune").projectDir = file("module-day-fortune")
+project(":day-fortune:domain").projectDir = file("module-day-fortune/day-fortune-domain")
+project(":day-fortune:application").projectDir = file("module-day-fortune/day-fortune-application")
+project(":day-fortune:adapter-in").projectDir = file("module-day-fortune/day-fortune-adapter-in")
+project(":day-fortune:adapter-out").projectDir = file("module-day-fortune/day-fortune-adapter-out")

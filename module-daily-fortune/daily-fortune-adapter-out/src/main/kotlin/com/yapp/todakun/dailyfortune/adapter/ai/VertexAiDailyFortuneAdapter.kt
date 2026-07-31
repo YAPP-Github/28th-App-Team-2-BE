@@ -24,10 +24,16 @@ class VertexAiDailyFortuneAdapter(
         profile: MemberSajuProfile,
         fortuneDate: LocalDate,
         todayPillar: Pillar,
-    ): GeneratedDailyFortune =
-        runCatching { callAi(profile, fortuneDate, todayPillar) }
-            .getOrElse { throw DailyFortuneGenerationFailedException(it) }
-            ?: throw DailyFortuneEmptyResponseException()
+    ): GeneratedDailyFortune {
+        val generated =
+            try {
+                callAi(profile, fortuneDate, todayPillar)
+            } catch (e: Exception) {
+                throw DailyFortuneGenerationFailedException(e)
+            }
+
+        return generated ?: throw DailyFortuneEmptyResponseException()
+    }
 
     private fun callAi(
         profile: MemberSajuProfile,
