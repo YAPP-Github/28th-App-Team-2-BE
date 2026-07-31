@@ -1,6 +1,8 @@
 package com.yapp.todakun.auth.adapter.web.dto.request
 
 import com.yapp.todakun.auth.port.inbound.SignupCommand
+import com.yapp.todakun.shared.FortuneCategory
+import com.yapp.todakun.web.validation.ValidEnum
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -48,7 +50,7 @@ data class SignupRequest(
     @field:Schema(description = "관심 운세 카테고리 목록", example = """["RELATIONSHIP", "MONEY"]""")
     @field:Size(min = 1, max = 5, message = "관심 운세는 1~5개 선택해야 합니다.")
     val favoriteFortuneCategories: List<
-        @Pattern(regexp = "^(RELATIONSHIP|LOVE|ACHIEVEMENT|MONEY|HEALTH)$", message = "올바른 관심 운세 값이 아닙니다.")
+        @ValidEnum(enumClass = FortuneCategory::class, message = "올바른 관심 운세 값이 아닙니다.")
         String,
         >,
 ) {

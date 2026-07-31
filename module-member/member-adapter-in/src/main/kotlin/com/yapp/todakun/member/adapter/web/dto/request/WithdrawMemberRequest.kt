@@ -3,10 +3,10 @@ package com.yapp.todakun.member.adapter.web.dto.request
 import com.yapp.todakun.member.WithdrawalReason
 import com.yapp.todakun.member.adapter.web.dto.toMemberEnum
 import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
+import com.yapp.todakun.web.validation.ValidEnum
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.util.UUID
 
@@ -31,12 +31,7 @@ data class WithdrawMemberRequest(
         ],
     )
     @field:NotBlank(message = "탈퇴 사유를 선택해 주세요.")
-    @field:Pattern(
-        regexp =
-            "^(CONTENT_INAPPROPRIATE|CHATBOT_UNSATISFACTORY|LOW_USAGE|MISSING_FEATURE|" +
-                "PAYMENT_INCONVENIENCE|PRIVACY_CONCERN|FREQUENT_ERRORS|SWITCHING_SERVICE|ETC)$",
-        message = "올바른 탈퇴 사유 값이 아닙니다.",
-    )
+    @field:ValidEnum(enumClass = WithdrawalReason::class, message = "올바른 탈퇴 사유 값이 아닙니다.")
     val reason: String,
     @field:Schema(description = "탈퇴 사유 상세. '기타(ETC)' 선택 시 필수, 그 외 선택(최대 200자)", example = "자주 들어오지 않게 되었어요.")
     @field:Size(max = 200, message = "상세 사유는 최대 200자까지 입력할 수 있습니다.")
