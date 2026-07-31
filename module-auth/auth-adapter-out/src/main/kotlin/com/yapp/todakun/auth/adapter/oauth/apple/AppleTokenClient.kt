@@ -12,7 +12,7 @@ import org.springframework.web.client.requiredBody
 /**
  * Apple `/auth/token`(authorization code 교환) · `/auth/revoke`(계정 연결 해제) 호출.
  * 실패를 삼키지 않고 [OauthProviderUnavailableException]으로 변환해 던진다 — 이 실패를
- * 로그인/탈퇴 흐름에서 무시할지는 각 정책을 아는 호출자(AppleOauthFetcher/RevokeOauthAccountAdapter)가 결정한다.
+ * 로그인/탈퇴 흐름에서 무시할지는 각 정책을 아는 호출자(AppleOauthFetcher/RevokeOauthTokenAdapter)가 결정한다.
  */
 @Component
 class AppleTokenClient(
