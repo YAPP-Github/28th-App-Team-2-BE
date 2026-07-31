@@ -22,7 +22,7 @@ class LoginService(
     private val withdrawnAccountPort: WithdrawnAccountPort,
 ) : LoginUseCase {
     override fun login(command: LoginCommand): LoginResult {
-        val profile = oauthPort.fetchProfile(command.provider, command.oauthAccessToken)
+        val profile = oauthPort.fetchProfile(command.provider, command.oauthAccessToken, command.authorizationCode)
         val memberId = getMemberIdPort.findIdByOauth(profile.provider, profile.providerId)
 
         return if (memberId == null) {
