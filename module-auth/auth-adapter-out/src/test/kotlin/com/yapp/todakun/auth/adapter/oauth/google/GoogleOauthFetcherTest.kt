@@ -5,9 +5,9 @@ import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor
 import com.yapp.todakun.auth.code.AuthErrorCode
+import com.yapp.todakun.auth.exception.OauthEmailRequiredException
 import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.auth.fixture.GoogleOauthFixture
-import com.yapp.todakun.common.exception.UnauthorizedException
 import com.yapp.todakun.shared.OauthProvider
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -58,10 +58,10 @@ class GoogleOauthFetcherTest :
             }
 
             context("email_verified가 false면") {
-                it("OAUTH_EMAIL_REQUIRED로 UnauthorizedException을 던진다") {
+                it("OauthEmailRequiredException을 던진다") {
                     every { googleIdTokenProcessor.process(ID_TOKEN, null) } returns GoogleOauthFixture.claims(emailVerified = false)
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(ID_TOKEN) }
+                    val exception = shouldThrow<OauthEmailRequiredException> { fetcher.fetchProfile(ID_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_EMAIL_REQUIRED
                 }

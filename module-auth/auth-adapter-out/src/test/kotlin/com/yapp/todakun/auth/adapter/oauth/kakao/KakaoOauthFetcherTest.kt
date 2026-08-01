@@ -1,11 +1,11 @@
 package com.yapp.todakun.auth.adapter.oauth.kakao
 
 import com.yapp.todakun.auth.code.AuthErrorCode
+import com.yapp.todakun.auth.exception.OauthEmailRequiredException
 import com.yapp.todakun.auth.exception.OauthProviderUnavailableException
 import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.auth.fixture.KakaoOauthFixture
 import com.yapp.todakun.auth.fixture.OauthFixture
-import com.yapp.todakun.common.exception.UnauthorizedException
 import com.yapp.todakun.shared.OauthProvider
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -67,10 +67,10 @@ class KakaoOauthFetcherTest :
             }
 
             context("이메일 제공에 동의하지 않은 사용자면") {
-                it("OAUTH_EMAIL_REQUIRED로 UnauthorizedException을 던진다") {
+                it("OauthEmailRequiredException을 던진다") {
                     stubResponse(KakaoOauthFixture.memberInfoResponse(email = null, isEmailVerified = false))
 
-                    val exception = shouldThrow<UnauthorizedException> { fetcher.fetchProfile(OauthFixture.OAUTH_ACCESS_TOKEN) }
+                    val exception = shouldThrow<OauthEmailRequiredException> { fetcher.fetchProfile(OauthFixture.OAUTH_ACCESS_TOKEN) }
 
                     exception.errorCode shouldBe AuthErrorCode.OAUTH_EMAIL_REQUIRED
                 }
