@@ -24,3 +24,12 @@ oauth:
     issuers:
       - https://accounts.google.com
       - accounts.google.com
+  apple:
+    client-ids: com.yapp.todakun
+    jwk-set-uri: https://appleid.apple.com/auth/keys
+    issuer: https://appleid.apple.com
+    team-id: TEST_TEAM_ID
+    key-id: TEST_KEY_ID
+    private-key: dGVzdC1wcml2YXRlLWtleQ==
+    token-endpoint: https://appleid.apple.com/auth/token
+    revoke-endpoint: https://appleid.apple.com/auth/revoke
