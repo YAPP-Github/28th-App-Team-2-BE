@@ -22,6 +22,8 @@ class LoginService(
     private val withdrawnAccountPort: WithdrawnAccountPort,
 ) : LoginUseCase {
     override fun login(command: LoginCommand): LoginResult {
+        command.requireAppleAuthorizationCode()
+
         val profile = oauthPort.fetchProfile(command.provider, command.oauthAccessToken, command.authorizationCode)
         val memberId = getMemberIdPort.findIdByOauth(profile.provider, profile.providerId)
 
