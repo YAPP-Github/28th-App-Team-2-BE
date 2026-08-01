@@ -10,7 +10,7 @@ data class LoginRequest(
     @field:Schema(description = "OAuth 제공자", example = "KAKAO")
     @field:NotNull(message = "OAuth 제공자를 입력해 주세요.")
     val provider: OauthProvider,
-    @field:Schema(description = "OAuth 액세스 토큰(Apple은 ID 토큰)", example = "eyJhbGciOiJIUzI1NiJ9...")
+    @field:Schema(description = "OAuth 액세스 토큰(Apple은 ID 토큰)", example = "eyJhbGciOiJSUzI1NiJ9...")
     @field:NotBlank(message = "OAuth 액세스 토큰을 입력해 주세요.")
     val oauthAccessToken: String,
     @field:Schema(
