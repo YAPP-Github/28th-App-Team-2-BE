@@ -9,6 +9,7 @@ import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
 import com.yapp.todakun.shared.DeleteMemberSajusPort
 import com.yapp.todakun.shared.RegisterWithdrawnAccountPort
 import com.yapp.todakun.shared.RevokeMemberTokensPort
+import com.yapp.todakun.shared.RevokeOauthTokenPort
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.Runs
@@ -27,6 +28,7 @@ class WithdrawMemberServiceTest : DescribeSpec({
     val deleteMemberSajusPort = mockk<DeleteMemberSajusPort>()
     val revokeMemberTokensPort = mockk<RevokeMemberTokensPort>()
     val registerWithdrawnAccountPort = mockk<RegisterWithdrawnAccountPort>()
+    val revokeOauthTokenPort = mockk<RevokeOauthTokenPort>()
     val service =
         WithdrawMemberService(
             memberRepository,
@@ -34,6 +36,7 @@ class WithdrawMemberServiceTest : DescribeSpec({
             deleteMemberSajusPort,
             revokeMemberTokensPort,
             registerWithdrawnAccountPort,
+            revokeOauthTokenPort,
         )
 
     afterTest {
@@ -43,6 +46,7 @@ class WithdrawMemberServiceTest : DescribeSpec({
             deleteMemberSajusPort,
             revokeMemberTokensPort,
             registerWithdrawnAccountPort,
+            revokeOauthTokenPort,
         )
     }
 
@@ -58,6 +62,7 @@ class WithdrawMemberServiceTest : DescribeSpec({
                 every { deleteMemberSajusPort.deleteByMemberId(MemberFixture.MEMBER_ID) } just Runs
                 every { revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, accessToken) } just Runs
                 every { registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId) } just Runs
+                every { revokeOauthTokenPort.revokeIfApplicable(member.oauthProvider, member.providerId) } just Runs
                 every { memberRepository.deleteById(MemberFixture.MEMBER_ID) } just Runs
 
                 service.withdraw(command)
@@ -67,6 +72,7 @@ class WithdrawMemberServiceTest : DescribeSpec({
                     deleteMemberSajusPort.deleteByMemberId(MemberFixture.MEMBER_ID)
                     revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, accessToken)
                     registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
+                    revokeOauthTokenPort.revokeIfApplicable(member.oauthProvider, member.providerId)
                     memberRepository.deleteById(MemberFixture.MEMBER_ID)
                 }
             }
@@ -81,6 +87,7 @@ class WithdrawMemberServiceTest : DescribeSpec({
                 verify(exactly = 0) { memberRepository.deleteById(any()) }
                 verify(exactly = 0) { deleteMemberSajusPort.deleteByMemberId(any()) }
                 verify(exactly = 0) { registerWithdrawnAccountPort.register(any(), any()) }
+                verify(exactly = 0) { revokeOauthTokenPort.revokeIfApplicable(any(), any()) }
             }
         }
     }
