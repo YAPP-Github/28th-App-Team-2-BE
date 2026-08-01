@@ -1,5 +1,6 @@
 package com.yapp.todakun.auth.adapter.persistence
 
+import com.yapp.todakun.auth.config.JpaAuditingTestConfig
 import com.yapp.todakun.auth.config.TestContainersConfig
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
@@ -18,7 +19,7 @@ private const val UPDATED_REFRESH_TOKEN = "apple-refresh-token-updated"
 @ExperimentalUuidApi
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, JpaAuditingTestConfig::class)
 class AppleOauthCredentialAdapterTest(
     private val appleOauthCredentialJpaRepository: AppleOauthCredentialJpaRepository,
 ) : DescribeSpec(
