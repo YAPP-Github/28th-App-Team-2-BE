@@ -13,7 +13,10 @@ data class LoginRequest(
     @field:Schema(description = "OAuth 액세스 토큰(Apple은 ID 토큰)", example = "eyJhbGciOiJIUzI1NiJ9...")
     @field:NotBlank(message = "OAuth 액세스 토큰을 입력해 주세요.")
     val oauthAccessToken: String,
-    @field:Schema(description = "Apple 최초 로그인 시 함께 전달되는 authorization code(Kakao/Google은 불필요)", example = "c1234.abcd...")
+    @field:Schema(
+        description = "Apple 로그인마다 매번 함께 전달되는 authorization code(Kakao/Google은 불필요)",
+        example = "c1234.abcd...",
+    )
     val authorizationCode: String? = null,
 ) {
     fun toCommand() =
