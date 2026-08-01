@@ -15,14 +15,14 @@ class AppleOauthCredentialAdapter(
         providerId: String,
         clientId: String,
         refreshToken: String,
-    ) {
+    ): AppleOauthCredential {
         val credential =
             appleOauthCredentialJpaRepository.findByProviderId(providerId)
                 ?.toDomain()
                 ?.copy(clientId = clientId, refreshToken = refreshToken)
                 ?: AppleOauthCredential.create(providerId, clientId, refreshToken)
 
-        appleOauthCredentialJpaRepository.save(AppleOauthCredentialJpaEntity.fromDomain(credential))
+        return appleOauthCredentialJpaRepository.save(AppleOauthCredentialJpaEntity.fromDomain(credential)).toDomain()
     }
 
     override fun find(providerId: String): AppleOauthCredential? =

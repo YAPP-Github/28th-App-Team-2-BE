@@ -7,7 +7,7 @@ import kotlin.uuid.toJavaUuid
 
 /**
  * Apple SNS 식별자([providerId])별로 발급받은 refresh token 보관 기록.
- * 탈퇴 시 Apple 계정 연결을 해제(revoke)하기 위해 최초 로그인 시점에 저장해둔다.
+ * 탈퇴 시 Apple 계정 연결을 해제(revoke)하기 위해 로그인 시점마다 최신 값으로 갱신해둔다.
  */
 data class AppleOauthCredential(
     val id: UUID,
