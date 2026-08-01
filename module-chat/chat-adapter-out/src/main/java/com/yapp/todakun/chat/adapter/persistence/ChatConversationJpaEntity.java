@@ -17,7 +17,7 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @Table(
         name = "chat_conversation",
-        indexes = @Index(name = "ix_chat_conversation_member", columnList = "member_id")
+        indexes = @Index(name = "ix_chat_conversation_member", columnList = "member_id, last_message_at DESC")
 )
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

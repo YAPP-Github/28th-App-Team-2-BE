@@ -1,6 +1,5 @@
 package com.yapp.todakun.chat.application
 
-import com.yapp.todakun.chat.exception.ChatConversationForbiddenException
 import com.yapp.todakun.chat.exception.ChatConversationNotFoundException
 import com.yapp.todakun.chat.port.inbound.DeleteConversationUseCase
 import com.yapp.todakun.chat.port.outbound.ChatConversationRepository
@@ -18,7 +17,7 @@ class DeleteConversationService(
         conversationId: UUID,
     ) {
         val conversation = chatConversationRepository.findById(conversationId) ?: throw ChatConversationNotFoundException()
-        if (conversation.memberId != memberId) throw ChatConversationForbiddenException()
+        conversation.assertAccessibleBy(memberId)
 
         chatMessageRepository.deleteAllByConversationId(conversationId)
         chatConversationRepository.deleteById(conversationId)

@@ -17,9 +17,13 @@ data class RawChatAction(
     val date: String?,
 ) {
     fun toDomainOrNull(): ChatAction? {
-        if (!hasAction || type == null || label == null || category == null || date == null) return null
-        val parsedDate = runCatching { LocalDate.parse(date) }.getOrNull() ?: return null
+        if (!hasAction) return null
+        val validType = type ?: return null
+        val validLabel = label?.takeIf { it.isNotBlank() } ?: return null
+        val validCategory = category?.takeIf { it.isNotBlank() } ?: return null
+        val validDate = date ?: return null
+        val parsedDate = runCatching { LocalDate.parse(validDate) }.getOrNull() ?: return null
 
-        return ChatAction(type = type, label = label, category = category, date = parsedDate)
+        return ChatAction(type = validType, label = validLabel, category = validCategory, date = parsedDate)
     }
 }

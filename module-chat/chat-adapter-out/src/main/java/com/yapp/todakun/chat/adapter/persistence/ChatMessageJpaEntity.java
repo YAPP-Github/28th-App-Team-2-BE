@@ -23,7 +23,7 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @Table(
         name = "chat_message",
-        indexes = @Index(name = "ix_chat_message_conversation", columnList = "conversation_id")
+        indexes = @Index(name = "ix_chat_message_conversation", columnList = "conversation_id, created_at")
 )
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -70,7 +70,8 @@ public class ChatMessageJpaEntity extends BaseEntity {
     }
 
     public ChatMessage toDomain() {
-        ChatAction action = actionType != null
+        boolean hasAction = actionType != null && actionLabel != null && actionCategory != null && actionDate != null;
+        ChatAction action = hasAction
                 ? new ChatAction(actionType, actionLabel, actionCategory, actionDate)
                 : null;
 

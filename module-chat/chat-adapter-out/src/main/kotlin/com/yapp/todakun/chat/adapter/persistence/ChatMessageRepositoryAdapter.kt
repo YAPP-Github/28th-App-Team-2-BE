@@ -17,14 +17,14 @@ class ChatMessageRepositoryAdapter(
     override fun findById(id: UUID): ChatMessage? = chatMessageJpaRepository.findById(id).getOrNull()?.toDomain()
 
     override fun findAllByConversationIdOrderByCreatedAtAsc(conversationId: UUID): List<ChatMessage> =
-        chatMessageJpaRepository.findAllByConversationIdOrderByCreatedAtAsc(conversationId).map { it.toDomain() }
+        chatMessageJpaRepository.findAllByConversationIdOrderByCreatedAtAscIdAsc(conversationId).map { it.toDomain() }
 
     override fun findRecentByConversationId(
         conversationId: UUID,
         limit: Int,
     ): List<ChatMessage> =
         chatMessageJpaRepository
-            .findAllByConversationIdOrderByCreatedAtDesc(conversationId, PageRequest.of(0, limit))
+            .findAllByConversationIdOrderByCreatedAtDescIdDesc(conversationId, PageRequest.of(0, limit))
             .map { it.toDomain() }
 
     override fun deleteAllByConversationId(conversationId: UUID) = chatMessageJpaRepository.deleteAllByConversationId(conversationId)

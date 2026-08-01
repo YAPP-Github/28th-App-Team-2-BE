@@ -8,6 +8,7 @@ import com.yapp.todakun.chat.port.outbound.ChatAiPort
 import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -30,6 +31,8 @@ class StreamChatAnswerService(
     private val chatAiPort: ChatAiPort,
     private val sendNotificationPort: SendNotificationPort,
 ) : StreamChatAnswerUseCase {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @ExperimentalUuidApi
     override fun stream(
         command: SendChatMessageCommand,
@@ -39,6 +42,7 @@ class StreamChatAnswerService(
             try {
                 prepareChatTurnService.prepare(command)
             } catch (e: Exception) {
+                log.warn("채팅 턴 준비 실패: memberId={}", command.memberId, e)
                 listener.onError(e)
                 return
             }
@@ -59,6 +63,7 @@ class StreamChatAnswerService(
             try {
                 chatAiPort.streamAnswer(prepared.promptContext) { delta -> listener.onDelta(delta) }
             } catch (e: Exception) {
+                log.warn("답변 생성 실패: conversationId={}", prepared.conversationId, e)
                 failChatTurnService.fail(prepared.memberId, prepared.assistantMessageId)
                 listener.onError(e)
                 return
@@ -68,7 +73,15 @@ class StreamChatAnswerService(
         val action = runCatching { chatAiPort.extractAction(prepared.promptContext, answer) }.getOrNull()
         val connected = listener.isClientConnected()
 
-        completeChatTurnService.complete(prepared.conversationId, prepared.assistantMessageId, answer, action, unread = !connected)
+        try {
+            completeChatTurnService.complete(prepared.conversationId, prepared.assistantMessageId, answer, action, unread = !connected)
+        } catch (e: Exception) {
+            // AI 호출은 이미 성공했으나 확정 저장이 실패한 경우다 — 메시지를 GENERATING에 방치하지 않고 실패로 전환한다.
+            log.error("답변 완료 처리 실패: conversationId={}", prepared.conversationId, e)
+            failChatTurnService.fail(prepared.memberId, prepared.assistantMessageId)
+            listener.onError(e)
+            return
+        }
 
         action?.let(listener::onAction)
         listener.onDone(prepared.assistantMessageId)

@@ -26,7 +26,8 @@ class RedisChatQuotaAdapter(
         val key = keyOf(memberId)
         // INCR은 키가 없으면 0에서 시작해 원자적으로 1 증가시키므로, 존재 확인 후 증가시키는 방식의 경쟁 조건이 없다.
         val used = redisTemplate.opsForValue().increment(key) ?: 1L
-        if (used == 1L) {
+        // TTL이 없는 키(최초 생성 또는 이전 EXPIRE 실패로 인한 TTL 유실)는 항상 만료 시각을 재설정한다.
+        if (used == 1L || redisTemplate.getExpire(key) < 0) {
             redisTemplate.expire(key, ttlUntilMidnight())
         }
         if (used > DAILY_FREE_CHAT_LIMIT) {

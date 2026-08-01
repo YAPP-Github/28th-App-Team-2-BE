@@ -3,7 +3,6 @@ package com.yapp.todakun.chat.application
 import com.yapp.todakun.chat.ChatConversation
 import com.yapp.todakun.chat.ChatMessage
 import com.yapp.todakun.chat.ChatMessageStatus
-import com.yapp.todakun.chat.exception.ChatConversationForbiddenException
 import com.yapp.todakun.chat.exception.ChatConversationNotFoundException
 import com.yapp.todakun.chat.port.inbound.SendChatMessageCommand
 import com.yapp.todakun.chat.port.outbound.ChatConversationRepository
@@ -24,7 +23,6 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
-private const val CONVERSATION_TITLE_MAX_LENGTH = 60
 private const val HISTORY_LIMIT = 20
 
 // 어시스턴트 답변은 길이 제한이 없으므로(자유 형식 생성 결과), 메시지 개수만 제한하면 프롬프트가 무한정 커질 수 있다.
@@ -46,35 +44,40 @@ class PrepareChatTurnService(
     @ExperimentalUuidApi
     fun prepare(command: SendChatMessageCommand): PreparedChatTurn {
         val quota = chatQuotaPort.reserve(command.memberId)
-        val conversation = resolveConversation(command)
-        // 이번 질문을 저장하기 전에 히스토리를 먼저 읽어, 프롬프트의 history와 question이 중복되지 않게 한다.
-        val history = buildHistory(conversation.id)
 
-        val userMessage = chatMessageRepository.save(ChatMessage.createUser(conversation.id, command.content))
-        val assistantPlaceholder = chatMessageRepository.save(ChatMessage.createAssistantPlaceholder(conversation.id))
+        try {
+            val conversation = resolveConversation(command)
+            // 이번 질문을 저장하기 전에 히스토리를 먼저 읽어, 프롬프트의 history와 question이 중복되지 않게 한다.
+            val history = buildHistory(conversation.id)
 
-        return PreparedChatTurn(
-            memberId = command.memberId,
-            conversationId = conversation.id,
-            conversationTitle = conversation.title,
-            userMessageId = userMessage.id,
-            assistantMessageId = assistantPlaceholder.id,
-            quota = quota,
-            promptContext = buildPromptContext(command.memberId, history, command.content),
-        )
+            val userMessage = chatMessageRepository.save(ChatMessage.createUser(conversation.id, command.content))
+            val assistantPlaceholder = chatMessageRepository.save(ChatMessage.createAssistantPlaceholder(conversation.id))
+
+            return PreparedChatTurn(
+                memberId = command.memberId,
+                conversationId = conversation.id,
+                conversationTitle = conversation.title,
+                userMessageId = userMessage.id,
+                assistantMessageId = assistantPlaceholder.id,
+                quota = quota,
+                promptContext = buildPromptContext(command.memberId, history, command.content),
+            )
+        } catch (e: Exception) {
+            // AI 응답을 생성하지 못한 시도는 하루 무료 쿼터를 소모시키지 않는다.
+            chatQuotaPort.refund(command.memberId)
+            throw e
+        }
     }
 
     @ExperimentalUuidApi
     private fun resolveConversation(command: SendChatMessageCommand): ChatConversation {
         command.conversationId?.let { id ->
             val conversation = chatConversationRepository.findById(id) ?: throw ChatConversationNotFoundException()
-            if (conversation.memberId != command.memberId) throw ChatConversationForbiddenException()
+            conversation.assertAccessibleBy(command.memberId)
             return conversation
         }
 
-        val title = command.content.take(CONVERSATION_TITLE_MAX_LENGTH)
-
-        return chatConversationRepository.save(ChatConversation.create(command.memberId, title, Instant.now()))
+        return chatConversationRepository.save(ChatConversation.create(command.memberId, command.content, Instant.now()))
     }
 
     private fun buildHistory(conversationId: UUID): List<ChatHistoryTurn> {

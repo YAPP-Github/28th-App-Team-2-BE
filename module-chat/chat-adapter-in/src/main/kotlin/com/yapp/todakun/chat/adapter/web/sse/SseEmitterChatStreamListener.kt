@@ -4,6 +4,7 @@ import com.yapp.todakun.chat.ChatAction
 import com.yapp.todakun.chat.port.inbound.ChatStreamListener
 import com.yapp.todakun.chat.port.inbound.ChatTurnStarted
 import com.yapp.todakun.common.exception.BusinessException
+import org.slf4j.LoggerFactory
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.io.IOException
 import java.util.UUID
@@ -19,6 +20,7 @@ private const val UNKNOWN_ERROR_MESSAGE = "일시적인 오류가 발생했습�
 class SseEmitterChatStreamListener(
     private val emitter: SseEmitter,
 ) : ChatStreamListener {
+    private val log = LoggerFactory.getLogger(javaClass)
     private val disconnected = AtomicBoolean(false)
 
     init {
@@ -40,6 +42,9 @@ class SseEmitterChatStreamListener(
 
     override fun onError(error: Throwable) {
         val errorCode = (error as? BusinessException)?.errorCode
+        if (errorCode == null) {
+            log.error("채팅 스트림에서 알 수 없는 오류가 발생했습니다", error)
+        }
         send("error", ChatErrorEvent(errorCode?.code ?: UNKNOWN_ERROR_CODE, errorCode?.message ?: UNKNOWN_ERROR_MESSAGE))
         emitter.complete()
     }
@@ -55,6 +60,9 @@ class SseEmitterChatStreamListener(
         try {
             emitter.send(SseEmitter.event().name(eventName).data(data))
         } catch (e: IOException) {
+            disconnected.set(true)
+        } catch (e: IllegalStateException) {
+            // SseEmitter가 이미 완료/타임아웃된 뒤 send가 호출된 경우(비-I/O 오류). 끊김으로 처리한다.
             disconnected.set(true)
         }
     }

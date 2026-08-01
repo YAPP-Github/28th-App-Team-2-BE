@@ -1,10 +1,13 @@
 package com.yapp.todakun.chat
 
+import com.yapp.todakun.chat.exception.ChatConversationForbiddenException
 import java.time.Instant
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
+
+private const val TITLE_MAX_LENGTH = 60
 
 /**
  * 대화 스레드. [title]은 첫 사용자 질문에서 파생되어 생성 시점에 고정되며(히스토리 목록 제목), 이후 바뀌지 않는다.
@@ -26,6 +29,11 @@ data class ChatConversation(
     /** 마지막 활동 시각을 갱신한다. 현재 시각은 호출부(application)가 주입한다(도메인은 시계에 의존하지 않는다). */
     fun touch(now: Instant): ChatConversation = copy(lastMessageAt = now)
 
+    /** 요청한 회원이 이 대화의 소유자인지 검증한다. 소유자가 아니면 [ChatConversationForbiddenException]을 던진다. */
+    fun assertAccessibleBy(memberId: UUID) {
+        if (this.memberId != memberId) throw ChatConversationForbiddenException()
+    }
+
     companion object {
         @ExperimentalUuidApi
         fun create(
@@ -36,7 +44,7 @@ data class ChatConversation(
             ChatConversation(
                 id = Uuid.generateV7().toJavaUuid(),
                 memberId = memberId,
-                title = title,
+                title = title.take(TITLE_MAX_LENGTH),
                 unread = false,
                 lastMessageAt = now,
                 createdAt = null,

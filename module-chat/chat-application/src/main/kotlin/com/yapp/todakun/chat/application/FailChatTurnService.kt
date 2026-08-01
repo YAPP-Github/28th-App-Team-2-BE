@@ -15,9 +15,10 @@ class FailChatTurnService(
         memberId: UUID,
         assistantMessageId: UUID,
     ) {
-        val message =
-            checkNotNull(chatMessageRepository.findById(assistantMessageId)) { "assistant message not found: $assistantMessageId" }
-        chatMessageRepository.save(message.fail())
+        // 생성 중 대화가 삭제되면 메시지가 이미 사라졌을 수 있다 — 그래도 쿼터 환불은 항상 수행한다.
+        chatMessageRepository.findById(assistantMessageId)?.let { message ->
+            chatMessageRepository.save(message.fail())
+        }
         chatQuotaPort.refund(memberId)
     }
 }

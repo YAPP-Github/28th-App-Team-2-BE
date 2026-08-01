@@ -1,6 +1,8 @@
 package com.yapp.todakun.chat.application
 
 import com.yapp.todakun.chat.ChatAction
+import com.yapp.todakun.chat.exception.ChatAssistantMessageNotFoundException
+import com.yapp.todakun.chat.exception.ChatConversationNotFoundException
 import com.yapp.todakun.chat.port.outbound.ChatConversationRepository
 import com.yapp.todakun.chat.port.outbound.ChatMessageRepository
 import com.yapp.todakun.common.annotation.CommandService
@@ -21,11 +23,10 @@ class CompleteChatTurnService(
         unread: Boolean,
     ) {
         // 두 메시지·대화 모두 바로 이전 단계(PrepareChatTurnService)에서 우리가 직접 생성한 것이라 항상 존재해야 하는 내부 불변식이다.
-        val message =
-            checkNotNull(chatMessageRepository.findById(assistantMessageId)) { "assistant message not found: $assistantMessageId" }
+        val message = chatMessageRepository.findById(assistantMessageId) ?: throw ChatAssistantMessageNotFoundException()
         chatMessageRepository.save(message.complete(answer, action))
 
-        val conversation = checkNotNull(chatConversationRepository.findById(conversationId)) { "conversation not found: $conversationId" }
+        val conversation = chatConversationRepository.findById(conversationId) ?: throw ChatConversationNotFoundException()
         chatConversationRepository.save(conversation.touch(Instant.now()).markUnread(unread))
     }
 }
