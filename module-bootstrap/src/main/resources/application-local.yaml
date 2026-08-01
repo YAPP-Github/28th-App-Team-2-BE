@@ -57,6 +57,11 @@ token:
 oauth:
   google:
     client-ids: ${GOOGLE_OAUTH_CLIENT_IDS}  # 콤마 구분(Android/iOS 등 플랫폼별 클라이언트 ID)
+  apple:
+    client-ids: ${APPLE_CLIENT_IDS}  # 콤마 구분(여러 클라이언트 ID 지원 시)
+    team-id: ${APPLE_TEAM_ID}
+    key-id: ${APPLE_KEY_ID}
+    private-key: ${APPLE_PRIVATE_KEY}
 
 logging:
   level:
