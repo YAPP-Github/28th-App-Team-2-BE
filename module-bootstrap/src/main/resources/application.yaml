@@ -47,6 +47,11 @@ oauth:
     issuers:
       - https://accounts.google.com
       - accounts.google.com
+  apple:
+    jwk-set-uri: https://appleid.apple.com/auth/keys
+    issuer: https://appleid.apple.com
+    token-endpoint: https://appleid.apple.com/auth/token
+    revoke-endpoint: https://appleid.apple.com/auth/revoke
 
 # 회원 탈퇴 정책 v1.0 — 탈퇴 후 재가입 제한/SNS 식별자 보관 기간(90일). 환경 무관 고정값.
 account:
