@@ -1,5 +1,6 @@
 package com.yapp.todakun.auth.application.service
 
+import com.yapp.todakun.auth.exception.AppleAuthorizationCodeRequiredException
 import com.yapp.todakun.auth.exception.ReSignupRestrictedException
 import com.yapp.todakun.auth.fixture.AuthFixture
 import com.yapp.todakun.auth.fixture.TokenFixture
@@ -136,6 +137,16 @@ class LoginServiceTest :
                         verify(exactly = 1) {
                             oauthPort.fetchProfile(appleCommand.provider, appleCommand.oauthAccessToken, appleCommand.authorizationCode)
                         }
+                    }
+                }
+
+                context("provider가 APPLE이고 authorizationCode가 없으면") {
+                    it("AppleAuthorizationCodeRequiredException을 던지고 OauthPort를 호출하지 않는다") {
+                        val appleCommand = AuthFixture.loginCommand(provider = OauthProvider.APPLE, authorizationCode = null)
+
+                        shouldThrow<AppleAuthorizationCodeRequiredException> { loginService.login(appleCommand) }
+
+                        verify(exactly = 0) { oauthPort.fetchProfile(any(), any(), any()) }
                     }
                 }
             }
