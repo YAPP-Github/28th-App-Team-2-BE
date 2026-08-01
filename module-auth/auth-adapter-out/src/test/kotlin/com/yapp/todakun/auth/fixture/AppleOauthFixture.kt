@@ -9,7 +9,11 @@ private const val ISSUER = "https://appleid.apple.com"
 private const val JWK_SET_URI = "https://appleid.apple.com/auth/keys"
 private const val TEAM_ID = "TEST_TEAM_ID"
 private const val KEY_ID = "TEST_KEY_ID"
-private const val PRIVATE_KEY = "test-private-key-base64"
+
+// PKCS#8 DER Base64로 인코딩된 테스트용 EC(P-256) 개인키 — AppleOauthClientSecretGenerator.parsePrivateKey()가 그대로 파싱 가능해야 한다.
+private const val PRIVATE_KEY =
+    "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg6mPFSDFRomwVgSjNJEOpYV0DUG7ea2QNphnIA8tWlfqhRANCAAQb6Z3WvuT+pwQxdkG+" +
+        "JhQ/Cw2aRmlBOuhCfVfidXN0XBrwxXBUqPvJh7ktEZKheSdsD+9rGvAGI2xn6JH7rP5D"
 private const val TOKEN_ENDPOINT = "https://appleid.apple.com/auth/token"
 private const val REVOKE_ENDPOINT = "https://appleid.apple.com/auth/revoke"
 
