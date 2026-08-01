@@ -1,6 +1,7 @@
 package com.yapp.todakun.config
 
 import com.ninjasquad.springmockk.MockkBean
+import com.yapp.todakun.chat.port.outbound.ChatAiPort
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiPort
 import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
@@ -27,4 +28,7 @@ class DailyFortuneAiMockConfig {
 
     @MockkBean
     lateinit var compatibilityAiPort: CompatibilityAiPort
+
+    @MockkBean
+    lateinit var chatAiPort: ChatAiPort
 }

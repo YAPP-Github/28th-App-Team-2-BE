@@ -46,6 +46,10 @@ dependencies {
     implementation(project(":day-fortune:application"))
     implementation(project(":day-fortune:adapter-in"))
     implementation(project(":day-fortune:adapter-out"))
+    implementation(project(":chat:domain"))
+    implementation(project(":chat:application"))
+    implementation(project(":chat:adapter-in"))
+    implementation(project(":chat:adapter-out"))
 
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.data.jpa)

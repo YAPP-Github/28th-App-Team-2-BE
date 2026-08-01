@@ -67,6 +67,12 @@ include("day-fortune:application")
 include("day-fortune:adapter-in")
 include("day-fortune:adapter-out")
 
+// chat 도메인 (:chat 하위에 nested된 4개 모듈, leaf는 레이어명만)
+include("chat:domain")
+include("chat:application")
+include("chat:adapter-in")
+include("chat:adapter-out")
+
 // 모듈 디렉터리는 `module-*` 접두사를 쓰므로 프로젝트 경로를 매핑한다.
 project(":bootstrap").projectDir = file("module-bootstrap")
 project(":common").projectDir = file("module-common")
@@ -136,3 +142,9 @@ project(":day-fortune:domain").projectDir = file("module-day-fortune/day-fortune
 project(":day-fortune:application").projectDir = file("module-day-fortune/day-fortune-application")
 project(":day-fortune:adapter-in").projectDir = file("module-day-fortune/day-fortune-adapter-in")
 project(":day-fortune:adapter-out").projectDir = file("module-day-fortune/day-fortune-adapter-out")
+
+project(":chat").projectDir = file("module-chat")
+project(":chat:domain").projectDir = file("module-chat/chat-domain")
+project(":chat:application").projectDir = file("module-chat/chat-application")
+project(":chat:adapter-in").projectDir = file("module-chat/chat-adapter-in")
+project(":chat:adapter-out").projectDir = file("module-chat/chat-adapter-out")
