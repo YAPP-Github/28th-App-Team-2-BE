@@ -28,10 +28,12 @@ object AuthFixture {
     fun loginCommand(
         provider: OauthProvider = OauthProvider.KAKAO,
         oauthAccessToken: String = OAUTH_ACCESS_TOKEN,
+        authorizationCode: String? = null,
     ): LoginCommand =
         LoginCommand(
             provider = provider,
             oauthAccessToken = oauthAccessToken,
+            authorizationCode = authorizationCode,
         )
 
     fun signupCommand(
