@@ -46,8 +46,10 @@ class AppleOauthFetcher(
         )
     }
 
-    // Apple 서버 장애(네트워크/일시적 불가)로 인한 토큰 교환 실패는 로그인 자체를 막지 않도록 로그만 남긴다(정책 확정).
-    // 실패 시 credential이 저장되지 않아 이후 탈퇴 시 revoke가 no-op이 될 수 있으나, 로그인 흐름을 우선한다.
+    // Apple 서버 장애(네트워크/일시적 불가, OauthProviderUnavailableException)로 인한 토큰 교환 실패는
+    // 로그인 자체를 막지 않도록 로그만 남긴다(정책 확정). 실패 시 credential이 저장되지 않아 이후 탈퇴 시
+    // revoke가 no-op이 될 수 있으나, 로그인 흐름을 우선한다.
+    // invalid_grant/invalid_client 같은 영구적 클라이언트 오류(OauthTokenInvalidException)나
     // 그 외 예기치 못한 예외(예: credential 저장 중 DB 오류)는 삼키지 않고 전파해 로그인도 실패시킨다.
     private fun exchangeAndSaveCredential(
         clientId: String,

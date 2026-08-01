@@ -1,6 +1,7 @@
 package com.yapp.todakun.auth.adapter.oauth.apple
 
 import com.yapp.todakun.auth.exception.OauthProviderUnavailableException
+import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.auth.fixture.AppleOauthFixture
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -11,9 +12,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.util.MultiValueMap
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
 
@@ -69,6 +72,18 @@ class AppleOauthTokenClientTest :
                     every { requestBodySpec.retrieve() } throws ResourceAccessException("Connection timed out")
 
                     shouldThrow<OauthProviderUnavailableException> {
+                        tokenClient.exchangeAuthorizationCode(AppleOauthFixture.CLIENT_ID, AUTHORIZATION_CODE)
+                    }
+                }
+            }
+
+            context("invalid_grant 등 Apple이 4xx로 거절하면") {
+                it("OauthTokenInvalidException을 던진다") {
+                    stubPost(properties.tokenEndpoint)
+                    every { requestBodySpec.retrieve() } throws
+                        HttpClientErrorException(HttpStatus.BAD_REQUEST, "invalid_grant")
+
+                    shouldThrow<OauthTokenInvalidException> {
                         tokenClient.exchangeAuthorizationCode(AppleOauthFixture.CLIENT_ID, AUTHORIZATION_CODE)
                     }
                 }
