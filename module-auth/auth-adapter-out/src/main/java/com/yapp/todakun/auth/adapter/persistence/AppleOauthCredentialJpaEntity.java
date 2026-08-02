@@ -1,8 +1,10 @@
 package com.yapp.todakun.auth.adapter.persistence;
 
 import com.yapp.todakun.auth.AppleOauthCredential;
+import com.yapp.todakun.auth.adapter.persistence.crypto.AesGcmStringConverter;
 import com.yapp.todakun.persistence.BaseEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -30,7 +32,10 @@ public class AppleOauthCredentialJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private String clientId;
 
-    @Column(nullable = false)
+    // Apple 계정 연결 해제(revoke) 권한을 갖는 민감 자격증명 → DB 유출 대비 AES-256-GCM으로 at-rest 암호화한다.
+    // 암호화 오버헤드(IV+태그+Base64)로 원문보다 길어지므로 기본 255자보다 넉넉하게 잡는다.
+    @Convert(converter = AesGcmStringConverter.class)
+    @Column(nullable = false, length = 1000)
     private String refreshToken;
 
     public static AppleOauthCredentialJpaEntity fromDomain(AppleOauthCredential credential) {
