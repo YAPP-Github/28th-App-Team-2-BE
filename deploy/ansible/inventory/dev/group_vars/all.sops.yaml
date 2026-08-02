@@ -25,6 +25,7 @@ apple_team_id: ENC[AES256_GCM,data:Zi/kJSnYkbBPoA==,iv:8msHF1Lwir8X/7bGpeprLC4O4
 apple_key_id: ENC[AES256_GCM,data:b/vL9qOwn3XKtA==,iv:XF0MMz1qQvb3LX3zg/rEsgpo9NSkLUH0cpDpfeqXWSE=,tag:QMF6EyDCzSvdu4HoqWuL5g==,type:str]
 apple_client_ids: ENC[AES256_GCM,data:6Mz5gZGrYI+Ph3r6w4P3MoHvdg==,iv:3rJdjTcyWIjGjKzRzH32aobOno3h4lMeP52c/7S0ULg=,tag:y8CBhwXTH/uXGivtMFd5Mg==,type:str]
 apple_private_key: ENC[AES256_GCM,data:V4BttVdFqg9hCr0HUDfKvuvxtCIZismGuyZqDxtJFt3BbSi9Q66e9qzaMYUCf60h1ivnXBAPcTpSXgAPaH/ZtenZOAkpvzr9DaLPnf6SxjYNufsYFZIw70T+0SN5EhP0lDQljTJON0unNoxYgC/j7JhPEi8t6YTAyUO9OSHZu2vUvzidySb/0thzWo/py8YNNK1YrLluY5DGYeYkFGoWg14xwAE=,iv:s8ulcDxRbOfUBNtw4Yy137lgjY97sSHCTltJqqR8PE8=,tag:PhgeRJSy+JKe6s1KST9NOA==,type:str]
+encryption_key: ENC[AES256_GCM,data:QRJy+vnQ+8w0Eq2qTPgJndMEfjzsxWS43tlvl1DTZPf9oMPNljkJ7g76YZI=,iv:2RN26GNz71EwjH36UN7S7L5QgNnrURphqzm/NMqagkk=,tag:dQzBkOaHEthXU1dJcLvHSw==,type:str]
 sops:
     age:
         - enc: |
@@ -45,7 +46,7 @@ sops:
             Lv1moO9mki1jjmQmEM8GPdgVv1UZCB7iCYp84KPVdGMDNvvouQBOBA==
             -----END AGE ENCRYPTED FILE-----
           recipient: age1kkdg6kehtjn9dryapgj2hywgg0xlflv8dvdsxed4m5a8az82kdustamkv0
-    lastmodified: "2026-08-01T08:25:12Z"
-    mac: ENC[AES256_GCM,data:PXazdhFfea1x1YlZxD/1tJho5E4DBO5YK1jgUfwrHOzGvebSPebl5pF9PNbZiESyciegxhY0W10AYMpMB1g7cDTov6VqwKK+Nihc/TINQs03vD2LsHrAZetxIphM+tYqWqgNwl7Wf3LFpamPGyYMtyHr+otE52hqCPa2k/gfcjU=,iv:z5K8TtPRK3lLQqQ8b/EZd6iXbHd8LMCg6uZa0uF6qXs=,tag:VsofUclnlIN1ONCm7E9V+A==,type:str]
+    lastmodified: "2026-08-02T02:11:21Z"
+    mac: ENC[AES256_GCM,data:zsS7gflacP4iS0LEvdWWomesa3JJ3Sl9FcjbOAXd2X9ICmaLlHqSAk1aB+0nSnilVdaGtF8NBydyJQWWF5/49hjAWqOHnwpNjR8dUUcIzDY5hQVGketUBlIF1L2jPdQViRsjyE8NcXx74E4h/Y55RCGGm05/AjxSnKk3F4I7zps=,iv:6vvgoFsu0w8aKAm3/GqqpZwZODWaX2VSZ8ene2IkWvM=,tag:eLaIc/gZd/tIcOXjEOkHtg==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.13.2
