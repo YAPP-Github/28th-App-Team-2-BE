@@ -106,14 +106,39 @@ class MemberRepositoryAdapterTest(
                 }
             }
 
-            describe("findIds") {
-                context("저장된 회원이 있으면") {
-                    it("전체 회원 ID 목록을 반환한다") {
-                        val member = savedMember()
+            describe("findIdsAfter") {
+                context("커서가 null이면") {
+                    it("처음부터 id 오름차순으로 limit개까지 반환한다") {
+                        val member1 = savedMember()
+                        val member2 = savedMember()
 
-                        val found = adapter.findIds()
+                        val found = adapter.findIdsAfter(null, 10)
 
-                        found shouldBe listOf(member.id)
+                        found shouldBe listOf(member1.id, member2.id).sorted()
+                    }
+                }
+
+                context("커서를 지정하면") {
+                    it("커서 이후의 id만 반환한다") {
+                        val member1 = savedMember()
+                        val member2 = savedMember()
+                        val sortedIds = listOf(member1.id, member2.id).sorted()
+
+                        val found = adapter.findIdsAfter(sortedIds[0], 10)
+
+                        found shouldBe listOf(sortedIds[1])
+                    }
+                }
+
+                context("limit보다 대상 회원이 많으면") {
+                    it("limit 개수만큼만 반환한다") {
+                        val member1 = savedMember()
+                        val member2 = savedMember()
+                        val member3 = savedMember()
+
+                        val found = adapter.findIdsAfter(null, 2)
+
+                        found shouldBe listOf(member1.id, member2.id, member3.id).sorted().take(2)
                     }
                 }
             }
