@@ -5,4 +5,5 @@ plugins {
 dependencies {
     implementation(project(":shared"))
     implementation(project(":auth:domain"))
+    implementation(libs.spring.context)
 }
