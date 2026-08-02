@@ -20,7 +20,6 @@ class GetMemberFortuneProfileAdapter(
             gender = member.gender.name,
             job = member.job.name,
             relationshipStatus = member.relationshipStatus.name,
-            favoriteFortuneCategories = member.favoriteFortuneCategories.toList(),
         )
     }
 }
