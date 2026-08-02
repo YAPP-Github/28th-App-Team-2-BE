@@ -1,6 +1,7 @@
 package com.yapp.todakun.yearfortune.application.service
 
 import com.yapp.todakun.common.annotation.CommandService
+import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
 import com.yapp.todakun.shared.GetSajuChartPort
 import com.yapp.todakun.shared.GetYearPillarPort
@@ -80,7 +81,7 @@ class CreateYearSelectionFortuneService(
             gender = memberProfile.gender,
             job = memberProfile.job,
             relationshipStatus = memberProfile.relationshipStatus,
-            favoriteFortuneCategories = memberProfile.favoriteFortuneCategories,
+            fortuneCategories = FortuneCategory.entries.toList(),
             dayMaster = chart.dayMaster,
             yearPillar = chart.yearPillar.toPillar(),
             monthPillar = chart.monthPillar.toPillar(),
