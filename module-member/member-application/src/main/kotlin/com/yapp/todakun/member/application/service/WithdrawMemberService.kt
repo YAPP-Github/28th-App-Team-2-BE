@@ -1,44 +1,24 @@
 package com.yapp.todakun.member.application.service
 
-import com.yapp.todakun.common.annotation.CommandService
-import com.yapp.todakun.member.MemberWithdrawalLog
-import com.yapp.todakun.member.exception.MemberNotFoundException
 import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
 import com.yapp.todakun.member.port.inbound.WithdrawMemberUseCase
-import com.yapp.todakun.member.repository.MemberRepository
-import com.yapp.todakun.member.repository.MemberWithdrawalLogRepository
-import com.yapp.todakun.shared.DeleteMemberSajusPort
-import com.yapp.todakun.shared.RegisterWithdrawnAccountPort
-import com.yapp.todakun.shared.RevokeMemberTokensPort
 import com.yapp.todakun.shared.RevokeOauthTokenPort
+import org.springframework.stereotype.Service
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
- * 회원 탈퇴 유스케이스(탈퇴 정책 v1.0 — 복구 유예 없이 즉시 확정 처리). 한 트랜잭션에서
- * ① 비식별 사유 로그 저장 → ② 소유 사주 데이터 하드 삭제 → ③ 인증 토큰 폐기 →
- * ④ SNS 식별자를 재가입 제한 목록(90일)에 등록 → ⑤ (Apple만) OAuth 토큰 철회 → ⑥ 회원 하드 삭제 순으로 처리
- * 사주·토큰 정리, 재가입 제한 등록, OAuth 토큰 철회는 크로스 도메인 포트로 위임한다(member는 saju·auth 내부 구조를 모른다).
+ * 회원 탈퇴 유스케이스(탈퇴 정책 v1.0 — 복구 유예 없이 즉시 확정 처리).
+ * [WithdrawMemberTransactionService]가 로그 저장·사주 삭제·토큰 폐기·재가입 제한 등록·회원 하드 삭제를
+ * 한 트랜잭션으로 커밋한 뒤, (Apple만) OAuth 토큰 철회를 트랜잭션 밖에서 호출한다.
  */
-@CommandService
+@Service
 class WithdrawMemberService(
-    private val memberRepository: MemberRepository,
-    private val memberWithdrawalLogRepository: MemberWithdrawalLogRepository,
-    private val deleteMemberSajusPort: DeleteMemberSajusPort,
-    private val revokeMemberTokensPort: RevokeMemberTokensPort,
-    private val registerWithdrawnAccountPort: RegisterWithdrawnAccountPort,
+    private val withdrawMemberTransactionService: WithdrawMemberTransactionService,
     private val revokeOauthTokenPort: RevokeOauthTokenPort,
 ) : WithdrawMemberUseCase {
     @ExperimentalUuidApi
     override fun withdraw(command: WithdrawMemberCommand) {
-        val member = memberRepository.findById(command.memberId) ?: throw MemberNotFoundException()
-
-        memberWithdrawalLogRepository.save(
-            MemberWithdrawalLog.create(reason = command.reason, detail = command.detail),
-        )
-        deleteMemberSajusPort.deleteByMemberId(member.id)
-        revokeMemberTokensPort.revokeAll(member.id, command.accessToken)
-        registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
+        val member = withdrawMemberTransactionService.withdraw(command)
         revokeOauthTokenPort.revokeIfApplicable(member.oauthProvider, member.providerId)
-        memberRepository.deleteById(member.id)
     }
 }
