@@ -9,5 +9,8 @@ import java.util.UUID
 class GetMemberIdsAdapter(
     private val memberRepository: MemberRepository,
 ) : GetMemberIdsPort {
-    override fun getMemberIds(): List<UUID> = memberRepository.findIds()
+    override fun getMemberIds(
+        afterMemberId: UUID?,
+        limit: Int,
+    ): List<UUID> = memberRepository.findIdsAfter(afterMemberId, limit)
 }
