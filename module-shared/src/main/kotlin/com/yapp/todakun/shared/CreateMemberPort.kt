@@ -14,6 +14,5 @@ interface CreateMemberPort {
         gender: String,
         job: String,
         relationshipStatus: String,
-        favoriteFortuneCategories: List<String>,
     ): UUID
 }

@@ -9,5 +9,4 @@ data class MemberFortuneProfile(
     val gender: String,
     val job: String,
     val relationshipStatus: String,
-    val favoriteFortuneCategories: List<FortuneCategory>,
 )
