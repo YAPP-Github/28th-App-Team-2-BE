@@ -42,7 +42,6 @@ class CreateMemberAdapterTest :
                                 gender = member.gender.name,
                                 job = member.job.name,
                                 relationshipStatus = member.relationshipStatus.name,
-                                favoriteFortuneCategories = member.favoriteFortuneCategories.map { it.name },
                             )
 
                         id shouldBe member.id
@@ -55,7 +54,6 @@ class CreateMemberAdapterTest :
                         memberSlot.captured.providerId shouldBe member.providerId
                         memberSlot.captured.job shouldBe member.job
                         memberSlot.captured.relationshipStatus shouldBe member.relationshipStatus
-                        memberSlot.captured.favoriteFortuneCategories shouldBe member.favoriteFortuneCategories
                     }
                 }
 
@@ -72,7 +70,6 @@ class CreateMemberAdapterTest :
                                 gender = "INVALID",
                                 job = member.job.name,
                                 relationshipStatus = member.relationshipStatus.name,
-                                favoriteFortuneCategories = member.favoriteFortuneCategories.map { it.name },
                             )
                         }
 

@@ -30,7 +30,6 @@ class GetMemberFortuneProfileAdapterTest : DescribeSpec({
                 result.gender shouldBe member.gender.name
                 result.job shouldBe member.job.name
                 result.relationshipStatus shouldBe member.relationshipStatus.name
-                result.favoriteFortuneCategories shouldBe member.favoriteFortuneCategories.toList()
             }
         }
 

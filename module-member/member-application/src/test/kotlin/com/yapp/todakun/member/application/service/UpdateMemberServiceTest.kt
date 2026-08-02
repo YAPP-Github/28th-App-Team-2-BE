@@ -9,7 +9,6 @@ import com.yapp.todakun.member.exception.MemberNotFoundException
 import com.yapp.todakun.member.fixture.MemberFixture
 import com.yapp.todakun.member.port.inbound.UpdateMemberCommand
 import com.yapp.todakun.member.repository.MemberRepository
-import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.ReplaceSelfSajuChartPort
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -42,7 +41,6 @@ class UpdateMemberServiceTest : DescribeSpec({
         birthTime = birthTime,
         job = Job.WORKER,
         relationshipStatus = RelationshipStatus.DATING,
-        favoriteFortuneCategories = setOf(FortuneCategory.LOVE),
     )
 
     describe("update") {

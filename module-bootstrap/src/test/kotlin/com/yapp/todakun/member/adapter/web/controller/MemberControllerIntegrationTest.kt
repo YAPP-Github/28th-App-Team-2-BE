@@ -16,7 +16,6 @@ import com.yapp.todakun.member.port.inbound.GetMyProfileUseCase
 import com.yapp.todakun.member.port.inbound.UpdateMemberUseCase
 import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
 import com.yapp.todakun.member.port.inbound.WithdrawMemberUseCase
-import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.OauthProvider
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -78,7 +77,6 @@ class MemberControllerIntegrationTest(
                 providerId = "1234567890",
                 job = Job.WORKER,
                 relationshipStatus = RelationshipStatus.SOLO,
-                favoriteFortuneCategories = setOf(FortuneCategory.RELATIONSHIP, FortuneCategory.ACHIEVEMENT),
             )
 
         describe("GET /api/v1/members/me") {
@@ -89,7 +87,7 @@ class MemberControllerIntegrationTest(
             }
 
             context("인증된 회원이 요청하면") {
-                it("본인 프로필(관심 주제 포함)을 반환한다") {
+                it("본인 프로필을 반환한다") {
                     every { getMyProfileUseCase.getProfile(MEMBER_ID) } returns member()
 
                     val response =
@@ -103,7 +101,6 @@ class MemberControllerIntegrationTest(
 
                     val body = objectMapper.readTree(response)
                     body["data"]["name"].asString() shouldBe "토닥이"
-                    body["data"]["favoriteFortuneCategories"].size() shouldBe 2
                 }
             }
         }
@@ -117,7 +114,6 @@ class MemberControllerIntegrationTest(
                     "birthTime" to "JASI",
                     "job" to "WORKER",
                     "relationshipStatus" to "DATING",
-                    "favoriteFortuneCategories" to listOf("LOVE", "MONEY"),
                 )
 
             context("인증된 회원이 유효한 값으로 요청하면") {
@@ -133,20 +129,6 @@ class MemberControllerIntegrationTest(
                         ).andExpect(status().isOk)
 
                     verify(exactly = 1) { updateMemberUseCase.update(any()) }
-                }
-            }
-
-            context("관심 주제가 비어 있으면") {
-                it("400을 반환한다") {
-                    mockMvc
-                        .perform(
-                            patch("/api/v1/members/me")
-                                .with(authentication(UsernamePasswordAuthenticationToken(MEMBER_ID, null, emptyList())))
-                                .contentType("application/json")
-                                .content(
-                                    objectMapper.writeValueAsString(requestBody + ("favoriteFortuneCategories" to emptyList<String>())),
-                                ),
-                        ).andExpect(status().isBadRequest)
                 }
             }
         }
