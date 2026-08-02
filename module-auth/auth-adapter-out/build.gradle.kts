@@ -1,5 +1,5 @@
 plugins {
-    id("todakun.spring")
+    id("todakun.adapter-persistence")
 }
 
 dependencies {
@@ -14,5 +14,10 @@ dependencies {
     implementation(libs.nimbus.jose.jwt)
 
     testImplementation(libs.bundles.testcontainers.redis)
-    testImplementation(libs.kotest.extensions.spring)
+}
+
+tasks.test {
+    // AesGcmStringConverter가 JPA 프로바이더에 의해 직접 생성되어 ENCRYPTION_KEY 환경변수를 직접 읽는다.
+    // 테스트 전용 고정 키(AES-256, openssl rand -base64 32로 생성) — 운영 키와 무관하다.
+    environment("ENCRYPTION_KEY", "QOZw2OZGGf1rpm4LwEiZz8aHoxjhYpwCVqNSPPgE6YY=")
 }

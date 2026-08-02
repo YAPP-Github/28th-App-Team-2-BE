@@ -23,6 +23,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.verify
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
@@ -47,6 +48,8 @@ private const val INVALID_ACCESS_TOKEN = "invalid-access-token"
 
 // 존재/형식 여부만 중요하고 값 자체는 의미가 없는 refresh 토큰(조회 실패 유도용)
 private const val INVALID_REFRESH_TOKEN = "invalid-refresh-token"
+
+private const val AUTHORIZATION_CODE = "test-authorization-code"
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -97,6 +100,18 @@ class AuthControllerIntegrationTest(
                             contentType = MediaType.APPLICATION_JSON
                             content = LoginRequest(provider = OauthProvider.KAKAO, oauthAccessToken = "").toJson()
                         }.andExpect { status { isBadRequest() } }
+                }
+            }
+
+            context("provider가 APPLE이고 authorizationCode가 있으면") {
+                it("OauthPort.fetchProfile에 authorizationCode를 전달한다") {
+                    val authorizationCode = AUTHORIZATION_CODE
+                    val oauthAccessToken = stubNewOauthProfile(provider = OauthProvider.APPLE, authorizationCode = authorizationCode)
+
+                    val data = login(oauthAccessToken, provider = OauthProvider.APPLE, authorizationCode = authorizationCode)
+
+                    data["isNewMember"].asBoolean() shouldBe true
+                    verify(exactly = 1) { oauthPort.fetchProfile(OauthProvider.APPLE, oauthAccessToken, authorizationCode) }
                 }
             }
         }
@@ -184,11 +199,17 @@ class AuthControllerIntegrationTest(
     private fun login(
         oauthAccessToken: String,
         provider: OauthProvider = OauthProvider.KAKAO,
+        authorizationCode: String? = null,
     ): JsonNode =
         mockMvc
             .post("/api/v1/auth/login") {
                 contentType = MediaType.APPLICATION_JSON
-                content = LoginRequest(provider = provider, oauthAccessToken = oauthAccessToken).toJson()
+                content =
+                    LoginRequest(
+                        provider = provider,
+                        oauthAccessToken = oauthAccessToken,
+                        authorizationCode = authorizationCode,
+                    ).toJson()
             }.andExpect { status { isOk() } }
             .andReturn()
             .response
@@ -227,11 +248,14 @@ class AuthControllerIntegrationTest(
         }
 
     /** 매 호출마다 고유한 OAuth 프로필을 스텁으로 등록하고, 그 프로필로 로그인할 때 사용할 oauthAccessToken을 반환한다. */
-    private fun stubNewOauthProfile(provider: OauthProvider = OauthProvider.KAKAO): String {
+    private fun stubNewOauthProfile(
+        provider: OauthProvider = OauthProvider.KAKAO,
+        authorizationCode: String? = null,
+    ): String {
         val oauthAccessToken = "oauth-token-${UUID.randomUUID()}"
         val providerId = "provider-${UUID.randomUUID()}"
         val profile = OauthMemberProfile(provider = provider, providerId = providerId, email = "$providerId@todakun.com")
-        every { oauthPort.fetchProfile(provider, oauthAccessToken) } returns profile
+        every { oauthPort.fetchProfile(provider, oauthAccessToken, authorizationCode) } returns profile
 
         return oauthAccessToken
     }

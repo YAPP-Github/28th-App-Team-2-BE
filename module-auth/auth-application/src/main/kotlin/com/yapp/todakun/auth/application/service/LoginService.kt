@@ -9,10 +9,13 @@ import com.yapp.todakun.auth.port.outbound.OauthPort
 import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.auth.port.outbound.WithdrawnAccountPort
-import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.shared.GetMemberIdPort
+import org.springframework.stereotype.Service
 
-@CommandService
+// login()이 호출하는 포트 중 원자적으로 묶어야 할 RDB 쓰기가 없어(GetMemberIdPort는 읽기 전용,
+// 나머지는 Redis/무상태 JWT) 의도적으로 @CommandService(트랜잭션)를 걸지 않는다.
+// 걸면 Apple 인증 코드 교환(HTTP, 최대 8초) 동안 DB 커넥션을 불필요하게 점유하게 된다.
+@Service
 class LoginService(
     private val oauthPort: OauthPort,
     private val getMemberIdPort: GetMemberIdPort,
@@ -22,7 +25,9 @@ class LoginService(
     private val withdrawnAccountPort: WithdrawnAccountPort,
 ) : LoginUseCase {
     override fun login(command: LoginCommand): LoginResult {
-        val profile = oauthPort.fetchProfile(command.provider, command.oauthAccessToken)
+        command.requireAppleAuthorizationCode()
+
+        val profile = oauthPort.fetchProfile(command.provider, command.oauthAccessToken, command.authorizationCode)
         val memberId = getMemberIdPort.findIdByOauth(profile.provider, profile.providerId)
 
         return if (memberId == null) {

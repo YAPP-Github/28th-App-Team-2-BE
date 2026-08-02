@@ -1,5 +1,6 @@
 package com.yapp.todakun.auth.application.service
 
+import com.yapp.todakun.auth.exception.AppleAuthorizationCodeRequiredException
 import com.yapp.todakun.auth.exception.ReSignupRestrictedException
 import com.yapp.todakun.auth.fixture.AuthFixture
 import com.yapp.todakun.auth.fixture.TokenFixture
@@ -9,6 +10,7 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.auth.port.outbound.WithdrawnAccountPort
 import com.yapp.todakun.shared.GetMemberIdPort
+import com.yapp.todakun.shared.OauthProvider
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
@@ -17,6 +19,9 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+
+// Apple 로그인에서만 전달되는 authorization code(Kakao/Google은 불필요) — OauthPort까지 그대로 전달되는지 검증한다.
+private const val AUTHORIZATION_CODE = "test-authorization-code"
 
 class LoginServiceTest :
     DescribeSpec(
@@ -112,6 +117,36 @@ class LoginServiceTest :
                         shouldThrow<ReSignupRestrictedException> { loginService.login(command) }
 
                         verify(exactly = 0) { onboardingTokenPort.issue(any()) }
+                    }
+                }
+
+                context("provider가 APPLE이고 authorizationCode가 있으면") {
+                    it("OauthPort.fetchProfile에 authorizationCode를 그대로 전달한다") {
+                        val appleCommand =
+                            AuthFixture.loginCommand(provider = OauthProvider.APPLE, authorizationCode = AUTHORIZATION_CODE)
+                        val appleProfile = AuthFixture.oauthMemberProfile(provider = OauthProvider.APPLE)
+                        every {
+                            oauthPort.fetchProfile(appleCommand.provider, appleCommand.oauthAccessToken, appleCommand.authorizationCode)
+                        } returns appleProfile
+                        every { getMemberIdPort.findIdByOauth(appleProfile.provider, appleProfile.providerId) } returns memberId
+                        every { accessTokenPort.generate(memberId) } returns issuedAccessToken
+                        every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
+
+                        loginService.login(appleCommand)
+
+                        verify(exactly = 1) {
+                            oauthPort.fetchProfile(appleCommand.provider, appleCommand.oauthAccessToken, appleCommand.authorizationCode)
+                        }
+                    }
+                }
+
+                context("provider가 APPLE이고 authorizationCode가 없으면") {
+                    it("AppleAuthorizationCodeRequiredException을 던지고 OauthPort를 호출하지 않는다") {
+                        val appleCommand = AuthFixture.loginCommand(provider = OauthProvider.APPLE, authorizationCode = null)
+
+                        shouldThrow<AppleAuthorizationCodeRequiredException> { loginService.login(appleCommand) }
+
+                        verify(exactly = 0) { oauthPort.fetchProfile(any(), any(), any()) }
                     }
                 }
             }
