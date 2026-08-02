@@ -27,7 +27,6 @@ class UpdateMemberService(
                 birthTime = command.birthTime,
                 job = command.job,
                 relationshipStatus = command.relationshipStatus,
-                favoriteFortuneCategories = command.favoriteFortuneCategories,
             )
         memberRepository.save(updated)
 
