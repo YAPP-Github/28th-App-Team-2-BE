@@ -68,7 +68,7 @@ class SignupServiceTest :
 
                         verify(
                             exactly = 0,
-                        ) { createMemberPort.create(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+                        ) { createMemberPort.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
                         verify(exactly = 0) { createDailyFortunePort.create(any(), any()) }
                     }
                 }
@@ -87,7 +87,6 @@ class SignupServiceTest :
                                 gender = command.gender,
                                 job = command.job,
                                 relationshipStatus = command.relationshipStatus,
-                                favoriteFortuneCategories = command.favoriteFortuneCategories,
                             )
                         } returns memberId
                         every {

@@ -231,8 +231,6 @@ class AuthControllerIntegrationTest(
                     gender = Gender.MALE.name,
                     job = Job.STUDENT.name,
                     relationshipStatus = RelationshipStatus.SOLO.name,
-                    favoriteFortuneCategories =
-                        listOf(FortuneCategory.RELATIONSHIP.name, FortuneCategory.MONEY.name, FortuneCategory.HEALTH.name),
                 ).toJson()
         }
 
