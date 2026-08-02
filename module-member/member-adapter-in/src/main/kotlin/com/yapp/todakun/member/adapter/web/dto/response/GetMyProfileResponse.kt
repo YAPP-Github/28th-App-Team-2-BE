@@ -16,7 +16,6 @@ data class GetMyProfileResponse(
     val calendarType: String,
     val job: String,
     val relationshipStatus: String,
-    val favoriteFortuneCategories: List<String>,
 ) {
     companion object {
         fun from(member: Member): GetMyProfileResponse =
@@ -30,7 +29,6 @@ data class GetMyProfileResponse(
                 calendarType = member.calendarType.name,
                 job = member.job.name,
                 relationshipStatus = member.relationshipStatus.name,
-                favoriteFortuneCategories = member.favoriteFortuneCategories.map { it.name },
             )
     }
 }

@@ -88,7 +88,7 @@ class CreateDailyFortuneService(
             gender = memberProfile.gender,
             job = memberProfile.job,
             relationshipStatus = memberProfile.relationshipStatus,
-            favoriteFortuneCategories = memberProfile.favoriteFortuneCategories,
+            fortuneCategories = FortuneCategory.entries.toList(),
             dayMaster = chart.dayMaster,
             yearPillar = chart.yearPillar.toPillar(),
             monthPillar = chart.monthPillar.toPillar(),

@@ -45,7 +45,6 @@ object AuthFixture {
         gender: String = GENDER,
         job: String = JOB,
         relationshipStatus: String = RELATIONSHIP_STATUS,
-        favoriteFortuneCategories: List<String> = listOf("RELATIONSHIP", "MONEY", "HEALTH"),
     ): SignupCommand =
         SignupCommand(
             onboardingToken = onboardingToken,
@@ -56,7 +55,6 @@ object AuthFixture {
             gender = gender,
             job = job,
             relationshipStatus = relationshipStatus,
-            favoriteFortuneCategories = favoriteFortuneCategories,
         )
 
     fun logoutCommand(accessToken: String = ACCESS_TOKEN): LogoutCommand = LogoutCommand(accessToken = accessToken)

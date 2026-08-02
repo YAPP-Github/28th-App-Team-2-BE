@@ -9,6 +9,7 @@ import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dayfortune.port.outbound.Pillar
 import com.yapp.todakun.dayfortune.repository.DaySelectionFortuneRepository
+import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetDailyPillarPort
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
 import com.yapp.todakun.shared.GetSajuChartPort
@@ -76,7 +77,7 @@ class CreateOneDaySelectionFortuneService(
             gender = memberProfile.gender,
             job = memberProfile.job,
             relationshipStatus = memberProfile.relationshipStatus,
-            favoriteFortuneCategories = memberProfile.favoriteFortuneCategories,
+            fortuneCategories = FortuneCategory.entries.toList(),
             dayMaster = chart.dayMaster,
             yearPillar = chart.yearPillar.toPillar(),
             monthPillar = chart.monthPillar.toPillar(),

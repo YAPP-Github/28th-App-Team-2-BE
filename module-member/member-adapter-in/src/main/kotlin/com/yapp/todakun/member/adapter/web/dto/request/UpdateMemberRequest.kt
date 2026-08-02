@@ -7,13 +7,11 @@ import com.yapp.todakun.member.Job
 import com.yapp.todakun.member.RelationshipStatus
 import com.yapp.todakun.member.adapter.web.dto.toMemberEnum
 import com.yapp.todakun.member.port.inbound.UpdateMemberCommand
-import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.web.validation.ValidEnum
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.PastOrPresent
-import jakarta.validation.constraints.Size
 import java.time.LocalDate
 import java.util.UUID
 
@@ -46,10 +44,6 @@ data class UpdateMemberRequest(
     @field:NotBlank(message = "연애 상태를 입력해 주세요.")
     @field:ValidEnum(enumClass = RelationshipStatus::class, message = "올바른 연애 상태 값이 아닙니다.")
     val relationshipStatus: String,
-    @field:Schema(description = "관심 운세 카테고리 목록", example = """["RELATIONSHIP", "MONEY"]""")
-    @field:Size(min = 1, max = 5, message = "관심 운세는 1~5개 선택해야 합니다.")
-    @field:ValidEnum(enumClass = FortuneCategory::class, message = "올바른 관심 운세 값이 아닙니다.")
-    val favoriteFortuneCategories: List<String>,
 ) {
     fun toCommand(memberId: UUID) =
         UpdateMemberCommand(
@@ -60,6 +54,5 @@ data class UpdateMemberRequest(
             birthTime = birthTime.toMemberEnum<BirthTime>(),
             job = job.toMemberEnum<Job>(),
             relationshipStatus = relationshipStatus.toMemberEnum<RelationshipStatus>(),
-            favoriteFortuneCategories = favoriteFortuneCategories.map { it.toMemberEnum<FortuneCategory>() }.toSet(),
         )
 }

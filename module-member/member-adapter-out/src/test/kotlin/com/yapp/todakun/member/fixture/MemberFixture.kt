@@ -7,7 +7,6 @@ import com.yapp.todakun.member.Job
 import com.yapp.todakun.member.Member
 import com.yapp.todakun.member.RelationshipStatus
 import com.yapp.todakun.member.Role
-import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.OauthProvider
 import java.time.LocalDate
 import java.util.UUID
@@ -29,8 +28,6 @@ object MemberFixture {
         providerId: String = PROVIDER_ID,
         job: Job = Job.STUDENT,
         relationshipStatus: RelationshipStatus = RelationshipStatus.SOLO,
-        favoriteFortuneCategories: Set<FortuneCategory> =
-            setOf(FortuneCategory.RELATIONSHIP, FortuneCategory.MONEY, FortuneCategory.HEALTH),
     ): Member =
         Member.reconstitute(
             id = id,
@@ -44,6 +41,5 @@ object MemberFixture {
             providerId = providerId,
             job = job,
             relationshipStatus = relationshipStatus,
-            favoriteFortuneCategories = favoriteFortuneCategories,
         )
 }

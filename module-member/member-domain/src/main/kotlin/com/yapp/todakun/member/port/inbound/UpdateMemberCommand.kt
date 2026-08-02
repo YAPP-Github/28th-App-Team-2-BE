@@ -5,7 +5,6 @@ import com.yapp.todakun.member.CalendarType
 import com.yapp.todakun.member.Gender
 import com.yapp.todakun.member.Job
 import com.yapp.todakun.member.RelationshipStatus
-import com.yapp.todakun.shared.FortuneCategory
 import java.time.LocalDate
 import java.util.UUID
 
@@ -18,5 +17,4 @@ data class UpdateMemberCommand(
     val birthTime: BirthTime,
     val job: Job,
     val relationshipStatus: RelationshipStatus,
-    val favoriteFortuneCategories: Set<FortuneCategory>,
 )

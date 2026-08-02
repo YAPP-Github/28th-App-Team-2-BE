@@ -14,7 +14,7 @@ data class MemberSajuProfile(
     val gender: String,
     val job: String,
     val relationshipStatus: String,
-    val favoriteFortuneCategories: List<FortuneCategory>,
+    val fortuneCategories: List<FortuneCategory>,
     val dayMaster: String,
     val yearPillar: Pillar,
     val monthPillar: Pillar,

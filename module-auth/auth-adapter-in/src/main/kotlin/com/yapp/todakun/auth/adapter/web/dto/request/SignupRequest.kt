@@ -1,8 +1,6 @@
 package com.yapp.todakun.auth.adapter.web.dto.request
 
 import com.yapp.todakun.auth.port.inbound.SignupCommand
-import com.yapp.todakun.shared.FortuneCategory
-import com.yapp.todakun.web.validation.ValidEnum
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -47,10 +45,6 @@ data class SignupRequest(
     @field:NotBlank(message = "연애 상태를 입력해 주세요.")
     @field:Pattern(regexp = "^(SOLO|DATING|MARRY|REMARRY)$", message = "올바른 연애 상태 값이 아닙니다.")
     val relationshipStatus: String,
-    @field:Schema(description = "관심 운세 카테고리 목록", example = """["RELATIONSHIP", "MONEY"]""")
-    @field:Size(min = 1, max = 5, message = "관심 운세는 1~5개 선택해야 합니다.")
-    @field:ValidEnum(enumClass = FortuneCategory::class, message = "올바른 관심 운세 값이 아닙니다.")
-    val favoriteFortuneCategories: List<String>,
 ) {
     fun toCommand() =
         SignupCommand(
@@ -62,6 +56,5 @@ data class SignupRequest(
             gender = gender,
             job = job,
             relationshipStatus = relationshipStatus,
-            favoriteFortuneCategories = favoriteFortuneCategories,
         )
 }

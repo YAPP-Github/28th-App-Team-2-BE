@@ -11,5 +11,4 @@ data class SignupCommand(
     val gender: String,
     val job: String,
     val relationshipStatus: String,
-    val favoriteFortuneCategories: List<String>,
 )
