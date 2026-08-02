@@ -169,7 +169,6 @@ private fun memberFortuneProfile(): MemberFortuneProfile =
         gender = "MALE",
         job = "WORKER",
         relationshipStatus = "SOLO",
-        favoriteFortuneCategories = listOf(FortuneCategory.LOVE, FortuneCategory.MONEY),
     )
 
 private fun generatedDaySelectionFortune(

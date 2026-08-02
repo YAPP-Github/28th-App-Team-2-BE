@@ -119,7 +119,7 @@ private fun memberSajuProfile(): MemberSajuProfile =
         gender = "MALE",
         job = "WORKER",
         relationshipStatus = "SOLO",
-        favoriteFortuneCategories = listOf(FortuneCategory.LOVE, FortuneCategory.MONEY),
+        fortuneCategories = FortuneCategory.entries.toList(),
         dayMaster = "갑",
         yearPillar = pillar(stem = "갑", branch = "자"),
         monthPillar = pillar(stem = "을", branch = "축"),
