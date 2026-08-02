@@ -14,6 +14,9 @@ spring:
     show-sql: false
     hibernate:
       ddl-auto: update  # 자동 스키마 생성 사용
+  batch:
+    jdbc:
+      initialize-schema: always  # Spring Batch 메타데이터 테이블 자동 생성(이미 있으면 스킵되는 멱등 동작)
   ai:
     vertex:
       ai:

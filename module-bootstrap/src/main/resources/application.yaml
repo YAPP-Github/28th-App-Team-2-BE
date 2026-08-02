@@ -15,6 +15,9 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  batch:
+    job:
+      enabled: false  # 배치 Job은 3시 스케줄러(JobLauncher 직접 호출)로만 트리거 — 앱 기동 시 자동 실행 방지
 
 springdoc:
   swagger-ui:

@@ -12,6 +12,11 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     show-sql: false
+  # Spring Batch 메타데이터 테이블(BATCH_JOB_INSTANCE 등)은 자동 생성하지 않는다.
+  # 배포 전 운영 DB에 spring-batch-core가 제공하는 org/springframework/batch/core/schema-postgresql.sql을 1회 수동 실행해야 한다.
+  batch:
+    jdbc:
+      initialize-schema: never
   ai:
     vertex:
       ai:

@@ -17,6 +17,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  batch:
+    jdbc:
+      initialize-schema: always  # Spring Batch 메타데이터 테이블 자동 생성(이미 있으면 스킵되는 멱등 동작)
   ai:
     vertex:
       ai:
