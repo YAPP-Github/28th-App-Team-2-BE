@@ -59,7 +59,7 @@ class VertexAiYearSelectionFortuneAdapter(
         - Gender: ${profile.gender}
         - Job: ${profile.job}
         - Relationship status: ${profile.relationshipStatus}
-        - Favorite fortune categories: ${profile.favoriteFortuneCategories.joinToString { it.label }}
+        - Fortune categories to cover: ${profile.fortuneCategories.joinToString { it.label }}
 
         [Saju Chart]
         - Day Master: ${profile.dayMaster}
