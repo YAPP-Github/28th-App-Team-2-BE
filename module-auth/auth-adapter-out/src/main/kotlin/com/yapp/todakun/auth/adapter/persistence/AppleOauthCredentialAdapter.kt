@@ -41,7 +41,7 @@ class AppleOauthCredentialAdapter(
                 ?.copy(clientId = clientId, refreshToken = refreshToken)
                 ?: AppleOauthCredential.create(providerId, clientId, refreshToken)
 
-        return appleOauthCredentialJpaRepository.save(AppleOauthCredentialJpaEntity.fromDomain(credential)).toDomain()
+        return appleOauthCredentialJpaRepository.saveAndFlush(AppleOauthCredentialJpaEntity.fromDomain(credential)).toDomain()
     }
 
     override fun find(providerId: String): AppleOauthCredential? =
