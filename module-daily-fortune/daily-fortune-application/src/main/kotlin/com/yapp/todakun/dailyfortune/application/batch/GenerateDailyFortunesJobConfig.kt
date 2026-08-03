@@ -9,14 +9,11 @@ import org.springframework.batch.core.listener.JobExecutionListener
 import org.springframework.batch.core.repository.JobRepository
 import org.springframework.batch.core.step.Step
 import org.springframework.batch.core.step.builder.StepBuilder
-import org.springframework.batch.infrastructure.item.ItemProcessor
 import org.springframework.batch.infrastructure.item.ItemReader
 import org.springframework.batch.infrastructure.item.ItemWriter
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.transaction.PlatformTransactionManager
-import java.time.LocalDate
 import java.util.UUID
 
 private const val GENERATE_DAILY_FORTUNES_JOB_NAME = "generateDailyFortunesJob"
@@ -51,7 +48,7 @@ class GenerateDailyFortunesJobConfig(
     @Bean
     fun generateDailyFortunesStep(
         memberIdItemReader: ItemReader<UUID>,
-        dailyFortuneItemProcessor: ItemProcessor<UUID, UUID>,
+        dailyFortuneItemProcessor: DailyFortuneItemProcessor,
     ): Step =
         StepBuilder(GENERATE_DAILY_FORTUNES_STEP_NAME, jobRepository)
             .chunk<UUID, UUID>(1)
@@ -67,8 +64,5 @@ class GenerateDailyFortunesJobConfig(
 
     @Bean
     @StepScope
-    fun dailyFortuneItemProcessor(
-        // jobParameters는 StepScope가 실행 시점에 StepContext.getJobParameters()로 동적 등록하는 SpEL 변수라, IDE의 정적 분석은 못 잡아낸다.
-        @Value("#{jobParameters['fortuneDate']}") fortuneDate: String,
-    ): ItemProcessor<UUID, UUID> = DailyFortuneItemProcessor(createDailyFortunePort, LocalDate.parse(fortuneDate))
+    fun dailyFortuneItemProcessor(): DailyFortuneItemProcessor = DailyFortuneItemProcessor(createDailyFortunePort)
 }

@@ -5,8 +5,11 @@ import com.yapp.todakun.shared.CreateDailyFortunePort
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import org.springframework.batch.core.job.parameters.JobParametersBuilder
+import org.springframework.batch.core.step.StepExecution
 import java.time.LocalDate
 import java.util.UUID
 
@@ -17,7 +20,14 @@ class DailyFortuneItemProcessorTest :
     DescribeSpec({
         val createDailyFortunePort = mockk<CreateDailyFortunePort>()
         val fortuneDate = LocalDate.of(2026, 6, 24)
-        val processor = DailyFortuneItemProcessor(createDailyFortunePort, fortuneDate)
+        val processor = DailyFortuneItemProcessor(createDailyFortunePort)
+        val stepExecution = mockk<StepExecution>()
+
+        every { stepExecution.jobParameters } returns
+            JobParametersBuilder().addString("fortuneDate", fortuneDate.toString()).toJobParameters()
+        processor.beforeStep(stepExecution)
+
+        afterTest { clearMocks(createDailyFortunePort) }
 
         describe("process") {
             context("오늘의 운세 생성이 성공하면") {
