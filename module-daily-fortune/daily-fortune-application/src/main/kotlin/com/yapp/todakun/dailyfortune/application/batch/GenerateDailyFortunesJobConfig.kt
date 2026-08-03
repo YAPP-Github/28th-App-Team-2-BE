@@ -5,6 +5,7 @@ import com.yapp.todakun.shared.GetMemberIdsPort
 import org.springframework.batch.core.configuration.annotation.StepScope
 import org.springframework.batch.core.job.Job
 import org.springframework.batch.core.job.builder.JobBuilder
+import org.springframework.batch.core.listener.JobExecutionListener
 import org.springframework.batch.core.repository.JobRepository
 import org.springframework.batch.core.step.Step
 import org.springframework.batch.core.step.builder.StepBuilder
@@ -35,10 +36,17 @@ class GenerateDailyFortunesJobConfig(
     private val createDailyFortunePort: CreateDailyFortunePort,
 ) {
     @Bean
-    fun generateDailyFortunesJob(generateDailyFortunesStep: Step): Job =
+    fun generateDailyFortunesJob(
+        generateDailyFortunesStep: Step,
+        dailyFortuneJobExecutionListener: JobExecutionListener,
+    ): Job =
         JobBuilder(GENERATE_DAILY_FORTUNES_JOB_NAME, jobRepository)
             .start(generateDailyFortunesStep)
+            .listener(dailyFortuneJobExecutionListener)
             .build()
+
+    @Bean
+    fun dailyFortuneJobExecutionListener(): JobExecutionListener = DailyFortuneJobExecutionListener()
 
     @Bean
     fun generateDailyFortunesStep(
