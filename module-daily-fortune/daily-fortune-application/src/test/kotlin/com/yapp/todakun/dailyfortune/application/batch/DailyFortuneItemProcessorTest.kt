@@ -1,0 +1,39 @@
+package com.yapp.todakun.dailyfortune.application.batch
+
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
+import com.yapp.todakun.shared.CreateDailyFortunePort
+import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
+import java.time.LocalDate
+import java.util.UUID
+
+private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
+private val DAILY_FORTUNE_ID = UUID.fromString("018f0000-0000-7000-8000-000000000002")
+
+class DailyFortuneItemProcessorTest :
+    DescribeSpec({
+        val createDailyFortunePort = mockk<CreateDailyFortunePort>()
+        val fortuneDate = LocalDate.of(2026, 6, 24)
+        val processor = DailyFortuneItemProcessor(createDailyFortunePort, fortuneDate)
+
+        describe("process") {
+            context("오늘의 운세 생성이 성공하면") {
+                it("생성된 id를 반환한다") {
+                    every { createDailyFortunePort.create(MEMBER_ID, fortuneDate) } returns DAILY_FORTUNE_ID
+
+                    processor.process(MEMBER_ID) shouldBe DAILY_FORTUNE_ID
+                }
+            }
+
+            context("오늘의 운세 생성 중 예외가 발생하면") {
+                it("null을 반환해 해당 회원만 건너뛴다") {
+                    every { createDailyFortunePort.create(MEMBER_ID, fortuneDate) } throws DailyFortuneGenerationFailedException()
+
+                    processor.process(MEMBER_ID).shouldBeNull()
+                }
+            }
+        }
+    })
