@@ -4,11 +4,11 @@ import com.yapp.todakun.dailyfortune.port.inbound.GenerateDailyFortunesUseCase
 import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.GetMemberIdsPort
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.util.UUID
 
-// Spring Batch(Job/Step/Chunk) 도입 전 "before" 성능 베이스라인용 순차 구현. 배치 구현 완료 후 대체된다.
+// Spring Batch(GenerateDailyFortunesBatchService) 도입 전 순차 구현. Spring 빈으로 등록하지 않고,
+// before/after 성능 비교 벤치마크에서 직접 생성해 비교군으로만 쓴다.
 internal const val PAGE_SIZE = 100
 
 /**
@@ -19,7 +19,6 @@ internal const val PAGE_SIZE = 100
  * [CreateDailyFortunePort] 구현체가 이미 자체 트랜잭션(@CommandService)을 갖기 때문에, 트랜잭션을 걸지 않는다.
  * 따라서 회원별 호출은 각각 독립된 트랜잭션으로 커밋/롤백된다.
  */
-@Component
 class GenerateDailyFortunesService(
     private val getMemberIdsPort: GetMemberIdsPort,
     private val createDailyFortunePort: CreateDailyFortunePort,
