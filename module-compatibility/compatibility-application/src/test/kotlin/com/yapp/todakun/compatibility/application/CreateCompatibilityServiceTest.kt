@@ -6,17 +6,14 @@ import com.yapp.todakun.compatibility.CompatibilityRelationshipType
 import com.yapp.todakun.compatibility.SajuCompatibility
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiPort
 import com.yapp.todakun.compatibility.port.outbound.GeneratedCompatibility
-import com.yapp.todakun.compatibility.port.outbound.SajuCompatibilityRepository
 import com.yapp.todakun.shared.CompatibilityChartView
 import com.yapp.todakun.shared.CompatibilityChartsView
 import com.yapp.todakun.shared.GetSajuChartsForCompatibilityPort
 import com.yapp.todakun.shared.PillarSummary
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -28,12 +25,12 @@ import kotlin.uuid.ExperimentalUuidApi
 class CreateCompatibilityServiceTest :
     DescribeSpec({
         val getSajuChartsForCompatibilityPort = mockk<GetSajuChartsForCompatibilityPort>()
-        val sajuCompatibilityRepository = mockk<SajuCompatibilityRepository>()
+        val sajuCompatibilityTransactionalStore = mockk<SajuCompatibilityTransactionalStore>()
         val compatibilityAiPort = mockk<CompatibilityAiPort>()
         val service =
             CreateCompatibilityService(
                 getSajuChartsForCompatibilityPort,
-                sajuCompatibilityRepository,
+                sajuCompatibilityTransactionalStore,
                 compatibilityAiPort,
             )
 
@@ -41,11 +38,10 @@ class CreateCompatibilityServiceTest :
         val partnerLinkId = UUID.fromString("018f0000-0000-7000-8000-0000000000d2")
         val charts = compatibilityChartsView()
 
-        afterTest { clearMocks(getSajuChartsForCompatibilityPort, sajuCompatibilityRepository, compatibilityAiPort) }
+        afterTest { clearMocks(getSajuChartsForCompatibilityPort, sajuCompatibilityTransactionalStore, compatibilityAiPort) }
 
         beforeTest {
             every { getSajuChartsForCompatibilityPort.getCharts(memberId, partnerLinkId) } returns charts
-            every { sajuCompatibilityRepository.lock(charts.myChartId, charts.partnerChartId) } just Runs
         }
 
         describe("create") {
@@ -53,7 +49,7 @@ class CreateCompatibilityServiceTest :
                 it("AI를 재호출하지 않고 저장된 궁합을 반환한다") {
                     val existing = sajuCompatibility(memberId, charts.myChartId, charts.partnerChartId)
                     every {
-                        sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, charts.myChartId, charts.partnerChartId)
+                        sajuCompatibilityTransactionalStore.findExistingWithLock(memberId, charts.myChartId, charts.partnerChartId)
                     } returns existing
 
                     val result = service.create(memberId, partnerLinkId)
@@ -61,37 +57,39 @@ class CreateCompatibilityServiceTest :
                     result.id shouldBe existing.id
                     result.partnerName shouldBe charts.partnerName
                     verify(exactly = 0) { compatibilityAiPort.generate(any()) }
+                    verify(exactly = 0) { sajuCompatibilityTransactionalStore.saveIfAbsent(any()) }
                 }
             }
 
             context("아직 생성된 적이 없으면") {
                 it("두 명식 오행 계산 + AI 총운으로 궁합을 저장하고 반환한다") {
                     every {
-                        sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, charts.myChartId, charts.partnerChartId)
+                        sajuCompatibilityTransactionalStore.findExistingWithLock(memberId, charts.myChartId, charts.partnerChartId)
                     } returns null
                     every { compatibilityAiPort.generate(any()) } returns generatedCompatibility()
                     val savedSlot = slot<SajuCompatibility>()
-                    every { sajuCompatibilityRepository.save(capture(savedSlot)) } answers { savedSlot.captured }
+                    every { sajuCompatibilityTransactionalStore.saveIfAbsent(capture(savedSlot)) } answers { savedSlot.captured }
 
                     val result = service.create(memberId, partnerLinkId)
 
                     result.relationshipType shouldBe CompatibilityRelationshipType.LOVER
                     savedSlot.captured.ohaengs.sumOf { it.percentage } shouldBe 100
-                    verify(exactly = 1) { sajuCompatibilityRepository.save(any()) }
+                    verify(exactly = 1) { sajuCompatibilityTransactionalStore.saveIfAbsent(any()) }
                 }
 
-                it("락을 선점한 뒤 조회한다") {
+                it("선조회 트랜잭션 → (트랜잭션 밖) AI 호출 → 저장 트랜잭션 순서로 처리한다") {
                     every {
-                        sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, charts.myChartId, charts.partnerChartId)
+                        sajuCompatibilityTransactionalStore.findExistingWithLock(memberId, charts.myChartId, charts.partnerChartId)
                     } returns null
                     every { compatibilityAiPort.generate(any()) } returns generatedCompatibility()
-                    every { sajuCompatibilityRepository.save(any()) } answers { firstArg() }
+                    every { sajuCompatibilityTransactionalStore.saveIfAbsent(any()) } answers { firstArg() }
 
                     service.create(memberId, partnerLinkId)
 
                     verifyOrder {
-                        sajuCompatibilityRepository.lock(charts.myChartId, charts.partnerChartId)
-                        sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, charts.myChartId, charts.partnerChartId)
+                        sajuCompatibilityTransactionalStore.findExistingWithLock(memberId, charts.myChartId, charts.partnerChartId)
+                        compatibilityAiPort.generate(any())
+                        sajuCompatibilityTransactionalStore.saveIfAbsent(any())
                     }
                 }
             }
