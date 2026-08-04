@@ -2,8 +2,8 @@ package com.yapp.todakun.dailyfortune.application.batch
 
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
 import com.yapp.todakun.shared.CreateDailyFortunePort
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -39,10 +39,10 @@ class DailyFortuneItemProcessorTest :
             }
 
             context("오늘의 운세 생성 중 예외가 발생하면") {
-                it("null을 반환해 해당 회원만 건너뛴다") {
+                it("잡지 않고 그대로 전파한다") {
                     every { createDailyFortunePort.create(MEMBER_ID, fortuneDate) } throws DailyFortuneGenerationFailedException()
 
-                    processor.process(MEMBER_ID).shouldBeNull()
+                    shouldThrow<DailyFortuneGenerationFailedException> { processor.process(MEMBER_ID) }
                 }
             }
         }

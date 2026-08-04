@@ -19,11 +19,14 @@ import java.util.UUID
 private const val GENERATE_DAILY_FORTUNES_JOB_NAME = "generateDailyFortunesJob"
 private const val GENERATE_DAILY_FORTUNES_STEP_NAME = "generateDailyFortunesStep"
 private const val MEMBER_ID_PAGE_SIZE = 100
+private const val AI_CALL_RETRY_LIMIT = 3L
 
 /**
  * 오늘의 운세 배치 Job/Step 구성.
  * chunk size는 1로 고정한다 — [CreateDailyFortunePort.create]가 회원 1명 단위로 AI 호출·저장을 자체 트랜잭션(@CommandService)으로
  * 커밋하기 때문에, chunk size를 키우면 여러 회원의 커밋이 하나의 Step 트랜잭션에 묶여 회원별 독립 커밋 격리가 깨진다.
+ * AI 호출 실패는 대부분 일시적이므로 회원당 최대 [AI_CALL_RETRY_LIMIT]회 재시도하고, 그래도 실패하면 해당 회원만
+ * skip해 배치 전체가 중단되지 않게 한다. chunk size가 1이라 재시도 시 재실행 범위도 회원 1명으로 국한되어 안전하다.
  */
 @Configuration
 class GenerateDailyFortunesJobConfig(
@@ -49,12 +52,19 @@ class GenerateDailyFortunesJobConfig(
     fun generateDailyFortunesStep(
         memberIdItemReader: ItemReader<UUID>,
         dailyFortuneItemProcessor: DailyFortuneItemProcessor,
+        dailyFortuneSkipListener: DailyFortuneSkipListener,
     ): Step =
         StepBuilder(GENERATE_DAILY_FORTUNES_STEP_NAME, jobRepository)
             .chunk<UUID, UUID>(1)
             .reader(memberIdItemReader)
             .processor(dailyFortuneItemProcessor)
             .writer(ItemWriter { })
+            .faultTolerant()
+            .retryLimit(AI_CALL_RETRY_LIMIT)
+            .retry(Exception::class.java)
+            .skipLimit(Long.MAX_VALUE)
+            .skip(Exception::class.java)
+            .listener(dailyFortuneSkipListener)
             .transactionManager(transactionManager)
             .build()
 
@@ -65,4 +75,8 @@ class GenerateDailyFortunesJobConfig(
     @Bean
     @StepScope
     fun dailyFortuneItemProcessor(): DailyFortuneItemProcessor = DailyFortuneItemProcessor(createDailyFortunePort)
+
+    @Bean
+    @StepScope
+    fun dailyFortuneSkipListener(): DailyFortuneSkipListener = DailyFortuneSkipListener()
 }

@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 
 /**
  * 오늘의 운세 배치 Job의 시작/종료를 로깅한다.
- * Step이 하나뿐이므로 그 StepExecution의 read/filter count로 처리 현황을 요약한다.
+ * Step이 하나뿐이므로 그 StepExecution의 read/write/skip count로 처리 현황을 요약한다.
  * BATCH_JOB_EXECUTION 메타데이터로도 조회 가능하지만, 새벽 배치 실패를 사람이 로그만으로 바로 알아차릴 수 있게 한다.
  */
 class DailyFortuneJobExecutionListener : JobExecutionListener {
@@ -23,12 +23,12 @@ class DailyFortuneJobExecutionListener : JobExecutionListener {
         val stepExecution = jobExecution.stepExecutions.firstOrNull()
 
         log.info(
-            "오늘의 운세 배치 종료: status={}, duration={}s, readCount={}, writeCount={}, filterCount={}",
+            "오늘의 운세 배치 종료: status={}, duration={}s, readCount={}, writeCount={}, skipCount={}",
             jobExecution.status,
             Duration.between(startTime, endTime).seconds,
             stepExecution?.readCount,
             stepExecution?.writeCount,
-            stepExecution?.filterCount,
+            stepExecution?.skipCount,
         )
     }
 }

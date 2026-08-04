@@ -38,7 +38,7 @@ class DailyFortuneJobExecutionListenerTest :
                     every { jobExecution.stepExecutions } returns listOf(stepExecution)
                     every { stepExecution.readCount } returns 10L
                     every { stepExecution.writeCount } returns 8L
-                    every { stepExecution.filterCount } returns 2L
+                    every { stepExecution.skipCount } returns 2L
 
                     shouldNotThrowAny { listener.afterJob(jobExecution) }
                 }
