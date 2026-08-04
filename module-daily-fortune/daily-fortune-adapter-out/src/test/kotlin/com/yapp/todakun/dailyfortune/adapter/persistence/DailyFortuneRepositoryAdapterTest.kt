@@ -83,5 +83,17 @@ class DailyFortuneRepositoryAdapterTest(
                     }
                 }
             }
+
+            describe("lock") {
+                context("같은 트랜잭션 내에서 동일한 (memberId, fortuneDate)로 재호출하면") {
+                    it("재진입 락이므로 예외 없이 통과한다") {
+                        val memberId = Uuid.generateV7().toJavaUuid()
+                        val fortuneDate = LocalDate.of(2026, 6, 24)
+
+                        adapter.lock(memberId, fortuneDate)
+                        adapter.lock(memberId, fortuneDate)
+                    }
+                }
+            }
         },
     )
