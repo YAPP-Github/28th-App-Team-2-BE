@@ -1,6 +1,5 @@
 package com.yapp.todakun.dayfortune.application.service
 
-import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.dayfortune.DaySelectionFortune
 import com.yapp.todakun.dayfortune.DaySelectionPurpose
 import com.yapp.todakun.dayfortune.FortuneCategoryStar
@@ -8,28 +7,28 @@ import com.yapp.todakun.dayfortune.port.inbound.DaySelectionFortuneResult
 import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dayfortune.port.outbound.Pillar
-import com.yapp.todakun.dayfortune.repository.DaySelectionFortuneRepository
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetDailyPillarPort
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
 import com.yapp.todakun.shared.GetSajuChartPort
 import com.yapp.todakun.shared.PillarSummary
 import com.yapp.todakun.shared.currentDate
+import org.springframework.stereotype.Service
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
- * (memberId, purpose, targetDate) 한 건을 독립 트랜잭션으로 생성한다 — 날짜별로 커밋을 분리해
- * 락/커넥션 점유 시간을 줄이고, 한 날짜의 실패가 이미 커밋된 다른 날짜를 롤백시키지 않게 한다.
- * [DaySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate] 선조회로 멱등성을 보장한다
- * (이미 생성된 조합이면 회원 프로필/사주 조회와 AI 호출을 건너뛰고 그대로 재사용한다).
- * 조회 전에 [DaySelectionFortuneRepository.lock]으로 (memberId, purpose, targetDate) 생성 구간을 직렬화한다
- * (락 없이는 두 요청이 동시에 조회 결과 null을 보고 각각 AI 호출·저장을 시도해 유니크 제약 충돌이 날 수 있다).
+ * (memberId, purpose, targetDate) 한 건 생성을 오케스트레이션한다. 트랜잭션을 걸지 않는다 — 외부 AI 호출을 DB 트랜잭션 밖에서 수행하기 위함이다.
+ * (선조회 → AI 생성 → 저장) 각 DB 단계는 [DaySelectionFortuneTransactionalStore]의 독립 트랜잭션으로 위임하므로,
+ * 날짜별 커밋이 분리되고(한 날짜의 실패가 다른 날짜를 롤백시키지 않음) 락/커넥션 점유 시간이 짧게 유지된다.
+ * 1) [DaySelectionFortuneTransactionalStore.findExistingWithLock]로 락+선조회(멱등: 이미 생성된 조합이면 회원 프로필/사주 조회와 AI 호출을 건너뛴다).
+ * 2) 트랜잭션 밖에서 AI를 호출하고 도메인 엔티티를 조립(검증 포함)한다.
+ * 3) [DaySelectionFortuneTransactionalStore.saveIfAbsent]로 락+재조회 후 멱등 저장한다(동시 요청 시 유니크 제약 충돌 방지).
  */
-@CommandService
+@Service
 class CreateOneDaySelectionFortuneService(
-    private val daySelectionFortuneRepository: DaySelectionFortuneRepository,
+    private val daySelectionFortuneTransactionalStore: DaySelectionFortuneTransactionalStore,
     private val getMemberFortuneProfilePort: GetMemberFortuneProfilePort,
     private val getSajuChartPort: GetSajuChartPort,
     private val getDailyPillarPort: GetDailyPillarPort,
@@ -41,9 +40,7 @@ class CreateOneDaySelectionFortuneService(
         targetDate: LocalDate,
         memberId: UUID,
     ): DaySelectionFortuneResult {
-        daySelectionFortuneRepository.lock(memberId, purpose, targetDate)
-
-        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate)?.let {
+        daySelectionFortuneTransactionalStore.findExistingWithLock(memberId, purpose, targetDate)?.let {
             return DaySelectionFortuneResult.from(it)
         }
 
@@ -51,21 +48,19 @@ class CreateOneDaySelectionFortuneService(
         val dayPillar = getDailyPillarPort.getPillar(targetDate).toPillar()
         val generated = daySelectionFortuneAiPort.generate(profile, purpose, targetDate, dayPillar)
 
-        val saved =
-            daySelectionFortuneRepository.save(
-                DaySelectionFortune.create(
-                    memberId = memberId,
-                    purpose = purpose,
-                    targetDate = targetDate,
-                    currentDate = currentDate(),
-                    score = generated.score,
-                    title = generated.title,
-                    content = generated.content,
-                    fortuneCategories = generated.fortuneCategories.map { FortuneCategoryStar(it.fortuneCategory, it.star) },
-                ),
+        val daySelectionFortune =
+            DaySelectionFortune.create(
+                memberId = memberId,
+                purpose = purpose,
+                targetDate = targetDate,
+                currentDate = currentDate(),
+                score = generated.score,
+                title = generated.title,
+                content = generated.content,
+                fortuneCategories = generated.fortuneCategories.map { FortuneCategoryStar(it.fortuneCategory, it.star) },
             )
 
-        return DaySelectionFortuneResult.from(saved)
+        return DaySelectionFortuneResult.from(daySelectionFortuneTransactionalStore.saveIfAbsent(daySelectionFortune))
     }
 
     private fun buildProfile(memberId: UUID): MemberSajuProfile {
