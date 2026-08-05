@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
+import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -26,7 +27,10 @@ class MemberRepositoryAdapterTest(
         {
             val adapter = MemberRepositoryAdapter(memberJpaRepository)
 
-            fun savedMember() = adapter.save(MemberFixture.create())
+            fun savedMember(
+                id: UUID = Uuid.generateV7().toJavaUuid(),
+                providerId: String = Uuid.generateV7().toString(),
+            ) = adapter.save(MemberFixture.create(id = id, providerId = providerId))
 
             describe("save") {
                 context("신규 회원을 저장하면") {
