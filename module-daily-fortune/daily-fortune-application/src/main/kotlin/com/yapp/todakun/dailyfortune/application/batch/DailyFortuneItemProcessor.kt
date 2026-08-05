@@ -1,6 +1,7 @@
 package com.yapp.todakun.dailyfortune.application.batch
 
 import com.yapp.todakun.shared.CreateDailyFortunePort
+import org.springframework.batch.core.configuration.annotation.StepScope
 import org.springframework.batch.core.listener.StepExecutionListener
 import org.springframework.batch.core.step.StepExecution
 import org.springframework.batch.infrastructure.item.ItemProcessor
@@ -16,7 +17,10 @@ import java.util.UUID
  * fortuneDate는 `#{jobParameters['...']}` SpEL 지연 바인딩 대신 [beforeStep]에서 StepExecution의 JobParameters로 읽는다 —
  * IDE가 SpEL 컨텍스트 변수를 정적으로 해석하지 못해 생기는 오탐(cannot resolve variable)이 애초에 발생하지 않는다.
  * [StepExecutionListener]를 구현하면 SimpleStepBuilder가 processor 등록 시 자동으로 Step 리스너로도 등록한다.
+ * 클래스 레벨의 [StepScope]는 실제 스코프 부여용이 아니라 kotlin-allopen이 CGLIB 프록시 대상으로 인식하게 하는 표시용이다
+ * (실제 스코프는 [GenerateDailyFortunesJobConfig]의 `@Bean` 메서드가 부여, [MemberIdItemReader] 참고).
  */
+@StepScope
 class DailyFortuneItemProcessor(
     private val createDailyFortunePort: CreateDailyFortunePort,
 ) : ItemProcessor<UUID, UUID>, StepExecutionListener {
