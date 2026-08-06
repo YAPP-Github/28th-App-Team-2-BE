@@ -37,6 +37,13 @@ class ChatStreamController(
                     streamChatAnswerUseCase.stream(request.toCommand(memberId), listener)
                 } catch (e: Exception) {
                     listener.onError(e)
+                } catch (e: Throwable) {
+                    // Error(OutOfMemoryError·NoClassDefFoundError 등)로 워커가 죽는 경우.
+                    // 여기서 스트림을 닫아주지 않으면 emitter가 타임아웃(120초)까지 열린 채 남았다가
+                    // 종료 청크 없이 커넥션이 끊긴다(클라이언트에는 스트림 비정상 종료).
+                    // 스트림만 닫고 Error는 그대로 다시 던진다 — 삼키면 JVM 이상을 숨기게 된다.
+                    listener.onError(e)
+                    throw e
                 }
             }
         } catch (e: TaskRejectedException) {

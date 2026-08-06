@@ -64,6 +64,13 @@ class SseEmitterChatStreamListener(
         } catch (e: IllegalStateException) {
             // SseEmitter가 이미 완료/타임아웃된 뒤 send가 호출된 경우(비-I/O 오류). 끊김으로 처리한다.
             disconnected.set(true)
+        } catch (e: Exception) {
+            // 직렬화 실패(HttpMessageNotWritableException) 등 예상 못 한 오류.
+            // 여기서 예외를 밖으로 던지면 호출자가 emitter.complete()에 도달하지 못해 응답이 타임아웃까지
+            // 열린 채 남고, 결국 종료 청크 없이 커넥션이 끊긴다(클라이언트에는 스트림 비정상 종료).
+            // 그래서 삼키고 끊김으로 처리해, 호출자가 항상 complete()까지 진행하게 한다.
+            log.error("SSE 이벤트 전송에 실패했습니다: event={}", eventName, e)
+            disconnected.set(true)
         }
     }
 }
