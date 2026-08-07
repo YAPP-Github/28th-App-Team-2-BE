@@ -1,5 +1,7 @@
 package com.yapp.todakun.dailyfortune.application.batch
 
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneEmptyResponseException
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
 import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.GetMemberIdsPort
 import org.springframework.batch.core.configuration.annotation.StepScope
@@ -61,9 +63,11 @@ class GenerateDailyFortunesJobConfig(
             .writer(ItemWriter { })
             .faultTolerant()
             .retryLimit(AI_CALL_RETRY_LIMIT)
-            .retry(Exception::class.java)
+            .retry(DailyFortuneGenerationFailedException::class.java)
+            .retry(DailyFortuneEmptyResponseException::class.java)
             .skipLimit(Long.MAX_VALUE)
-            .skip(Exception::class.java)
+            .skip(DailyFortuneGenerationFailedException::class.java)
+            .skip(DailyFortuneEmptyResponseException::class.java)
             .listener(dailyFortuneSkipListener)
             .transactionManager(transactionManager)
             .build()
