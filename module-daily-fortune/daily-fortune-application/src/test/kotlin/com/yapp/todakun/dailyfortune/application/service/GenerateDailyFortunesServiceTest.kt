@@ -15,6 +15,9 @@ private val MEMBER_1 = UUID.fromString("018f0000-0000-7000-8000-000000000001")
 private val MEMBER_2 = UUID.fromString("018f0000-0000-7000-8000-000000000002")
 private val DAILY_FORTUNE_ID = UUID.fromString("018f0000-0000-7000-8000-000000000003")
 
+// keyset 페이징 계약(afterMemberId 이후 오름차순 반환)을 지키도록 fullPage.last()보다 큰 값을 쓴다.
+private val NEXT_PAGE_MEMBER = UUID.fromString("018f0000-0000-7000-8000-000000002000")
+
 // MEMBER_1/MEMBER_2(...0001/...0002)와 겹치지 않도록 1000부터 채번한다.
 private fun generateFullPageMemberIds(): List<UUID> = List(PAGE_SIZE) { UUID.fromString("018f0000-0000-7000-8000-%012d".format(it + 1000)) }
 
@@ -59,14 +62,14 @@ class GenerateDailyFortunesServiceTest :
                 it("다음 페이지를 이어서 조회한다") {
                     val fullPage = generateFullPageMemberIds()
                     every { getMemberIdsPort.getMemberIds(null, PAGE_SIZE) } returns fullPage
-                    every { getMemberIdsPort.getMemberIds(fullPage.last(), PAGE_SIZE) } returns listOf(MEMBER_1)
-                    every { getMemberIdsPort.getMemberIds(MEMBER_1, PAGE_SIZE) } returns emptyList()
+                    every { getMemberIdsPort.getMemberIds(fullPage.last(), PAGE_SIZE) } returns listOf(NEXT_PAGE_MEMBER)
+                    every { getMemberIdsPort.getMemberIds(NEXT_PAGE_MEMBER, PAGE_SIZE) } returns emptyList()
                     every { createDailyFortunePort.create(any(), fortuneDate) } returns DAILY_FORTUNE_ID
 
                     service.generate(fortuneDate)
 
                     verify(exactly = 1) { getMemberIdsPort.getMemberIds(fullPage.last(), PAGE_SIZE) }
-                    verify(exactly = 1) { createDailyFortunePort.create(MEMBER_1, fortuneDate) }
+                    verify(exactly = 1) { createDailyFortunePort.create(NEXT_PAGE_MEMBER, fortuneDate) }
                 }
             }
         }
