@@ -2,8 +2,8 @@ package com.yapp.todakun.dailyfortune.application.batch
 
 import org.springframework.batch.core.configuration.support.JdbcDefaultBatchConfiguration
 import org.springframework.batch.core.repository.JobRepository
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializer
-import org.springframework.boot.sql.init.DatabaseInitializationMode
 import org.springframework.boot.sql.init.DatabaseInitializationSettings
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -19,16 +19,20 @@ import javax.sql.DataSource
  * `GenerateDailyFortunesJobConfig`가 이 클래스와 같이 jobRepository를 상속하면 자기 생성자가 자기 자신이 만드는 빈을 요구하는 순환 참조가 되므로, 인프라 전용 클래스로 분리한다.
  * Boot 4는 `spring.batch.jdbc.initialize-schema` 프로퍼티를 더 이상 제공하지 않으므로, spring-batch-core가 내장한 스키마 스크립트를 직접 실행해 메타데이터 테이블을 생성한다.
  * jobRepository()가 부모 클래스 코드에서 곧바로 메타데이터 테이블을 조회하므로, `@DependsOn`으로 스키마 초기화가 먼저 끝나도록 순서를 강제한다(없으면 "relation ... does not exist"로 기동 실패).
- * DatabaseInitializationSettings의 기본 mode는 EMBEDDED라 Postgres 같은 외부 DB에서는 조용히 스크립트를 건너뛰므로 ALWAYS로 명시해야 한다.
+ * DatabaseInitializationSettings의 기본 mode는 EMBEDDED라 Postgres 같은 외부 DB에서는 조용히 스크립트를 건너뛰므로 프로필별로 `batch.schema.initialization-mode`에 명시한다
+ * (운영은 배포 전 수동으로 스키마를 만들고 NEVER로 자동 실행을 막는다).
  */
 @Configuration
-class BatchJdbcConfig : JdbcDefaultBatchConfiguration() {
+@EnableConfigurationProperties(BatchSchemaProperties::class)
+class BatchJdbcConfig(
+    private val batchSchemaProperties: BatchSchemaProperties,
+) : JdbcDefaultBatchConfiguration() {
     @Bean
     fun batchSchemaInitializer(dataSource: DataSource): DataSourceScriptDatabaseInitializer {
         val settings =
             DatabaseInitializationSettings().apply {
                 schemaLocations = listOf("classpath:org/springframework/batch/core/schema-postgresql.sql")
-                mode = DatabaseInitializationMode.ALWAYS
+                mode = batchSchemaProperties.initializationMode
                 // 최초 기동 이후에는 테이블이 이미 있어 매 기동마다 재실행 시 중복 생성 에러가 나므로 계속 진행시킨다.
                 isContinueOnError = true
             }

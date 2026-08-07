@@ -12,11 +12,6 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     show-sql: false
-  # Spring Batch 메타데이터 테이블(BATCH_JOB_INSTANCE 등)은 자동 생성하지 않는다.
-  # 배포 전 운영 DB에 spring-batch-core가 제공하는 org/springframework/batch/core/schema-postgresql.sql을 1회 수동 실행해야 한다.
-  batch:
-    jdbc:
-      initialize-schema: never
   ai:
     vertex:
       ai:
@@ -26,6 +21,12 @@ spring:
           chat:
             options:
               model: ${VERTEX_AI_CHAT_MODEL}
+
+# Spring Batch 메타데이터 테이블(BATCH_JOB_INSTANCE 등)은 자동 생성하지 않는다.
+# 배포 전 운영 DB에 spring-batch-core가 제공하는 org/springframework/batch/core/schema-postgresql.sql을 1회 수동 실행해야 한다.
+batch:
+  schema:
+    initialization-mode: never
 
 # GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
 gcp:

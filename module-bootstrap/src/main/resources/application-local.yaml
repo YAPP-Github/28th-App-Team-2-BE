@@ -17,9 +17,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  batch:
-    jdbc:
-      initialize-schema: always  # Spring Batch 메타데이터 테이블 자동 생성(이미 있으면 스킵되는 멱등 동작)
   ai:
     vertex:
       ai:
@@ -29,6 +26,10 @@ spring:
           chat:
             options:
               model: ${VERTEX_AI_CHAT_MODEL}
+
+batch:
+  schema:
+    initialization-mode: always  # Spring Batch 메타데이터 테이블 자동 생성(이미 있으면 스킵되는 멱등 동작)
 
 # GCP Cloud Storage (raw 클라이언트). 로컬은 gcloud ADC(gcloud auth application-default login) 또는 키 파일로 인증.
 gcp:
