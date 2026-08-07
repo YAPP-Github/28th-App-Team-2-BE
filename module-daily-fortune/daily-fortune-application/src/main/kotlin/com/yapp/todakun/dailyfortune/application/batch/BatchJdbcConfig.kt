@@ -11,7 +11,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.DependsOn
 import javax.sql.DataSource
 
+private const val BATCH_SCHEMA_LOCATION = "classpath:org/springframework/batch/core/schema-postgresql.sql"
 private const val BATCH_REPRESENTATIVE_TABLE = "batch_job_instance"
+private const val BATCH_SCHEMA_INITIALIZER_BEAN = "batchSchemaInitializer"
 
 /**
  * Boot 4의 `BatchAutoConfiguration`은 기본값이 인메모리 JobRepository다
@@ -35,22 +37,22 @@ private const val BATCH_REPRESENTATIVE_TABLE = "batch_job_instance"
 class BatchJdbcConfig(
     private val batchSchemaProperties: BatchSchemaProperties,
 ) : JdbcDefaultBatchConfiguration() {
-    @Bean
+    @Bean(BATCH_SCHEMA_INITIALIZER_BEAN)
     fun batchSchemaInitializer(dataSource: DataSource): DataSourceScriptDatabaseInitializer {
         val settings =
             DatabaseInitializationSettings().apply {
-                schemaLocations = listOf("classpath:org/springframework/batch/core/schema-postgresql.sql")
+                schemaLocations = listOf(BATCH_SCHEMA_LOCATION)
                 mode = if (batchTablesExist(dataSource)) DatabaseInitializationMode.NEVER else batchSchemaProperties.initializationMode
             }
         return DataSourceScriptDatabaseInitializer(dataSource, settings)
     }
 
+    @Bean
+    @DependsOn(BATCH_SCHEMA_INITIALIZER_BEAN)
+    override fun jobRepository(): JobRepository = super.jobRepository()
+
     private fun batchTablesExist(dataSource: DataSource): Boolean =
         dataSource.connection.use { connection ->
             connection.metaData.getTables(null, null, BATCH_REPRESENTATIVE_TABLE, arrayOf("TABLE")).use { it.next() }
         }
-
-    @Bean
-    @DependsOn("batchSchemaInitializer")
-    override fun jobRepository(): JobRepository = super.jobRepository()
 }
