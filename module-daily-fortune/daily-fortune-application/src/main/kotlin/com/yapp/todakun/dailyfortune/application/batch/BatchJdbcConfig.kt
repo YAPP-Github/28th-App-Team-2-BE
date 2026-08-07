@@ -15,8 +15,8 @@ import javax.sql.DataSource
 private const val BATCH_SCHEMA_LOCATION = "classpath:org/springframework/batch/core/schema-postgresql.sql"
 private const val BATCH_SCHEMA_INITIALIZER_BEAN = "batchSchemaInitializer"
 
-// schema-postgresql.sql이 생성하는 테이블 전체 목록. 대표 테이블 1개만 확인하면 이전 초기화가 일부 테이블만 만들고 중단된
-// 경우를 놓칠 수 있어, 스크립트가 정의하는 모든 테이블의 존재 여부를 확인한다.
+// schema-postgresql.sql이 생성하는 테이블/시퀀스 전체 목록.
+// 테이블만 확인하면 테이블 생성 후 시퀀스 생성 전에 초기화가 중단된 경우를 놓쳐, ID 채번용 시퀀스가 없는 상태로 NEVER 처리될 수 있다.
 private val BATCH_TABLES =
     listOf(
         "batch_job_instance",
@@ -25,6 +25,14 @@ private val BATCH_TABLES =
         "batch_job_execution_context",
         "batch_step_execution",
         "batch_step_execution_context",
+    )
+
+// Spring Batch 6부터 BATCH_JOB_SEQ가 BATCH_JOB_INSTANCE_SEQ로 이름이 바뀌었다(schema-postgresql.sql 기준으로 확정).
+private val BATCH_SEQUENCES =
+    listOf(
+        "batch_job_instance_seq",
+        "batch_job_execution_seq",
+        "batch_step_execution_seq",
     )
 
 // pg_advisory_lock 키(임의 상수). 이 락은 스키마 초기화 직렬화 전용이므로 다른 advisory lock 용도와 겹치지만 않으면 된다.
@@ -43,7 +51,7 @@ private const val BATCH_SCHEMA_ADVISORY_LOCK_KEY = 8_412_037_501L
  * (운영은 배포 전 수동으로 스키마를 만들고 NEVER로 자동 실행을 막는다).
  * spring-batch-core가 내장한 schema-postgresql.sql은 IF NOT EXISTS가 없어 테이블이 이미 있는 상태에서 재실행하면 "relation already exists"가 발생한다.
  * 스크립트를 직접 포크해 IF NOT EXISTS를 추가하면 라이브러리 스키마 변경(컬럼 추가 등)을 조용히 놓칠 위험이 있으므로,
- * 대신 [batchTablesExist]로 [BATCH_TABLES] 전체의 존재 여부를 먼저 확인해 이미 있으면 NEVER로 스크립트 실행 자체를 건너뛴다.
+ * 대신 [batchTablesExist]로 [BATCH_TABLES]·[BATCH_SEQUENCES] 전체의 존재 여부를 먼저 확인해 이미 있으면 NEVER로 스크립트 실행 자체를 건너뛴다.
  * isContinueOnError로 에러를 삼키면 "relation already exists"뿐 아니라 진짜 스키마 실패까지 조용히 통과시켜
  * jobRepository() 실행 시점에야 "relation ... does not exist"로 뒤늦게 실패하므로 사용하지 않는다.
  * blue/green 배포 전환 구간에는 신·구 인스턴스가 동시에 떠 있어, [batchTablesExist] 체크와 스크립트 실행 사이에 경쟁 조건이 생길 수 있다
@@ -89,7 +97,14 @@ class BatchJdbcConfig(
     }
 
     private fun batchTablesExist(connection: Connection): Boolean =
-        BATCH_TABLES.all { table ->
-            connection.metaData.getTables(null, connection.schema, table, arrayOf("TABLE")).use { it.next() }
+        batchSchemaObjectsExist(connection, BATCH_TABLES, "TABLE") && batchSchemaObjectsExist(connection, BATCH_SEQUENCES, "SEQUENCE")
+
+    private fun batchSchemaObjectsExist(
+        connection: Connection,
+        names: List<String>,
+        type: String,
+    ): Boolean =
+        names.all { name ->
+            connection.metaData.getTables(null, connection.schema, name, arrayOf(type)).use { it.next() }
         }
 }
