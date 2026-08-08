@@ -5,6 +5,7 @@ import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.CachingConfigurer
 import org.springframework.cache.annotation.EnableCaching
 import org.springframework.cache.interceptor.CacheErrorHandler
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.data.redis.cache.RedisCacheConfiguration
@@ -35,12 +36,17 @@ import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
  * 캐시가 채워져 롤백 시 존재하지 않는 데이터가 캐시에 영구히 남을 수 있다. 트랜잭션 기본 순서
  * ([Ordered.LOWEST_PRECEDENCE])보다 한 단계 앞세워 캐싱이 항상 트랜잭션 바깥(커밋 이후)에서
  * 동작하도록 고정한다. 읽기 전용 캐시(today-fortune 등)에는 영향이 없다.
+ *
+ * `cacheManager()`에 `@Bean`을 붙여 [CachingConfigurer]가 내부적으로 쓰는 것과는 별개로
+ * 컨테이너에 `CacheManager` 빈으로도 등록한다 — `@Bean` 없이 override만 하면 캐싱 AOP 프록시는
+ * 정상 동작하지만 다른 컴포넌트(테스트 등)가 `CacheManager`를 주입받을 수 없다.
  */
 @Configuration
 @EnableCaching(order = Ordered.LOWEST_PRECEDENCE - 1)
 class RedisCacheConfig(
     private val redisConnectionFactory: RedisConnectionFactory,
 ) : CachingConfigurer {
+    @Bean
     override fun cacheManager(): CacheManager {
         val defaultConfig = defaultCacheConfiguration()
         val ttlConfigurations = CacheNames.ttlByCacheName.mapValues { (_, ttl) -> defaultConfig.entryTtl(ttl) }

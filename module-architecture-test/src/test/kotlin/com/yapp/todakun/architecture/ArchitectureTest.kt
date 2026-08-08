@@ -26,6 +26,19 @@ class ArchitectureTest {
                     clazz.annotations.none { it.name == "SpringBootApplication" }
             }
 
+    /** 도메인 클래스 안이 아니라 함수 자체(멤버 함수 포함)를 대상으로 한 순수 도메인 패키지 함수. */
+    private val domainFunctions
+        get() =
+            scope.functions().filter { function ->
+                !function.resideInPackage("..application..") &&
+                    !function.resideInPackage("..adapter..") &&
+                    !function.resideInPackage("..shared..") &&
+                    !function.resideInPackage("..common..") &&
+                    !function.resideInPackage("..architecture..") &&
+                    !function.resideInPackage("..web..") &&
+                    !function.resideInPackage("..config..")
+            }
+
     @Test
     fun `도메인 클래스는 Spring 어노테이션을 사용하지 않는다`() {
         domainClasses.forEach { clazz ->
@@ -47,19 +60,6 @@ class ArchitectureTest {
             }
         }
     }
-
-    /** 도메인 클래스 안이 아니라 함수 자체(멤버 함수 포함)를 대상으로 한 순수 도메인 패키지 함수. */
-    private val domainFunctions
-        get() =
-            scope.functions().filter { function ->
-                !function.resideInPackage("..application..") &&
-                    !function.resideInPackage("..adapter..") &&
-                    !function.resideInPackage("..shared..") &&
-                    !function.resideInPackage("..common..") &&
-                    !function.resideInPackage("..architecture..") &&
-                    !function.resideInPackage("..web..") &&
-                    !function.resideInPackage("..config..")
-            }
 
     @Test
     fun `도메인 함수는 Spring 어노테이션을 사용하지 않는다`() {
