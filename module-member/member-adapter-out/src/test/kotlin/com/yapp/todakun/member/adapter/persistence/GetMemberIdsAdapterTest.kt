@@ -19,11 +19,12 @@ class GetMemberIdsAdapterTest : DescribeSpec({
 
     describe("getMemberIds") {
         context("회원이 존재하면") {
-            it("전체 회원 ID 목록을 반환한다") {
+            it("커서 이후 회원 ID 목록을 페이지 크기만큼 반환한다") {
+                val afterMemberId = Uuid.generateV7().toJavaUuid()
                 val memberIds = listOf(Uuid.generateV7().toJavaUuid(), Uuid.generateV7().toJavaUuid())
-                every { memberRepository.findIds() } returns memberIds
+                every { memberRepository.findIdsAfter(afterMemberId, 2) } returns memberIds
 
-                val result = adapter.getMemberIds()
+                val result = adapter.getMemberIds(afterMemberId, 2)
 
                 result shouldBe memberIds
             }
@@ -31,9 +32,9 @@ class GetMemberIdsAdapterTest : DescribeSpec({
 
         context("회원이 존재하지 않으면") {
             it("빈 목록을 반환한다") {
-                every { memberRepository.findIds() } returns emptyList()
+                every { memberRepository.findIdsAfter(null, 2) } returns emptyList()
 
-                val result = adapter.getMemberIds()
+                val result = adapter.getMemberIds(null, 2)
 
                 result shouldBe emptyList()
             }

@@ -24,6 +24,10 @@ spring:
             options:
               model: ${VERTEX_AI_CHAT_MODEL}
 
+batch:
+  schema:
+    initialization-mode: always  # Spring Batch 메타데이터 테이블 자동 생성(이미 있으면 스킵되는 멱등 동작)
+
 # GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
 gcp:
   project-id: ${GCP_PROJECT_ID}

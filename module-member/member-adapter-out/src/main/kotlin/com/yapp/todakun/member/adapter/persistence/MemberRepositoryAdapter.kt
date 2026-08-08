@@ -5,6 +5,7 @@ import com.yapp.todakun.member.exception.MemberAlreadyExistsException
 import com.yapp.todakun.member.repository.MemberRepository
 import com.yapp.todakun.shared.OauthProvider
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.Limit
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
@@ -26,7 +27,10 @@ class MemberRepositoryAdapter(
         providerId: String,
     ): UUID? = memberJpaRepository.findByOauthProviderAndProviderId(oauthProvider, providerId)?.id
 
-    override fun findIds(): List<UUID> = memberJpaRepository.findIds()
+    override fun findIdsAfter(
+        afterMemberId: UUID?,
+        limit: Int,
+    ): List<UUID> = memberJpaRepository.findIdsAfter(afterMemberId, Limit.of(limit))
 
     override fun deleteById(id: UUID) {
         memberJpaRepository.deleteById(id)
