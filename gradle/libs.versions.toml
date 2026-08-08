@@ -83,6 +83,8 @@ lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 # --- 모니터링 / APM (bootstrap) ---
 # Prometheus 메트릭 노출(/actuator/prometheus). 버전은 Boot BOM(Micrometer)이 관리.
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+# 커스텀 비즈니스 지표 등록(MeterRegistry, notification-application). 버전은 Boot BOM(Micrometer)이 관리.
+micrometer-core = { module = "io.micrometer:micrometer-core" }
 # Sentry: DSN 미설정 시 자동 비활성(no-op).
 sentry-spring-boot4-starter = { module = "io.sentry:sentry-spring-boot-4-starter", version.ref = "sentry" }
 
