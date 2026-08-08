@@ -47,6 +47,9 @@ public class NotificationSettingJpaEntity extends BaseEntity {
     @Column(name = "lucky_action_reminder_enabled", nullable = false)
     private boolean luckyActionReminderEnabled;
 
+    @Column(name = "os_push_permission")
+    private Boolean osPushPermission;
+
     public static NotificationSettingJpaEntity fromDomain(NotificationSetting setting) {
         return NotificationSettingJpaEntity.builder()
                 .id(setting.getId())
@@ -55,6 +58,7 @@ public class NotificationSettingJpaEntity extends BaseEntity {
                 .morningReportTime(setting.getMorningReportTime())
                 .todakiEnabled(setting.getTodakiEnabled())
                 .luckyActionReminderEnabled(setting.getLuckyActionReminderEnabled())
+                .osPushPermission(setting.getOsPushPermission())
                 .build();
     }
 
@@ -65,7 +69,8 @@ public class NotificationSettingJpaEntity extends BaseEntity {
                 morningReportEnabled,
                 morningReportTime,
                 todakiEnabled,
-                luckyActionReminderEnabled
+                luckyActionReminderEnabled,
+                osPushPermission
         );
     }
 }

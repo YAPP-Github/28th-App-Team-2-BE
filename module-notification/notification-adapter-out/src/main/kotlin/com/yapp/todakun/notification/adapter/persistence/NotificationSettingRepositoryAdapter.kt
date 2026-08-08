@@ -2,6 +2,7 @@ package com.yapp.todakun.notification.adapter.persistence
 
 import com.yapp.todakun.notification.NotificationSetting
 import com.yapp.todakun.notification.port.outbound.NotificationSettingRepository
+import org.springframework.data.domain.Limit
 import org.springframework.stereotype.Repository
 import java.time.LocalTime
 import java.util.UUID
@@ -16,11 +17,18 @@ class NotificationSettingRepositoryAdapter(
     override fun save(setting: NotificationSetting): NotificationSetting =
         notificationSettingJpaRepository.save(NotificationSettingJpaEntity.fromDomain(setting)).toDomain()
 
-    override fun findAllMorningReportTargets(slot: LocalTime): List<NotificationSetting> =
+    override fun findMorningReportTargets(
+        slot: LocalTime,
+        afterId: UUID?,
+        limit: Int,
+    ): List<NotificationSetting> =
         notificationSettingJpaRepository
-            .findAllByMorningReportEnabledTrueAndMorningReportTime(slot)
+            .findMorningReportTargets(slot, afterId, Limit.of(limit))
             .map { it.toDomain() }
 
-    override fun findAllLuckyActionReminderTargets(): List<NotificationSetting> =
-        notificationSettingJpaRepository.findAllByLuckyActionReminderEnabledTrue().map { it.toDomain() }
+    override fun findLuckyActionReminderTargets(
+        afterId: UUID?,
+        limit: Int,
+    ): List<NotificationSetting> =
+        notificationSettingJpaRepository.findLuckyActionReminderTargets(afterId, Limit.of(limit)).map { it.toDomain() }
 }

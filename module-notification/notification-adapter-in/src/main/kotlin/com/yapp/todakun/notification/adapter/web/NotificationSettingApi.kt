@@ -1,5 +1,6 @@
 package com.yapp.todakun.notification.adapter.web
 
+import com.yapp.todakun.notification.adapter.web.dto.request.SyncOsPushPermissionRequest
 import com.yapp.todakun.notification.adapter.web.dto.request.UpdateNotificationSettingRequest
 import com.yapp.todakun.notification.adapter.web.dto.response.NotificationSettingResponse
 import com.yapp.todakun.web.response.CommonResponse
@@ -32,5 +33,18 @@ interface NotificationSettingApi {
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
         @RequestBody @Valid request: UpdateNotificationSettingRequest,
+    ): ResponseEntity<CommonResponse<NotificationSettingResponse>>
+
+    @Operation(
+        summary = "OS 알림 권한 동기화",
+        description =
+            "클라이언트가 감지한 OS 알림 권한 상태를 서버에 동기화한다. 사용자가 설정 화면에서 직접 조작하는 값이 아니라, " +
+                "OS 권한 변경을 감지할 때마다 클라이언트가 호출한다.",
+    )
+    @PatchMapping("api/v1/notifications/settings/os-permission")
+    fun syncOsPushPermission(
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal memberId: UUID,
+        @RequestBody @Valid request: SyncOsPushPermissionRequest,
     ): ResponseEntity<CommonResponse<NotificationSettingResponse>>
 }
