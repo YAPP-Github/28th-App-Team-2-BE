@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -38,6 +39,9 @@ class NotificationControllerIntegrationTest(
 ) : DescribeSpec(
         {
             fun auth(memberId: UUID) = authentication(UsernamePasswordAuthenticationToken(memberId, null, emptyList()))
+
+            fun authAdmin(memberId: UUID) =
+                authentication(UsernamePasswordAuthenticationToken(memberId, null, listOf(SimpleGrantedAuthority("ROLE_ADMIN"))))
 
             describe("GET /api/v1/notifications") {
                 context("인증 없이 요청하면") {
@@ -124,6 +128,69 @@ class NotificationControllerIntegrationTest(
                         )
                     patchedBody["data"]["morningReportEnabled"].asBoolean() shouldBe true
                     patchedBody["data"]["todakiEnabled"].asBoolean() shouldBe true
+                }
+            }
+
+            describe("PATCH /api/v1/notifications/settings/os-permission") {
+                it("OS 알림 권한 동기화 값을 저장한다") {
+                    val memberId = Uuid.generateV7().toJavaUuid()
+
+                    val patchedBody =
+                        objectMapper.readTree(
+                            mockMvc
+                                .perform(
+                                    patch("/api/v1/notifications/settings/os-permission")
+                                        .with(auth(memberId))
+                                        .contentType("application/json")
+                                        .content(objectMapper.writeValueAsString(mapOf("granted" to false))),
+                                ).andExpect(status().isOk)
+                                .andReturn()
+                                .response.contentAsString,
+                        )
+                    patchedBody["data"]["osPushPermission"].asBoolean() shouldBe false
+                }
+            }
+
+            describe("POST /api/v1/admin/notifications/notice") {
+                val request = mapOf("title" to "공지 제목", "content" to "공지 내용")
+
+                context("인증 없이 요청하면") {
+                    it("401을 반환한다") {
+                        mockMvc
+                            .perform(
+                                post("/api/v1/admin/notifications/notice")
+                                    .contentType("application/json")
+                                    .content(objectMapper.writeValueAsString(request)),
+                            ).andExpect(status().isUnauthorized)
+                    }
+                }
+
+                context("ROLE_ADMIN 권한이 없으면") {
+                    it("403을 반환한다") {
+                        val memberId = Uuid.generateV7().toJavaUuid()
+
+                        mockMvc
+                            .perform(
+                                post("/api/v1/admin/notifications/notice")
+                                    .with(auth(memberId))
+                                    .contentType("application/json")
+                                    .content(objectMapper.writeValueAsString(request)),
+                            ).andExpect(status().isForbidden)
+                    }
+                }
+
+                context("ROLE_ADMIN 권한이 있으면") {
+                    it("전체 회원에게 공지를 발송하고 201을 반환한다") {
+                        val memberId = Uuid.generateV7().toJavaUuid()
+
+                        mockMvc
+                            .perform(
+                                post("/api/v1/admin/notifications/notice")
+                                    .with(authAdmin(memberId))
+                                    .contentType("application/json")
+                                    .content(objectMapper.writeValueAsString(request)),
+                            ).andExpect(status().isCreated)
+                    }
                 }
             }
 

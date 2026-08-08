@@ -10,6 +10,7 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.auth.port.outbound.WithdrawnAccountPort
 import com.yapp.todakun.shared.GetMemberIdPort
+import com.yapp.todakun.shared.IsAdminMemberPort
 import org.springframework.stereotype.Service
 
 // login()이 호출하는 포트 중 원자적으로 묶어야 할 RDB 쓰기가 없어(GetMemberIdPort는 읽기 전용,
@@ -23,6 +24,7 @@ class LoginService(
     private val refreshTokenPort: RefreshTokenPort,
     private val onboardingTokenPort: OnboardingTokenPort,
     private val withdrawnAccountPort: WithdrawnAccountPort,
+    private val isAdminMemberPort: IsAdminMemberPort,
 ) : LoginUseCase {
     override fun login(command: LoginCommand): LoginResult {
         command.requireAppleAuthorizationCode()
@@ -42,7 +44,7 @@ class LoginService(
         } else {
             LoginResult(
                 isNewMember = false,
-                accessToken = accessTokenPort.generate(memberId),
+                accessToken = accessTokenPort.generate(memberId, isAdminMemberPort.isAdmin(memberId)),
                 refreshToken = refreshTokenPort.issue(memberId),
             )
         }

@@ -63,7 +63,8 @@ class SignupService(
             )
 
             return SignupResult(
-                accessToken = accessTokenPort.generate(memberId),
+                // 신규 가입자는 항상 Role.MEMBER로 생성되므로 조회 없이 isAdmin=false로 발급한다.
+                accessToken = accessTokenPort.generate(memberId, isAdmin = false),
                 refreshToken = refreshTokenPort.issue(memberId),
             )
         } finally {

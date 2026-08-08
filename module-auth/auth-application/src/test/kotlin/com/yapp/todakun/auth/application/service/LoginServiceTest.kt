@@ -10,6 +10,7 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.auth.port.outbound.WithdrawnAccountPort
 import com.yapp.todakun.shared.GetMemberIdPort
+import com.yapp.todakun.shared.IsAdminMemberPort
 import com.yapp.todakun.shared.OauthProvider
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -32,6 +33,7 @@ class LoginServiceTest :
             val refreshTokenPort = mockk<RefreshTokenPort>()
             val onboardingTokenPort = mockk<OnboardingTokenPort>()
             val withdrawnAccountPort = mockk<WithdrawnAccountPort>()
+            val isAdminMemberPort = mockk<IsAdminMemberPort>()
             val loginService =
                 LoginService(
                     oauthPort = oauthPort,
@@ -40,10 +42,19 @@ class LoginServiceTest :
                     refreshTokenPort = refreshTokenPort,
                     onboardingTokenPort = onboardingTokenPort,
                     withdrawnAccountPort = withdrawnAccountPort,
+                    isAdminMemberPort = isAdminMemberPort,
                 )
 
             afterTest {
-                clearMocks(oauthPort, getMemberIdPort, accessTokenPort, refreshTokenPort, onboardingTokenPort, withdrawnAccountPort)
+                clearMocks(
+                    oauthPort,
+                    getMemberIdPort,
+                    accessTokenPort,
+                    refreshTokenPort,
+                    onboardingTokenPort,
+                    withdrawnAccountPort,
+                    isAdminMemberPort,
+                )
             }
 
             val memberId = AuthFixture.MEMBER_ID
@@ -59,7 +70,8 @@ class LoginServiceTest :
                     it("OauthMemberProfile을 가져온다") {
                         every { oauthPort.fetchProfile(command.provider, command.oauthAccessToken) } returns profile
                         every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
-                        every { accessTokenPort.generate(memberId) } returns issuedAccessToken
+                        every { isAdminMemberPort.isAdmin(memberId) } returns false
+                        every { accessTokenPort.generate(memberId, false) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
 
                         loginService.login(command)
@@ -72,7 +84,8 @@ class LoginServiceTest :
                     it("isNewMember = false이고 accessToken과 refreshToken이 채워지며 onboardingToken은 null이다") {
                         every { oauthPort.fetchProfile(command.provider, command.oauthAccessToken) } returns profile
                         every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
-                        every { accessTokenPort.generate(memberId) } returns issuedAccessToken
+                        every { isAdminMemberPort.isAdmin(memberId) } returns false
+                        every { accessTokenPort.generate(memberId, false) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
 
                         val result = loginService.login(command)
@@ -81,11 +94,25 @@ class LoginServiceTest :
                         result.accessToken shouldBe issuedAccessToken
                         result.refreshToken shouldBe issuedRefreshToken
                         result.onboardingToken.shouldBeNull()
-                        verify(exactly = 1) { accessTokenPort.generate(memberId) }
+                        verify(exactly = 1) { accessTokenPort.generate(memberId, false) }
                         verify(exactly = 1) { refreshTokenPort.issue(memberId) }
                         verify(exactly = 0) { onboardingTokenPort.issue(any()) }
                         // 기존 회원은 재가입 제한 검사를 거치지 않는다.
                         verify(exactly = 0) { withdrawnAccountPort.isRestricted(any(), any()) }
+                    }
+                }
+
+                context("기존 회원이 관리자(Role.ADMIN)이면") {
+                    it("accessToken을 isAdmin=true로 발급한다") {
+                        every { oauthPort.fetchProfile(command.provider, command.oauthAccessToken) } returns profile
+                        every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
+                        every { isAdminMemberPort.isAdmin(memberId) } returns true
+                        every { accessTokenPort.generate(memberId, true) } returns issuedAccessToken
+                        every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
+
+                        loginService.login(command)
+
+                        verify(exactly = 1) { accessTokenPort.generate(memberId, true) }
                     }
                 }
 
@@ -103,7 +130,7 @@ class LoginServiceTest :
                         result.accessToken.shouldBeNull()
                         result.refreshToken.shouldBeNull()
                         verify(exactly = 1) { onboardingTokenPort.issue(profile) }
-                        verify(exactly = 0) { accessTokenPort.generate(any()) }
+                        verify(exactly = 0) { accessTokenPort.generate(any(), any()) }
                         verify(exactly = 0) { refreshTokenPort.issue(any()) }
                     }
                 }
@@ -129,7 +156,8 @@ class LoginServiceTest :
                             oauthPort.fetchProfile(appleCommand.provider, appleCommand.oauthAccessToken, appleCommand.authorizationCode)
                         } returns appleProfile
                         every { getMemberIdPort.findIdByOauth(appleProfile.provider, appleProfile.providerId) } returns memberId
-                        every { accessTokenPort.generate(memberId) } returns issuedAccessToken
+                        every { isAdminMemberPort.isAdmin(memberId) } returns false
+                        every { accessTokenPort.generate(memberId, false) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
 
                         loginService.login(appleCommand)

@@ -5,6 +5,7 @@ import com.yapp.todakun.auth.fixture.AuthFixture
 import com.yapp.todakun.auth.fixture.TokenFixture
 import com.yapp.todakun.auth.port.outbound.AccessTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
+import com.yapp.todakun.shared.IsAdminMemberPort
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -18,13 +19,15 @@ class RefreshServiceTest :
         {
             val accessTokenPort = mockk<AccessTokenPort>()
             val refreshTokenPort = mockk<RefreshTokenPort>()
+            val isAdminMemberPort = mockk<IsAdminMemberPort>()
             val refreshService =
                 RefreshService(
                     accessTokenPort = accessTokenPort,
                     refreshTokenPort = refreshTokenPort,
+                    isAdminMemberPort = isAdminMemberPort,
                 )
 
-            afterTest { clearMocks(accessTokenPort, refreshTokenPort) }
+            afterTest { clearMocks(accessTokenPort, refreshTokenPort, isAdminMemberPort) }
 
             val command = AuthFixture.refreshCommand()
             val memberId = AuthFixture.MEMBER_ID
@@ -35,7 +38,8 @@ class RefreshServiceTest :
                 context("refreshToken이 유효하면") {
                     it("기존 refreshToken을 소비하고 access/refresh 토큰을 새로 발급한다") {
                         every { refreshTokenPort.consume(command.refreshToken) } returns memberId
-                        every { accessTokenPort.generate(memberId) } returns issuedAccessToken
+                        every { isAdminMemberPort.isAdmin(memberId) } returns false
+                        every { accessTokenPort.generate(memberId, false) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
 
                         val result = refreshService.refresh(command)

@@ -28,4 +28,7 @@ object SecurityPaths {
             // 약관 목록은 온보딩 단계(가입 전)에서도 노출되어야 하므로 공개한다. 동의 저장(POST)은 인증 필요.
             "/api/v1/terms",
         )
+
+    /** ROLE_ADMIN 권한이 있어야 접근 가능한 API 경로. */
+    const val ADMIN = "/api/v1/admin/**"
 }
