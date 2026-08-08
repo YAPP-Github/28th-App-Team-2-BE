@@ -125,7 +125,8 @@ class RedisCacheIntegrationTest(
 
                     getMySajuUseCase.getMine(SajuFixture.MEMBER_ID) // evict 됐으니 리포지토리에서 다시 읽어야 한다
 
-                    verify(exactly = 2) { memberSajuLinkRepository.findSelfByMemberId(SajuFixture.MEMBER_ID) }
+                    // 캐시 미스 2회(캐시 적립·재조회) + ReplaceSelfSajuChartService.replace() 내부의 기존 링크 조회 1회 = 3회.
+                    verify(exactly = 3) { memberSajuLinkRepository.findSelfByMemberId(SajuFixture.MEMBER_ID) }
                 }
             }
         }
