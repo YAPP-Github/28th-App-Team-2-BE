@@ -12,14 +12,11 @@ import com.yapp.todakun.yearfortune.fixture.YearSelectionFortuneFixture
 import com.yapp.todakun.yearfortune.port.outbound.GeneratedCategoryFortune
 import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
-import com.yapp.todakun.yearfortune.repository.YearSelectionFortuneRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
@@ -31,14 +28,14 @@ import kotlin.uuid.toJavaUuid
 @ExperimentalUuidApi
 class CreateYearSelectionFortuneServiceTest :
     DescribeSpec({
-        val yearSelectionFortuneRepository = mockk<YearSelectionFortuneRepository>()
+        val yearSelectionFortuneTransactionalStore = mockk<YearSelectionFortuneTransactionalStore>()
         val getMemberFortuneProfilePort = mockk<GetMemberFortuneProfilePort>()
         val getSajuChartPort = mockk<GetSajuChartPort>()
         val getYearPillarPort = mockk<GetYearPillarPort>()
         val yearSelectionFortuneAiPort = mockk<YearSelectionFortuneAiPort>()
         val service =
             CreateYearSelectionFortuneService(
-                yearSelectionFortuneRepository,
+                yearSelectionFortuneTransactionalStore,
                 getMemberFortuneProfilePort,
                 getSajuChartPort,
                 getYearPillarPort,
@@ -50,7 +47,7 @@ class CreateYearSelectionFortuneServiceTest :
 
         afterTest {
             clearMocks(
-                yearSelectionFortuneRepository,
+                yearSelectionFortuneTransactionalStore,
                 getMemberFortuneProfilePort,
                 getSajuChartPort,
                 getYearPillarPort,
@@ -58,12 +55,8 @@ class CreateYearSelectionFortuneServiceTest :
             )
         }
 
-        beforeTest {
-            every { yearSelectionFortuneRepository.lock(memberId, year) } just Runs
-        }
-
         fun stubGeneration(generated: GeneratedYearSelectionFortune) {
-            every { yearSelectionFortuneRepository.findByMemberIdAndYear(memberId, year) } returns null
+            every { yearSelectionFortuneTransactionalStore.findExistingWithLock(memberId, year) } returns null
             every { getMemberFortuneProfilePort.getProfile(memberId) } returns memberFortuneProfile()
             every { getSajuChartPort.getChart(memberId) } returns sajuChartSummary()
             every { getYearPillarPort.getPillar(year) } returns pillarSummary()
@@ -74,12 +67,13 @@ class CreateYearSelectionFortuneServiceTest :
             context("이미 그 연도의 연도별 운세가 있으면") {
                 it("AI를 재호출하지 않고, 저장된 연도별 운세를 반환한다") {
                     val existing = YearSelectionFortuneFixture.create(memberId = memberId, year = year)
-                    every { yearSelectionFortuneRepository.findByMemberIdAndYear(memberId, year) } returns existing
+                    every { yearSelectionFortuneTransactionalStore.findExistingWithLock(memberId, year) } returns existing
 
                     val result = service.create(year, memberId)
 
                     result.id shouldBe existing.id
                     verify(exactly = 0) { yearSelectionFortuneAiPort.generate(any(), any(), any()) }
+                    verify(exactly = 0) { yearSelectionFortuneTransactionalStore.saveIfAbsent(any()) }
                 }
             }
 
@@ -87,30 +81,31 @@ class CreateYearSelectionFortuneServiceTest :
                 it("회원 정보·사주·세운으로 AI를 호출해 연도별 운세를 저장하고 반환한다") {
                     val saved = YearSelectionFortuneFixture.create(memberId = memberId, year = year)
                     stubGeneration(generatedYearSelectionFortune())
-                    every { yearSelectionFortuneRepository.save(any()) } returns saved
+                    every { yearSelectionFortuneTransactionalStore.saveIfAbsent(any()) } returns saved
 
                     val result = service.create(year, memberId)
 
                     result.id shouldBe saved.id
-                    verify(exactly = 1) { yearSelectionFortuneRepository.save(any()) }
+                    verify(exactly = 1) { yearSelectionFortuneTransactionalStore.saveIfAbsent(any()) }
                 }
 
-                it("(memberId, year) 락을 선점한 뒤 조회한다") {
+                it("선조회 트랜잭션 → (트랜잭션 밖) AI 호출 → 저장 트랜잭션 순서로 처리한다") {
                     val saved = YearSelectionFortuneFixture.create(memberId = memberId, year = year)
                     stubGeneration(generatedYearSelectionFortune())
-                    every { yearSelectionFortuneRepository.save(any()) } returns saved
+                    every { yearSelectionFortuneTransactionalStore.saveIfAbsent(any()) } returns saved
 
                     service.create(year, memberId)
 
                     verifyOrder {
-                        yearSelectionFortuneRepository.lock(memberId, year)
-                        yearSelectionFortuneRepository.findByMemberIdAndYear(memberId, year)
+                        yearSelectionFortuneTransactionalStore.findExistingWithLock(memberId, year)
+                        yearSelectionFortuneAiPort.generate(any(), year, any())
+                        yearSelectionFortuneTransactionalStore.saveIfAbsent(any())
                     }
                 }
             }
 
             context("AI가 반환한 카테고리가 중복되면") {
-                it("YearSelectionFortuneCategoryDuplicatedException을 던진다") {
+                it("YearSelectionFortuneCategoryDuplicatedException을 던지고 저장하지 않는다") {
                     val duplicatedCategories =
                         listOf(
                             GeneratedCategoryFortune(FortuneCategory.RELATIONSHIP, star = 2),
@@ -121,7 +116,7 @@ class CreateYearSelectionFortuneServiceTest :
 
                     shouldThrow<YearSelectionFortuneCategoryDuplicatedException> { service.create(year, memberId) }
 
-                    verify(exactly = 0) { yearSelectionFortuneRepository.save(any()) }
+                    verify(exactly = 0) { yearSelectionFortuneTransactionalStore.saveIfAbsent(any()) }
                 }
             }
         }

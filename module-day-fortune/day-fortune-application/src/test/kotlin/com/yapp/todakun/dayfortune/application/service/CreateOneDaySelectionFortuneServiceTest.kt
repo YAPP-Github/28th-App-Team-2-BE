@@ -6,7 +6,6 @@ import com.yapp.todakun.dayfortune.fixture.DaySelectionFortuneFixture
 import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.GeneratedCategoryFortune
 import com.yapp.todakun.dayfortune.port.outbound.GeneratedDaySelectionFortune
-import com.yapp.todakun.dayfortune.repository.DaySelectionFortuneRepository
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetDailyPillarPort
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
@@ -17,10 +16,8 @@ import com.yapp.todakun.shared.SajuChartSummary
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
@@ -32,14 +29,14 @@ import kotlin.uuid.toJavaUuid
 @ExperimentalUuidApi
 class CreateOneDaySelectionFortuneServiceTest :
     DescribeSpec({
-        val daySelectionFortuneRepository = mockk<DaySelectionFortuneRepository>()
+        val daySelectionFortuneTransactionalStore = mockk<DaySelectionFortuneTransactionalStore>()
         val getMemberFortuneProfilePort = mockk<GetMemberFortuneProfilePort>()
         val getSajuChartPort = mockk<GetSajuChartPort>()
         val getDailyPillarPort = mockk<GetDailyPillarPort>()
         val daySelectionFortuneAiPort = mockk<DaySelectionFortuneAiPort>()
         val service =
             CreateOneDaySelectionFortuneService(
-                daySelectionFortuneRepository,
+                daySelectionFortuneTransactionalStore,
                 getMemberFortuneProfilePort,
                 getSajuChartPort,
                 getDailyPillarPort,
@@ -52,7 +49,7 @@ class CreateOneDaySelectionFortuneServiceTest :
 
         afterTest {
             clearMocks(
-                daySelectionFortuneRepository,
+                daySelectionFortuneTransactionalStore,
                 getMemberFortuneProfilePort,
                 getSajuChartPort,
                 getDailyPillarPort,
@@ -60,11 +57,8 @@ class CreateOneDaySelectionFortuneServiceTest :
             )
         }
 
-        beforeTest {
-            every { daySelectionFortuneRepository.lock(memberId, purpose, targetDate) } just Runs
-        }
-
         fun stubGeneration(generated: GeneratedDaySelectionFortune) {
+            every { daySelectionFortuneTransactionalStore.findExistingWithLock(memberId, purpose, targetDate) } returns null
             every { getMemberFortuneProfilePort.getProfile(memberId) } returns memberFortuneProfile()
             every { getSajuChartPort.getChart(memberId) } returns sajuChartSummary()
             every { getDailyPillarPort.getPillar(targetDate) } returns pillarSummary()
@@ -76,54 +70,49 @@ class CreateOneDaySelectionFortuneServiceTest :
                 it("회원 프로필/사주 조회와 AI 호출 없이 저장된 택일 운세를 반환한다") {
                     val existing = DaySelectionFortuneFixture.create(memberId = memberId, purpose = purpose, targetDate = targetDate)
                     every {
-                        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate)
+                        daySelectionFortuneTransactionalStore.findExistingWithLock(memberId, purpose, targetDate)
                     } returns existing
 
                     val result = service.createOne(purpose, targetDate, memberId)
 
                     result.id shouldBe existing.id
                     verify(exactly = 0) { getMemberFortuneProfilePort.getProfile(any()) }
+                    verify(exactly = 0) { getSajuChartPort.getChart(any()) }
+                    verify(exactly = 0) { getDailyPillarPort.getPillar(any()) }
                     verify(exactly = 0) { daySelectionFortuneAiPort.generate(any(), any(), any(), any()) }
+                    verify(exactly = 0) { daySelectionFortuneTransactionalStore.saveIfAbsent(any()) }
                 }
             }
 
             context("아직 생성된 적이 없으면") {
                 it("회원 정보/사주/일진으로 AI를 호출해 택일 운세를 저장하고 반환한다") {
                     val saved = DaySelectionFortuneFixture.create(memberId = memberId, purpose = purpose, targetDate = targetDate)
-                    every {
-                        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate)
-                    } returns null
                     stubGeneration(generatedDaySelectionFortune())
-                    every { daySelectionFortuneRepository.save(any()) } returns saved
+                    every { daySelectionFortuneTransactionalStore.saveIfAbsent(any()) } returns saved
 
                     val result = service.createOne(purpose, targetDate, memberId)
 
                     result.id shouldBe saved.id
-                    verify(exactly = 1) { daySelectionFortuneRepository.save(any()) }
+                    verify(exactly = 1) { daySelectionFortuneTransactionalStore.saveIfAbsent(any()) }
                 }
 
-                it("(memberId, purpose, targetDate) 락을 선점한 뒤 조회한다") {
+                it("선조회 트랜잭션 → (트랜잭션 밖) AI 호출 → 저장 트랜잭션 순서로 처리한다") {
                     val saved = DaySelectionFortuneFixture.create(memberId = memberId, purpose = purpose, targetDate = targetDate)
-                    every {
-                        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate)
-                    } returns null
                     stubGeneration(generatedDaySelectionFortune())
-                    every { daySelectionFortuneRepository.save(any()) } returns saved
+                    every { daySelectionFortuneTransactionalStore.saveIfAbsent(any()) } returns saved
 
                     service.createOne(purpose, targetDate, memberId)
 
                     verifyOrder {
-                        daySelectionFortuneRepository.lock(memberId, purpose, targetDate)
-                        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate)
+                        daySelectionFortuneTransactionalStore.findExistingWithLock(memberId, purpose, targetDate)
+                        daySelectionFortuneAiPort.generate(any(), purpose, targetDate, any())
+                        daySelectionFortuneTransactionalStore.saveIfAbsent(any())
                     }
                 }
             }
 
             context("AI가 반환한 카테고리가 중복되면") {
-                it("DaySelectionFortuneCategoryDuplicatedException을 던진다") {
-                    every {
-                        daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(memberId, purpose, targetDate)
-                    } returns null
+                it("DaySelectionFortuneCategoryDuplicatedException을 던지고 저장하지 않는다") {
                     val duplicatedCategories =
                         listOf(
                             GeneratedCategoryFortune(FortuneCategory.RELATIONSHIP, star = 2),
@@ -136,7 +125,7 @@ class CreateOneDaySelectionFortuneServiceTest :
                         service.createOne(purpose, targetDate, memberId)
                     }
 
-                    verify(exactly = 0) { daySelectionFortuneRepository.save(any()) }
+                    verify(exactly = 0) { daySelectionFortuneTransactionalStore.saveIfAbsent(any()) }
                 }
             }
         }

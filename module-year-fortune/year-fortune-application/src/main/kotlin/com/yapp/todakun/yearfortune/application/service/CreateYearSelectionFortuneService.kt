@@ -1,6 +1,5 @@
 package com.yapp.todakun.yearfortune.application.service
 
-import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
 import com.yapp.todakun.shared.GetSajuChartPort
@@ -15,19 +14,20 @@ import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
 import com.yapp.todakun.yearfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
-import com.yapp.todakun.yearfortune.repository.YearSelectionFortuneRepository
+import org.springframework.stereotype.Service
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
- * AI 생성 입력 조립 → AI 호출 → YearSelectionFortune 저장까지 한 트랜잭션으로 처리한다.
- * [YearSelectionFortuneRepository.findByMemberIdAndYear] 선조회로 멱등성을 보장한다(이미 생성된 연도면 AI를 재호출하지 않는다).
- * 동시 요청 대비 조회 전에 [YearSelectionFortuneRepository.lock]으로 (memberId, year) 생성 구간을 직렬화한다
- * (락 없이는 두 요청이 동시에 조회 결과 null을 보고 각각 AI 호출·저장을 시도해 유니크 제약 충돌이 날 수 있다).
+ * 연도별 운세 생성 오케스트레이터. 트랜잭션을 걸지 않는다 — 외부 AI 호출을 DB 트랜잭션 밖에서 수행하기 위함이다.
+ * (선조회 → AI 생성 → 저장) 각 DB 단계는 [YearSelectionFortuneTransactionalStore]의 독립 트랜잭션으로 위임한다.
+ * 1) [YearSelectionFortuneTransactionalStore.findExistingWithLock]로 락+선조회(멱등: 이미 생성된 연도면 AI를 재호출하지 않는다).
+ * 2) 트랜잭션 밖에서 AI를 호출하고 도메인 엔티티를 조립(검증 포함)한다.
+ * 3) [YearSelectionFortuneTransactionalStore.saveIfAbsent]로 락+재조회 후 멱등 저장한다(동시 요청 시 유니크 제약 충돌 방지).
  */
-@CommandService
+@Service
 class CreateYearSelectionFortuneService(
-    private val yearSelectionFortuneRepository: YearSelectionFortuneRepository,
+    private val yearSelectionFortuneTransactionalStore: YearSelectionFortuneTransactionalStore,
     private val getMemberFortuneProfilePort: GetMemberFortuneProfilePort,
     private val getSajuChartPort: GetSajuChartPort,
     private val getYearPillarPort: GetYearPillarPort,
@@ -38,28 +38,23 @@ class CreateYearSelectionFortuneService(
         year: Int,
         memberId: UUID,
     ): YearSelectionFortuneResult {
-        yearSelectionFortuneRepository.lock(memberId, year)
-
-        yearSelectionFortuneRepository.findByMemberIdAndYear(memberId, year)?.let {
+        yearSelectionFortuneTransactionalStore.findExistingWithLock(memberId, year)?.let {
             return YearSelectionFortuneResult.from(it)
         }
 
         val generated = requestGeneration(memberId, year)
-
-        val saved =
-            yearSelectionFortuneRepository.save(
-                YearSelectionFortune.create(
-                    memberId = memberId,
-                    year = year,
-                    currentYear = currentDate().year,
-                    score = generated.score,
-                    title = generated.title,
-                    content = generated.content,
-                    fortuneCategories = generated.fortuneCategories.map { FortuneCategoryStar(it.fortuneCategory, it.star) },
-                ),
+        val yearSelectionFortune =
+            YearSelectionFortune.create(
+                memberId = memberId,
+                year = year,
+                currentYear = currentDate().year,
+                score = generated.score,
+                title = generated.title,
+                content = generated.content,
+                fortuneCategories = generated.fortuneCategories.map { FortuneCategoryStar(it.fortuneCategory, it.star) },
             )
 
-        return YearSelectionFortuneResult.from(saved)
+        return YearSelectionFortuneResult.from(yearSelectionFortuneTransactionalStore.saveIfAbsent(yearSelectionFortune))
     }
 
     private fun requestGeneration(

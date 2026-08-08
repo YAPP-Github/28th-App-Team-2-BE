@@ -5,8 +5,6 @@ import com.yapp.todakun.dailyfortune.fixture.DailyFortuneFixture
 import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedCategoryFortune
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
-import com.yapp.todakun.dailyfortune.repository.DailyFortuneRepository
-import com.yapp.todakun.shared.CreateLuckActionPort
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetDailyPillarPort
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
@@ -21,47 +19,44 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000002")
-private val LUCK_ACTION_ID = UUID.fromString("018f0000-0000-7000-8000-000000000005")
 
 @ExperimentalUuidApi
 class CreateDailyFortuneServiceTest :
     DescribeSpec({
-        val dailyFortuneRepository = mockk<DailyFortuneRepository>()
+        val dailyFortuneTransactionalStore = mockk<DailyFortuneTransactionalStore>()
         val getMemberFortuneProfilePort = mockk<GetMemberFortuneProfilePort>()
         val getSajuChartPort = mockk<GetSajuChartPort>()
         val getDailyPillarPort = mockk<GetDailyPillarPort>()
         val dailyFortuneAiPort = mockk<DailyFortuneAiPort>()
-        val createLuckActionPort = mockk<CreateLuckActionPort>()
         val service =
             CreateDailyFortuneService(
-                dailyFortuneRepository,
+                dailyFortuneTransactionalStore,
                 getMemberFortuneProfilePort,
                 getSajuChartPort,
                 getDailyPillarPort,
                 dailyFortuneAiPort,
-                createLuckActionPort,
             )
 
         val fortuneDate = LocalDate.of(2026, 6, 24)
 
         afterTest {
             clearMocks(
-                dailyFortuneRepository,
+                dailyFortuneTransactionalStore,
                 getMemberFortuneProfilePort,
                 getSajuChartPort,
                 getDailyPillarPort,
                 dailyFortuneAiPort,
-                createLuckActionPort,
             )
         }
 
         fun stubGeneration(generated: GeneratedDailyFortune) {
-            every { dailyFortuneRepository.findByMemberIdAndFortuneDate(MEMBER_ID, fortuneDate) } returns null
+            every { dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate) } returns null
             every { getMemberFortuneProfilePort.getProfile(MEMBER_ID) } returns memberFortuneProfile()
             every { getSajuChartPort.getChart(MEMBER_ID) } returns sajuChartSummary()
             every { getDailyPillarPort.getPillar(fortuneDate) } returns pillarSummary()
@@ -72,34 +67,45 @@ class CreateDailyFortuneServiceTest :
             context("이미 그 날짜의 오늘의 운세가 있으면") {
                 it("AI를 재호출하지 않고, 저장된 오늘의 운세의 ID를 반환한다") {
                     val existing = DailyFortuneFixture.create(memberId = MEMBER_ID, fortuneDate = fortuneDate)
-                    every { dailyFortuneRepository.findByMemberIdAndFortuneDate(MEMBER_ID, fortuneDate) } returns existing
+                    every { dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate) } returns existing
 
                     val result = service.create(MEMBER_ID, fortuneDate)
 
                     result shouldBe existing.id
                     verify(exactly = 0) { dailyFortuneAiPort.generate(any(), any(), any()) }
+                    verify(exactly = 0) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
                 }
             }
 
             context("아직 생성된 적이 없으면") {
-                it("회원 정보·사주로 AI를 호출해 오늘의 운세를 저장하고, 카테고리별 LuckAction을 생성한다") {
+                it("회원 정보·사주로 AI를 호출해 오늘의 운세와 LuckAction을 멱등 저장하고 ID를 반환한다") {
                     val saved = DailyFortuneFixture.create(memberId = MEMBER_ID, fortuneDate = fortuneDate)
                     stubGeneration(generatedDailyFortune())
-                    every { dailyFortuneRepository.save(any()) } returns saved
-                    every { createLuckActionPort.create(any(), any(), any(), any(), any(), any()) } returns LUCK_ACTION_ID
+                    every { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) } returns saved.id
 
                     val result = service.create(MEMBER_ID, fortuneDate)
 
                     result shouldBe saved.id
-                    verify(exactly = 1) { dailyFortuneRepository.save(any()) }
-                    verify(
-                        exactly = FortuneCategory.entries.size,
-                    ) { createLuckActionPort.create(MEMBER_ID, any(), fortuneDate, any(), any(), any()) }
+                    verify(exactly = 1) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
+                }
+
+                it("선조회 트랜잭션 → (트랜잭션 밖) AI 호출 → 저장 트랜잭션 순서로 처리한다") {
+                    val saved = DailyFortuneFixture.create(memberId = MEMBER_ID, fortuneDate = fortuneDate)
+                    stubGeneration(generatedDailyFortune())
+                    every { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) } returns saved.id
+
+                    service.create(MEMBER_ID, fortuneDate)
+
+                    verifyOrder {
+                        dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate)
+                        dailyFortuneAiPort.generate(any(), fortuneDate, any())
+                        dailyFortuneTransactionalStore.saveIfAbsent(any(), any())
+                    }
                 }
             }
 
             context("AI가 카테고리를 정확히 5개(1개씩) 채우지 못하면") {
-                it("DailyFortuneGenerationFailedException을 던진다") {
+                it("DailyFortuneGenerationFailedException을 던지고 저장하지 않는다") {
                     val duplicatedCategories =
                         listOf(
                             FortuneCategory.RELATIONSHIP,
@@ -112,8 +118,7 @@ class CreateDailyFortuneServiceTest :
 
                     shouldThrow<DailyFortuneGenerationFailedException> { service.create(MEMBER_ID, fortuneDate) }
 
-                    verify(exactly = 0) { dailyFortuneRepository.save(any()) }
-                    verify(exactly = 0) { createLuckActionPort.create(any(), any(), any(), any(), any(), any()) }
+                    verify(exactly = 0) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
                 }
             }
         }

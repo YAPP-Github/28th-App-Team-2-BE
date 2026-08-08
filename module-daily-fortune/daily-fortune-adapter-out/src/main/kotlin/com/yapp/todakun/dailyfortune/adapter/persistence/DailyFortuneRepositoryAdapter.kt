@@ -26,4 +26,9 @@ class DailyFortuneRepositoryAdapter(
         to: LocalDate,
     ): List<DailyFortune> =
         dailyFortuneJpaRepository.findAllByMemberIdAndFortuneDateBetweenOrderByFortuneDateAsc(memberId, from, to).map { it.toDomain() }
+
+    override fun lock(
+        memberId: UUID,
+        fortuneDate: LocalDate,
+    ) = dailyFortuneJpaRepository.lock(memberId, fortuneDate)
 }

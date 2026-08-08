@@ -1,6 +1,5 @@
 package com.yapp.todakun.compatibility.application
 
-import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.compatibility.CompatibilityOhaengCalculator
 import com.yapp.todakun.compatibility.CompatibilityRelationshipType
 import com.yapp.todakun.compatibility.SajuCompatibility
@@ -10,23 +9,25 @@ import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiInput
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiPort
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityChartProfile
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityPillar
-import com.yapp.todakun.compatibility.port.outbound.SajuCompatibilityRepository
 import com.yapp.todakun.shared.CompatibilityChartView
 import com.yapp.todakun.shared.CompatibilityChartsView
 import com.yapp.todakun.shared.GetSajuChartsForCompatibilityPort
 import com.yapp.todakun.shared.PillarSummary
+import org.springframework.stereotype.Service
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
- * 궁합 생성 유스케이스. 두 명식 조회 → (멱등) 기존 궁합 선조회 → 오행 결정적 계산 + AI 총운 생성 → 저장을 한 트랜잭션으로 처리한다.
- * [SajuCompatibilityRepository.findByMemberIdAndCharts] 선조회로 멱등성을 보장한다(이미 생성된 조합이면 AI를 재호출하지 않는다).
- * 조회 전에 [SajuCompatibilityRepository.lock]으로 (내 명식, 상대 명식) 생성 구간을 직렬화해 동시 요청 시 유니크 제약 충돌을 막는다.
+ * 궁합 생성 오케스트레이터. 트랜잭션을 걸지 않는다 — 외부 AI 호출을 DB 트랜잭션 밖에서 수행하기 위함이다.
+ * (선조회 → 오행 결정적 계산 + AI 총운 생성 → 저장) 각 DB 단계는 [SajuCompatibilityTransactionalStore]의 독립 트랜잭션으로 위임한다.
+ * 1) [SajuCompatibilityTransactionalStore.findExistingWithLock]로 락+선조회(멱등: 이미 생성된 조합이면 AI를 재호출하지 않는다).
+ * 2) 트랜잭션 밖에서 오행 계산과 AI 총운 생성을 수행하고 도메인 엔티티를 조립한다.
+ * 3) [SajuCompatibilityTransactionalStore.saveIfAbsent]로 락+재조회 후 멱등 저장한다(동시 요청 시 유니크 제약 충돌 방지).
  */
-@CommandService
+@Service
 class CreateCompatibilityService(
     private val getSajuChartsForCompatibilityPort: GetSajuChartsForCompatibilityPort,
-    private val sajuCompatibilityRepository: SajuCompatibilityRepository,
+    private val sajuCompatibilityTransactionalStore: SajuCompatibilityTransactionalStore,
     private val compatibilityAiPort: CompatibilityAiPort,
 ) : CreateCompatibilityUseCase {
     @ExperimentalUuidApi
@@ -36,9 +37,7 @@ class CreateCompatibilityService(
     ): CompatibilityResult {
         val charts = getSajuChartsForCompatibilityPort.getCharts(memberId, partnerLinkId)
 
-        sajuCompatibilityRepository.lock(charts.myChartId, charts.partnerChartId)
-
-        sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, charts.myChartId, charts.partnerChartId)?.let {
+        sajuCompatibilityTransactionalStore.findExistingWithLock(memberId, charts.myChartId, charts.partnerChartId)?.let {
             return CompatibilityResult.from(it, charts.partnerName)
         }
 
@@ -46,23 +45,24 @@ class CreateCompatibilityService(
         val ohaengs = CompatibilityOhaengCalculator.combine(charts.myChart.ohaeng, charts.partnerChart.ohaeng)
         val generated = compatibilityAiPort.generate(buildAiInput(relationshipType, charts))
 
-        val saved =
-            sajuCompatibilityRepository.save(
-                SajuCompatibility.create(
-                    memberId = memberId,
-                    myChartId = charts.myChartId,
-                    partnerChartId = charts.partnerChartId,
-                    relationshipType = relationshipType,
-                    score = generated.score,
-                    headline = generated.headline,
-                    subheadline = generated.subheadline,
-                    summary = generated.summary,
-                    totalAnalysis = generated.totalAnalysis,
-                    ohaengs = ohaengs,
-                ),
+        val sajuCompatibility =
+            SajuCompatibility.create(
+                memberId = memberId,
+                myChartId = charts.myChartId,
+                partnerChartId = charts.partnerChartId,
+                relationshipType = relationshipType,
+                score = generated.score,
+                headline = generated.headline,
+                subheadline = generated.subheadline,
+                summary = generated.summary,
+                totalAnalysis = generated.totalAnalysis,
+                ohaengs = ohaengs,
             )
 
-        return CompatibilityResult.from(saved, charts.partnerName)
+        return CompatibilityResult.from(
+            sajuCompatibilityTransactionalStore.saveIfAbsent(sajuCompatibility),
+            charts.partnerName,
+        )
     }
 
     private fun buildAiInput(
