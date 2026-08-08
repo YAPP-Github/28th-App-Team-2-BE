@@ -24,8 +24,10 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
 
-      - name: Gradle 설정 (캐시 포함)
+      - name: Gradle 설정 (캐시 포함, PR 브랜치는 읽기 전용 — 캐시 오염 방지)
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
 
       - name: Gradle Wrapper 권한 부여
         run: chmod +x gradlew
