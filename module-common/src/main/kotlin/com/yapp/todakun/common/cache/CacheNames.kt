@@ -12,21 +12,24 @@ import java.time.Duration
  * TODAY_FORTUNE·LUCK_ACTIONS는 캐시 키에 조회일(fortuneDate)이 포함되어 날짜가 바뀌면 키 자체가
  * 달라지므로, 엔트리 TTL 24시간은 "자정 만료"를 흉내내는 값이 아니라 더는 조회되지 않는 이전 날짜
  * 키를 자연 소멸시키는 안전장치다.
- * SAJU_CHART·TERMS는 값이 거의 바뀌지 않아 장기 TTL과 명시적 evict가 무효화를 주도하고, TTL은
- * evict 누락에 대비한 안전장치로만 둔다.
+ * SAJU_CHART_DETAIL·SAJU_CHART_SUMMARY·TERMS는 값이 거의 바뀌지 않아 장기 TTL과 명시적 evict가 무효화를 주도하고, TTL은 evict 누락에 대비한 안전장치로만 둔다.
+ * SAJU_CHART_DETAIL([GetMySajuUseCase])과 SAJU_CHART_SUMMARY([GetSajuChartPort])는 같은 memberId를 키로 쓰지만 반환 타입이 다른 별개 조회라 캐시 이름을 분리한다.
+ * 하나로 합치면 같은 `{cacheName}:{memberId}` 키에 서로 다른 타입이 덮어써진다.
  * YEAR_FORTUNE은 조회와 생성을 겸하는 멱등 서비스라 캐싱 전략을 별도로 설계해야 해 제외한다.
  */
 object CacheNames {
     const val TODAY_FORTUNE = "today-fortune"
     const val LUCK_ACTIONS = "luck-actions"
-    const val SAJU_CHART = "saju-chart"
+    const val SAJU_CHART_DETAIL = "saju-chart-detail"
+    const val SAJU_CHART_SUMMARY = "saju-chart-summary"
     const val TERMS = "terms"
 
     val ttlByCacheName: Map<String, Duration> =
         mapOf(
             TODAY_FORTUNE to Duration.ofHours(24),
             LUCK_ACTIONS to Duration.ofHours(24),
-            SAJU_CHART to Duration.ofDays(30),
+            SAJU_CHART_DETAIL to Duration.ofDays(30),
+            SAJU_CHART_SUMMARY to Duration.ofDays(30),
             TERMS to Duration.ofDays(7),
         )
 }
