@@ -1,12 +1,14 @@
 package com.yapp.todakun.dailyfortune.application.service
 
 import com.yapp.todakun.common.annotation.QueryService
+import com.yapp.todakun.common.cache.CacheNames
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
 import com.yapp.todakun.dailyfortune.port.inbound.GetTodayFortuneUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.dailyfortune.repository.DailyFortuneRepository
 import com.yapp.todakun.shared.GetLuckActionScoresPort
 import com.yapp.todakun.shared.currentDate
+import org.springframework.cache.annotation.Cacheable
 import java.time.LocalDate
 import java.util.UUID
 
@@ -15,6 +17,8 @@ class GetTodayFortuneService(
     private val dailyFortuneRepository: DailyFortuneRepository,
     private val getLuckActionScoresPort: GetLuckActionScoresPort,
 ) : GetTodayFortuneUseCase {
+    // 회원별 하루 1건, 생성 후 불변이라 evict 없이 TTL(자정 경계, CacheNames 참고)만으로 무효화한다(이슈 #56).
+    @Cacheable(cacheNames = [CacheNames.TODAY_FORTUNE], key = "#memberId + ':' + #fortuneDate")
     override fun getToday(
         memberId: UUID,
         fortuneDate: LocalDate,
