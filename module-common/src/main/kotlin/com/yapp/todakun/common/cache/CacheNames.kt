@@ -16,8 +16,8 @@ import java.time.Duration
  * 하나로 합치면 같은 `{cacheName}:{memberId}` 키에 서로 다른 타입이 덮어써진다.
  * YEAR_FORTUNE은 `CreateYearSelectionFortuneService.create()`(get-or-create)에 그대로 `@Cacheable`을 붙인다.
  * 캐시 히트 시 락·DB 조회 없이 즉시 반환되고, 캐시 미스일 때만 기존 락 기반 생성 로직이 그대로 실행된다.
- * 단, 이 메서드는 트랜잭션 안에서 쓰기(save)까지 하므로 캐시 적립이 커밋 *이전*에 일어나면 롤백 시 존재하지 않는 데이터가 영구 캐싱될 수 있어,
- * RedisCacheConfig에서 캐싱 어드바이저가 트랜잭션 어드바이저보다 바깥에서 실행되도록 순서를 명시적으로 고정했다. AI 재호출 비용이 커서 TTL을 SAJU_CHART보다 길게 잡는다.
+ * `create()` 자체는 트랜잭션을 걸지 않고 DB 쓰기는 `YearSelectionFortuneTransactionalStore`의 독립
+ * 트랜잭션에 위임하므로 캐시 적립은 항상 그 커밋 이후에 일어난다. AI 재호출 비용이 커서 TTL을 SAJU_CHART보다 길게 잡는다.
  */
 object CacheNames {
     const val TODAY_FORTUNE = "today-fortune"

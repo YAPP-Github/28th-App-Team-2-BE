@@ -31,11 +31,12 @@ import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
  * 임의 클래스 역직렬화(가젯 공격)를 막기 위해 [BasicPolymorphicTypeValidator]로 허용 패키지를
  * `com.yapp.todakun` 하위로 제한한다.
  *
- * `order`: `CreateYearSelectionFortuneService.create()`처럼 트랜잭션 안에서 쓰기까지 하는 메서드에
- * `@Cacheable`을 붙이는 경우, 캐싱 어드바이저가 트랜잭션 어드바이저보다 안쪽에서 실행되면 커밋 전에
- * 캐시가 채워져 롤백 시 존재하지 않는 데이터가 캐시에 영구히 남을 수 있다. 트랜잭션 기본 순서
- * ([Ordered.LOWEST_PRECEDENCE])보다 한 단계 앞세워 캐싱이 항상 트랜잭션 바깥(커밋 이후)에서
- * 동작하도록 고정한다. 읽기 전용 캐시(today-fortune 등)에는 영향이 없다.
+ * `order`: `ReplaceSelfSajuChartService.replace()`/`DeleteMemberSajusService.deleteByMemberId()`처럼
+ * `@CommandService`(=`@Transactional`) 메서드에 `@CacheEvict`를 붙이는 경우, 캐싱 어드바이저가
+ * 트랜잭션 어드바이저보다 안쪽에서 실행되면 커밋 전에 무효화가 일어나 롤백 시에도 여전히 유효한
+ * 캐시를 불필요하게 비우게 된다. 트랜잭션 기본 순서([Ordered.LOWEST_PRECEDENCE])보다 한 단계
+ * 앞세워 캐싱이 항상 트랜잭션 바깥(커밋 이후)에서 동작하도록 고정한다.
+ * 읽기 전용 캐시(today-fortune 등)에는 영향이 없다.
  *
  * `cacheManager()`에 `@Bean`을 붙여 [CachingConfigurer]가 내부적으로 쓰는 것과는 별개로
  * 컨테이너에 `CacheManager` 빈으로도 등록한다 — `@Bean` 없이 override만 하면 캐싱 AOP 프록시는
