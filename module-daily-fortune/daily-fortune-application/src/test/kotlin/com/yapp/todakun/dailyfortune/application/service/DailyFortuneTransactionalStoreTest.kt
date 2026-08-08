@@ -65,6 +65,10 @@ class DailyFortuneTransactionalStoreTest :
                     result shouldBe EXISTING_ID
                     verify(exactly = 0) { dailyFortuneRepository.save(any()) }
                     verify(exactly = 0) { createLuckActionPort.create(any(), any(), any(), any(), any(), any()) }
+                    verifyOrder {
+                        dailyFortuneRepository.lock(MEMBER_ID, fortuneDate)
+                        dailyFortuneRepository.findByMemberIdAndFortuneDate(MEMBER_ID, fortuneDate)
+                    }
                 }
             }
 
