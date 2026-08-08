@@ -77,6 +77,8 @@ class CreateOneDaySelectionFortuneServiceTest :
 
                     result.id shouldBe existing.id
                     verify(exactly = 0) { getMemberFortuneProfilePort.getProfile(any()) }
+                    verify(exactly = 0) { getSajuChartPort.getChart(any()) }
+                    verify(exactly = 0) { getDailyPillarPort.getPillar(any()) }
                     verify(exactly = 0) { daySelectionFortuneAiPort.generate(any(), any(), any(), any()) }
                     verify(exactly = 0) { daySelectionFortuneTransactionalStore.saveIfAbsent(any()) }
                 }

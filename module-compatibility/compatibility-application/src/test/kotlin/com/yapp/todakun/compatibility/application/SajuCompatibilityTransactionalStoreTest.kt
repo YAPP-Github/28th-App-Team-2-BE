@@ -17,6 +17,10 @@ import io.mockk.verifyOrder
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
+// 재조회 결과와 저장 후보를 구분해, 구현이 재조회 결과 대신 입력값을 반환해도 테스트가 통과하지 않도록 한다.
+private val EXISTING_ID = UUID.fromString("018f0000-0000-7000-8000-0000000000e1")
+private val CANDIDATE_ID = UUID.fromString("018f0000-0000-7000-8000-0000000000e2")
+
 @ExperimentalUuidApi
 class SajuCompatibilityTransactionalStoreTest :
     DescribeSpec({
@@ -33,7 +37,7 @@ class SajuCompatibilityTransactionalStoreTest :
 
         describe("findExistingWithLock") {
             it("(myChartId, partnerChartId) 락을 선점한 뒤 조회한다") {
-                val existing = sajuCompatibility(memberId, myChartId, partnerChartId)
+                val existing = sajuCompatibility(EXISTING_ID, memberId, myChartId, partnerChartId)
                 every { sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, myChartId, partnerChartId) } returns existing
 
                 val result = store.findExistingWithLock(memberId, myChartId, partnerChartId)
@@ -48,15 +52,16 @@ class SajuCompatibilityTransactionalStoreTest :
 
         describe("saveIfAbsent") {
             context("락 재획득 후 재조회에서 이미 생성된 결과가 있으면") {
-                it("저장하지 않고 기존 결과를 반환한다(멱등)") {
-                    val existing = sajuCompatibility(memberId, myChartId, partnerChartId)
+                it("저장하지 않고 재조회된 기존 결과를 반환한다(멱등)") {
+                    val candidate = sajuCompatibility(CANDIDATE_ID, memberId, myChartId, partnerChartId)
+                    val existing = sajuCompatibility(EXISTING_ID, memberId, myChartId, partnerChartId)
                     every {
                         sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, myChartId, partnerChartId)
                     } returns existing
 
-                    val result = store.saveIfAbsent(existing)
+                    val result = store.saveIfAbsent(candidate)
 
-                    result shouldBe existing
+                    result.id shouldBe EXISTING_ID
                     verify(exactly = 0) { sajuCompatibilityRepository.save(any()) }
                     verifyOrder {
                         sajuCompatibilityRepository.lock(myChartId, partnerChartId)
@@ -66,8 +71,8 @@ class SajuCompatibilityTransactionalStoreTest :
             }
 
             context("재조회에서 결과가 없으면") {
-                it("락을 잡고 저장한다") {
-                    val toSave = sajuCompatibility(memberId, myChartId, partnerChartId)
+                it("락 → 재조회 → 저장 순서로 저장한다") {
+                    val toSave = sajuCompatibility(CANDIDATE_ID, memberId, myChartId, partnerChartId)
                     every { sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, myChartId, partnerChartId) } returns null
                     every { sajuCompatibilityRepository.save(toSave) } returns toSave
 
@@ -75,18 +80,24 @@ class SajuCompatibilityTransactionalStoreTest :
 
                     result shouldBe toSave
                     verify(exactly = 1) { sajuCompatibilityRepository.save(toSave) }
+                    verifyOrder {
+                        sajuCompatibilityRepository.lock(myChartId, partnerChartId)
+                        sajuCompatibilityRepository.findByMemberIdAndCharts(memberId, myChartId, partnerChartId)
+                        sajuCompatibilityRepository.save(toSave)
+                    }
                 }
             }
         }
     })
 
 private fun sajuCompatibility(
+    id: UUID,
     memberId: UUID,
     myChartId: UUID,
     partnerChartId: UUID,
 ): SajuCompatibility =
     SajuCompatibility.reconstitute(
-        id = UUID.fromString("018f0000-0000-7000-8000-0000000000e1"),
+        id = id,
         memberId = memberId,
         myChartId = myChartId,
         partnerChartId = partnerChartId,
