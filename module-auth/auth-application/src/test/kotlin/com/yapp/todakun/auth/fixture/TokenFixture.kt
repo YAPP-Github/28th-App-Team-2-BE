@@ -16,11 +16,13 @@ object TokenFixture {
         memberId: UUID,
         jti: String = JTI,
         remainingSeconds: Long = 3600L,
+        isAdmin: Boolean = false,
     ): AccessTokenClaims =
         AccessTokenClaims(
             memberId = memberId,
             jti = jti,
             remainingSeconds = remainingSeconds,
+            isAdmin = isAdmin,
         )
 
     fun issuedAccessToken(

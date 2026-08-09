@@ -5,7 +5,10 @@ import com.yapp.todakun.auth.token.IssuedAccessToken
 import java.util.UUID
 
 interface AccessTokenPort {
-    fun generate(memberId: UUID): IssuedAccessToken
+    fun generate(
+        memberId: UUID,
+        isAdmin: Boolean,
+    ): IssuedAccessToken
 
     fun parse(token: String): AccessTokenClaims
 }

@@ -102,7 +102,7 @@ class SignupServiceTest :
                             )
                         } returns memberId
                         every { createDailyFortunePort.create(memberId = memberId, fortuneDate = any()) } returns DAILY_FORTUNE_ID
-                        every { accessTokenPort.generate(memberId) } returns issuedAccessToken
+                        every { accessTokenPort.generate(memberId, false) } returns issuedAccessToken
                         every { refreshTokenPort.issue(memberId) } returns issuedRefreshToken
                         every { onboardingTokenPort.revoke(command.onboardingToken) } just Runs
 

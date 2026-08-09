@@ -9,4 +9,6 @@ dependencies {
     implementation(libs.spring.context)
     // 대상 회원별 발송 실패 로깅(버전은 Boot BOM 관리).
     implementation(libs.slf4j.api)
+    // 발송 성공/실패/재시도 소진 카운터 등록(NotificationMetrics).
+    implementation(libs.micrometer.core)
 }

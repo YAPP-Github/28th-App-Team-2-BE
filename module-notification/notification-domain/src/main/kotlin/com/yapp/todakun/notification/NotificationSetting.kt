@@ -21,6 +21,8 @@ data class NotificationSetting(
     val morningReportTime: LocalTime,
     val todakiEnabled: Boolean,
     val luckyActionReminderEnabled: Boolean,
+    // 클라이언트가 동기화한 OS 알림 권한 상태. null = 미동기화(사전 스킵 불가 — notification.md 6절).
+    val osPushPermission: Boolean? = null,
 ) {
     fun update(
         morningReportEnabled: Boolean,
@@ -35,6 +37,9 @@ data class NotificationSetting(
             todakiEnabled = todakiEnabled,
             luckyActionReminderEnabled = luckyActionReminderEnabled,
         )
+
+    /** 클라이언트가 감지한 OS 알림 권한 변경을 반영한다(사용자가 설정 화면에서 조작하는 값이 아님). */
+    fun syncOsPushPermission(granted: Boolean): NotificationSetting = copy(osPushPermission = granted)
 
     /** 알림 종류별 수신 토글. NOTICE(공지)는 항상 수신. */
     fun isPushEnabledFor(type: NotificationType): Boolean =
@@ -66,6 +71,7 @@ data class NotificationSetting(
             morningReportTime: LocalTime,
             todakiEnabled: Boolean,
             luckyActionReminderEnabled: Boolean,
+            osPushPermission: Boolean?,
         ): NotificationSetting =
             NotificationSetting(
                 id,
@@ -74,6 +80,7 @@ data class NotificationSetting(
                 morningReportTime,
                 todakiEnabled,
                 luckyActionReminderEnabled,
+                osPushPermission,
             )
     }
 }

@@ -10,6 +10,7 @@ data class NotificationSettingResponse(
     val morningReportTime: LocalTime,
     val todakiEnabled: Boolean,
     val luckyActionReminderEnabled: Boolean,
+    val osPushPermission: Boolean?,
 ) {
     companion object {
         fun from(setting: NotificationSetting) =
@@ -18,6 +19,7 @@ data class NotificationSettingResponse(
                 morningReportTime = setting.morningReportTime,
                 todakiEnabled = setting.todakiEnabled,
                 luckyActionReminderEnabled = setting.luckyActionReminderEnabled,
+                osPushPermission = setting.osPushPermission,
             )
     }
 }

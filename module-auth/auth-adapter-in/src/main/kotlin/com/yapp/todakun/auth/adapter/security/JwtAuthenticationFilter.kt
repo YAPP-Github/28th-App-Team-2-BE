@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpHeaders
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
 
@@ -57,7 +58,8 @@ class JwtAuthenticationFilter(
     }
 
     private fun authenticate(claims: AccessTokenClaims) {
+        val authorities = if (claims.isAdmin) listOf(SimpleGrantedAuthority("ROLE_ADMIN")) else emptyList()
         SecurityContextHolder.getContext().authentication =
-            UsernamePasswordAuthenticationToken(claims.memberId, null, emptyList())
+            UsernamePasswordAuthenticationToken(claims.memberId, null, authorities)
     }
 }

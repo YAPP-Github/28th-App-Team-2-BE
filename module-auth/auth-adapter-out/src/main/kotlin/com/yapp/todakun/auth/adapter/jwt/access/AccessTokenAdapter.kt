@@ -23,7 +23,10 @@ class AccessTokenAdapter(
     private val accessTokenProperties: AccessTokenProperties,
 ) : AccessTokenPort {
     @ExperimentalUuidApi
-    override fun generate(memberId: UUID): IssuedAccessToken {
+    override fun generate(
+        memberId: UUID,
+        isAdmin: Boolean,
+    ): IssuedAccessToken {
         val jti = Uuid.generateV7().toJavaUuid().toString()
         val now = Date()
 
@@ -31,6 +34,7 @@ class AccessTokenAdapter(
             Jwts.builder()
                 .subject(memberId.toString())
                 .id(jti)
+                .claim(ADMIN_CLAIM, isAdmin)
                 .issuedAt(now)
                 .expiration(Date(now.time + accessTokenProperties.expirySeconds * 1000))
                 .signWith(signingKey)
@@ -50,6 +54,8 @@ class AccessTokenAdapter(
             memberId = UUID.fromString(claims.subject),
             jti = requireNotNull(claims.id),
             remainingSeconds = ((claims.expiration.time - System.currentTimeMillis()) / 1000).coerceAtLeast(0),
+            // admin 클레임이 없는 기존(레거시) 토큰은 비관리자로 간주한다.
+            isAdmin = claims.get(ADMIN_CLAIM, java.lang.Boolean::class.java)?.booleanValue() ?: false,
         )
     }
 
@@ -68,3 +74,5 @@ class AccessTokenAdapter(
             throw UnauthorizedException(AuthErrorCode.ACCESS_TOKEN_INVALID)
         }
 }
+
+private const val ADMIN_CLAIM = "admin"

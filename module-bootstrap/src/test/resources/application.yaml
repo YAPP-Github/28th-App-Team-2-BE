@@ -6,6 +6,11 @@ spring:
     model:
       chat: none  # 테스트 컨텍스트에서 Vertex AI 빈 생성 자체를 막는다(project-id 미설정 시 기동 실패 방지, 실제 호출 금지)
 
+# 알림 재시도 폴러 등 @Scheduled가 매분 도는 탓에 @SpringBootTest 컨텍스트(특히 Testcontainers 정리 이후)에서
+# 스케줄러가 실행돼 로그 노이즈·커넥션 풀 경합이 생기는 것을 막는다.
+scheduling:
+  enabled: false
+
 token:
   jwt:
     secret: "3b1c2e7f9a4d6081c5e2f7a9b3d6180425e8f1a7c4b9d2e6f3081a5c7e9b2d4"

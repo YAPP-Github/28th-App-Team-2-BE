@@ -137,7 +137,7 @@ class MemberControllerIntegrationTest(
             context("인증된 회원이 탈퇴 사유와 함께 요청하면") {
                 it("200을 반환하고 사유로 탈퇴 처리한다") {
                     val commandSlot = slot<WithdrawMemberCommand>()
-                    every { accessTokenPort.parse(ACCESS_TOKEN) } returns AccessTokenClaims(MEMBER_ID, "test-jti", 300L)
+                    every { accessTokenPort.parse(ACCESS_TOKEN) } returns AccessTokenClaims(MEMBER_ID, "test-jti", 300L, false)
                     every { withdrawMemberUseCase.withdraw(capture(commandSlot)) } just Runs
 
                     mockMvc
@@ -156,7 +156,7 @@ class MemberControllerIntegrationTest(
 
             context("사유가 기타(ETC)인데 상세 사유가 비어 있으면") {
                 it("400을 반환하고 탈퇴 처리하지 않는다") {
-                    every { accessTokenPort.parse(ACCESS_TOKEN) } returns AccessTokenClaims(MEMBER_ID, "test-jti", 300L)
+                    every { accessTokenPort.parse(ACCESS_TOKEN) } returns AccessTokenClaims(MEMBER_ID, "test-jti", 300L, false)
 
                     mockMvc
                         .perform(

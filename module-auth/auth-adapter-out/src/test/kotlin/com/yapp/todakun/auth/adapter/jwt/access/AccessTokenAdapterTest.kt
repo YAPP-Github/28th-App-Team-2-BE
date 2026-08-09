@@ -2,11 +2,15 @@ package com.yapp.todakun.auth.adapter.jwt.access
 
 import com.yapp.todakun.auth.code.AuthErrorCode
 import com.yapp.todakun.common.exception.UnauthorizedException
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.security.Keys
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.longs.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
+import java.util.Date
+import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -31,7 +35,7 @@ class AccessTokenAdapterTest :
             describe("generate") {
                 context("memberId가 주어지면") {
                     it("서명된 토큰, jti, 만료 시간을 발급한다") {
-                        val issued = accessTokenAdapter.generate(memberId)
+                        val issued = accessTokenAdapter.generate(memberId, false)
 
                         issued.value.shouldNotBeBlank()
                         issued.jti.shouldNotBeBlank()
@@ -43,20 +47,41 @@ class AccessTokenAdapterTest :
             describe("parse") {
                 context("generate로 발급한 토큰이면") {
                     it("memberId와 jti를 복원한다") {
-                        val issued = accessTokenAdapter.generate(memberId)
+                        val issued = accessTokenAdapter.generate(memberId, false)
 
                         val claims = accessTokenAdapter.parse(issued.value)
 
                         claims.memberId shouldBe memberId
                         claims.jti shouldBe issued.jti
                         claims.remainingSeconds shouldBeLessThanOrEqual properties.expirySeconds
+                        claims.isAdmin shouldBe false
+                    }
+                }
+
+                context("isAdmin=true로 발급한 토큰이면") {
+                    it("isAdmin=true로 복원한다") {
+                        val issued = accessTokenAdapter.generate(memberId, true)
+
+                        val claims = accessTokenAdapter.parse(issued.value)
+
+                        claims.isAdmin shouldBe true
+                    }
+                }
+
+                context("admin 클레임이 없는(레거시) 토큰이면") {
+                    it("isAdmin=false로 간주한다") {
+                        val legacyToken = legacyTokenWithoutAdminClaim(memberId, properties)
+
+                        val claims = accessTokenAdapter.parse(legacyToken)
+
+                        claims.isAdmin shouldBe false
                     }
                 }
 
                 context("만료된 토큰이면") {
                     it("ACCESS_TOKEN_EXPIRED로 UnauthorizedException을 던진다") {
                         val expiredAdapter = AccessTokenAdapter(properties.copy(expirySeconds = -10L))
-                        val expiredToken = expiredAdapter.generate(memberId).value
+                        val expiredToken = expiredAdapter.generate(memberId, false).value
 
                         val exception = shouldThrow<UnauthorizedException> { accessTokenAdapter.parse(expiredToken) }
 
@@ -75,7 +100,7 @@ class AccessTokenAdapterTest :
                 context("서명이 위조된 토큰이면") {
                     it("ACCESS_TOKEN_INVALID로 UnauthorizedException을 던진다") {
                         val otherAdapter = AccessTokenAdapter(properties.copy(secret = OTHER_SECRET))
-                        val tamperedToken = otherAdapter.generate(memberId).value
+                        val tamperedToken = otherAdapter.generate(memberId, false).value
 
                         val exception = shouldThrow<UnauthorizedException> { accessTokenAdapter.parse(tamperedToken) }
 
@@ -85,3 +110,19 @@ class AccessTokenAdapterTest :
             }
         },
     )
+
+// admin 클레임이 도입되기 전(레거시)에 발급된 토큰을 재현한다.
+@OptIn(ExperimentalUuidApi::class)
+private fun legacyTokenWithoutAdminClaim(
+    memberId: UUID,
+    properties: AccessTokenProperties,
+): String {
+    val now = Date()
+    return Jwts.builder()
+        .subject(memberId.toString())
+        .id(Uuid.generateV7().toJavaUuid().toString())
+        .issuedAt(now)
+        .expiration(Date(now.time + properties.expirySeconds * 1000))
+        .signWith(Keys.hmacShaKeyFor(properties.secret.toByteArray(Charsets.UTF_8)))
+        .compact()
+}
