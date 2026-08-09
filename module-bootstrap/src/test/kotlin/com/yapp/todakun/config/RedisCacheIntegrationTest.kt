@@ -24,8 +24,9 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.cache.CacheManager
 import org.springframework.context.annotation.Import
 import java.time.LocalDate
-import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 /**
  * `@Cacheable`/`@CacheEvict`가 실제 [RedisCacheConfig]·TestContainer Redis를 통해 동작하는지 검증한다(이슈 #56).
@@ -67,7 +68,14 @@ class RedisCacheIntegrationTest(
             context("같은 요청을 반복하면") {
                 it("두 번째 호출부터는 리포지토리를 다시 조회하지 않는다") {
                     every { termsRepository.findAll() } returns
-                        listOf(Terms.reconstitute(UUID.randomUUID(), TermsType.SERVICE, "서비스 이용약관", required = true))
+                        listOf(
+                            Terms.reconstitute(
+                                Uuid.generateV7().toJavaUuid(),
+                                TermsType.SERVICE,
+                                "서비스 이용약관",
+                                required = true,
+                            ),
+                        )
 
                     getTermsUseCase.getAllTerms()
                     getTermsUseCase.getAllTerms()
