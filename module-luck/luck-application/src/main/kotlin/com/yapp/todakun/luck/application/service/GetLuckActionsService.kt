@@ -13,7 +13,7 @@ import java.util.UUID
 class GetLuckActionsService(
     private val luckActionRepository: LuckActionRepository,
 ) : GetLuckActionsUseCase {
-    // 목록성 데이터, 갱신 빈도 낮음 — evict 없이 TTL만으로 무효화한다(이슈 #56).
+    // achieved 토글 시 ToggleLuckActionService에서 evict된다. 그 외에는 TTL 만료로만 무효화한다(이슈 #56).
     @Cacheable(cacheNames = [CacheNames.LUCK_ACTIONS], key = "#memberId + ':' + #fortuneDate")
     override fun getTodayLuckActions(
         memberId: UUID,
