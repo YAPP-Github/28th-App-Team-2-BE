@@ -40,5 +40,10 @@ kotlin {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     // 모듈별 테스트를 사용 가능한 코어의 절반으로 포크 병렬 실행(최소 1).
-    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+    // CI(예: GitHub Actions)는 코어 수가 적은데 org.gradle.parallel로 여러 모듈의 테스트 태스크까지
+    // 동시에 돌아, 모듈 내 포크 병렬까지 곱해지면 같은 모듈의 TestContainer(Postgres/Redis)를 공유하는
+    // 여러 통합 테스트 JVM이 동시에 뜨며 자원 경합(플레이크)이 커진다. CI에서는 모듈 내 포크를 1로 고정해
+    // 그 경합만 줄인다(모듈 간 병렬 실행 자체는 유지).
+    val isCi = System.getenv("CI") != null
+    maxParallelForks = if (isCi) 1 else (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 }
