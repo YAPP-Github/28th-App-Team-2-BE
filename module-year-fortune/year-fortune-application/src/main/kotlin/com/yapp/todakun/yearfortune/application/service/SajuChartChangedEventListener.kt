@@ -21,7 +21,9 @@ import org.springframework.transaction.event.TransactionalEventListener
  * `RedisCacheConfig`의 fail-open `CacheErrorHandler`를 거치지 않는다. `AFTER_COMMIT` 리스너가
  * 예외를 던지면 이미 커밋된 `DeleteMemberSajusService`/`ReplaceSelfSajuChartService` 트랜잭션의
  * 호출자에게까지 예외가 전파될 수 있으므로(Spring이 afterCommit 예외를 삼키지 않음), Redis 장애로
- * 인한 evict 실패는 여기서 직접 흡수한다.
+ * 인한 evict 실패는 여기서 직접 흡수한다. evict 실패는 명식이 이미 바뀌었는데도 캐시가 TTL(90일)
+ * 동안 조용히 stale 응답을 준다는 뜻이라 사람이 알아채야 하는 사건이다. `FailOpenCacheErrorHandler.
+ * handleCacheEvictError`와 동일하게 ERROR로 남겨 기존 Discord ERROR 웹훅(Grafana Cloud) 알림이 걸리게 한다.
  */
 @Service
 class SajuChartChangedEventListener(
@@ -37,7 +39,7 @@ class SajuChartChangedEventListener(
             try {
                 cache.evict(key)
             } catch (e: RuntimeException) {
-                log.warn("연도별 운세 캐시 무효화 실패. key={}", key, e)
+                log.error("연도별 운세 캐시 무효화 실패. key={}", key, e)
             }
         }
     }
