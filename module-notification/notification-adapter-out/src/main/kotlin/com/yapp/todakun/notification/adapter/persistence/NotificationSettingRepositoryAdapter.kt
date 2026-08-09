@@ -2,7 +2,6 @@ package com.yapp.todakun.notification.adapter.persistence
 
 import com.yapp.todakun.notification.NotificationSetting
 import com.yapp.todakun.notification.port.outbound.NotificationSettingRepository
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.Limit
 import org.springframework.stereotype.Repository
 import java.time.LocalTime
@@ -15,14 +14,19 @@ class NotificationSettingRepositoryAdapter(
     override fun findByMemberId(memberId: UUID): NotificationSetting? =
         notificationSettingJpaRepository.findByMemberId(memberId)?.toDomain()
 
-    override fun save(setting: NotificationSetting): NotificationSetting =
-        try {
-            notificationSettingJpaRepository.save(NotificationSettingJpaEntity.fromDomain(setting)).toDomain()
-        } catch (_: DataIntegrityViolationException) {
-            // 최초 생성 시 동시 요청 경합(member_id 유니크 제약) — 먼저 커밋된 행의 id로 갱신을 재시도한다.
-            val existingId = requireNotNull(notificationSettingJpaRepository.findByMemberId(setting.memberId)).id
-            notificationSettingJpaRepository.save(NotificationSettingJpaEntity.fromDomain(setting.copy(id = existingId))).toDomain()
-        }
+    // member_id 기준 upsert(단일 원자적 statement)라 동시 최초 생성 요청 경합에도 예외 없이 안전하다.
+    override fun save(setting: NotificationSetting): NotificationSetting {
+        notificationSettingJpaRepository.upsert(
+            id = setting.id,
+            memberId = setting.memberId,
+            morningReportEnabled = setting.morningReportEnabled,
+            morningReportTime = setting.morningReportTime,
+            todakiEnabled = setting.todakiEnabled,
+            luckyActionReminderEnabled = setting.luckyActionReminderEnabled,
+            osPushPermission = setting.osPushPermission,
+        )
+        return requireNotNull(findByMemberId(setting.memberId))
+    }
 
     override fun findMorningReportTargets(
         slot: LocalTime,

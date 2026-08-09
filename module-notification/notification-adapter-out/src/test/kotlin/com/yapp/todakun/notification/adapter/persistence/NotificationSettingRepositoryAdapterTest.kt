@@ -4,11 +4,17 @@ import com.yapp.todakun.notification.NotificationSetting
 import com.yapp.todakun.notification.config.TestContainersConfig
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.LocalTime
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -19,9 +25,13 @@ import kotlin.uuid.toJavaUuid
 @Import(TestContainersConfig::class)
 class NotificationSettingRepositoryAdapterTest(
     private val notificationSettingJpaRepository: NotificationSettingJpaRepository,
+    transactionManager: PlatformTransactionManager,
 ) : DescribeSpec(
         {
             val adapter = NotificationSettingRepositoryAdapter(notificationSettingJpaRepository)
+            // 워커 스레드는 테스트 트랜잭션(메인 스레드 ThreadLocal)에 접근할 수 없어, @Modifying 쿼리를
+            // 실행하려면 스레드마다 독립된 새 트랜잭션이 필요하다.
+            val transactionTemplate = TransactionTemplate(transactionManager)
 
             fun morningReportSetting(time: LocalTime = LocalTime.of(8, 0)) =
                 NotificationSetting
@@ -62,6 +72,31 @@ class NotificationSettingRepositoryAdapterTest(
                         val found = adapter.findByMemberId(saved.memberId)
 
                         found?.osPushPermission shouldBe null
+                    }
+                }
+
+                context("같은 회원에 대해 최초 생성 요청이 동시에 들어오면(두 기기에서 동시 동기화)") {
+                    it("예외 없이 정확히 한 행만 남는다") {
+                        val memberId = Uuid.generateV7().toJavaUuid()
+                        val barrier = CyclicBarrier(2)
+                        val executor = Executors.newFixedThreadPool(2)
+
+                        try {
+                            val futures =
+                                listOf(true, false).map { granted ->
+                                    executor.submit {
+                                        barrier.await(10, TimeUnit.SECONDS)
+                                        transactionTemplate.execute {
+                                            adapter.save(NotificationSetting.createDefault(memberId).syncOsPushPermission(granted))
+                                        }
+                                    }
+                                }
+                            futures.forEach { it.get(10, TimeUnit.SECONDS) }
+
+                            notificationSettingJpaRepository.findByMemberId(memberId).shouldNotBeNull()
+                        } finally {
+                            executor.shutdown()
+                        }
                     }
                 }
             }
