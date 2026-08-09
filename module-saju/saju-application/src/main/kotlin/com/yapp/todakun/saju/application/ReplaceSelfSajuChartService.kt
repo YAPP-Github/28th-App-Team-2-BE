@@ -2,7 +2,6 @@ package com.yapp.todakun.saju.application
 
 import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.common.cache.CacheNames
-import com.yapp.todakun.common.transaction.runAfterCommit
 import com.yapp.todakun.saju.BirthTime
 import com.yapp.todakun.saju.CalendarType
 import com.yapp.todakun.saju.Gender
@@ -11,9 +10,10 @@ import com.yapp.todakun.saju.SajuChart
 import com.yapp.todakun.saju.port.outbound.ManseryeokPort
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
-import com.yapp.todakun.shared.EvictYearSelectionFortunesPort
 import com.yapp.todakun.shared.ReplaceSelfSajuChartPort
+import com.yapp.todakun.shared.event.SajuChartChangedEvent
 import org.springframework.cache.annotation.CacheEvict
+import org.springframework.context.ApplicationEventPublisher
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
@@ -27,7 +27,7 @@ class ReplaceSelfSajuChartService(
     private val manseryeokPort: ManseryeokPort,
     private val sajuChartRepository: SajuChartRepository,
     private val memberSajuLinkRepository: MemberSajuLinkRepository,
-    private val evictYearSelectionFortunesPort: EvictYearSelectionFortunesPort,
+    private val applicationEventPublisher: ApplicationEventPublisher,
 ) : ReplaceSelfSajuChartPort {
     // 명식이 바뀌었으니 GetMySajuService/GetSajuChartService가 채운 캐시를 함께 비운다(이슈 #56).
     @CacheEvict(cacheNames = [CacheNames.SAJU_CHART_DETAIL, CacheNames.SAJU_CHART_SUMMARY], key = "#memberId")
@@ -71,8 +71,8 @@ class ReplaceSelfSajuChartService(
             memberSajuLinkRepository.save(MemberSajuLink.self(memberId = memberId, chartId = newChartId))
         }
 
-        // 연도별 운세도 이 명식을 기반으로 생성되므로 함께 비운다. 커밋 전에 비우면 그 사이 다른 트랜잭션이
-        // 아직 이전 명식으로 캐시를 다시 채울 수 있어, 커밋 후에만 실행되도록 미룬다(이슈 #56).
-        runAfterCommit { evictYearSelectionFortunesPort.evictByMemberId(memberId) }
+        // 명식이 바뀌었음을 알려 연도별 운세 캐시 등 파생 데이터를 정리하게 한다. AFTER_COMMIT 리스너가
+        // 처리하므로 커밋 전 이벤트가 먼저 처리되는 경쟁이 생기지 않는다(이슈 #56).
+        applicationEventPublisher.publishEvent(SajuChartChangedEvent(memberId))
     }
 }

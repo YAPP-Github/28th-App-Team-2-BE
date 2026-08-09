@@ -29,7 +29,7 @@ import kotlin.uuid.ExperimentalUuidApi
  *
  * `create()` 자체는 트랜잭션을 걸지 않아 [YearSelectionFortuneTransactionalStore]의 각 단계가 이미 커밋된 뒤에야 반환되므로,
  * `@Cacheable`이 캐시에 적립하는 시점은 항상 커밋 이후다(이슈 #56). 생성된 연도별 운세 자체는 저장 후 불변이지만, 그 값은
- * [GetSajuChartPort]로 읽은 명식에 의존하므로 사주가 바뀌거나 삭제되면 [EvictYearSelectionFortunesService]가 해당 캐시를 함께 비운다.
+ * [GetSajuChartPort]로 읽은 명식에 의존하므로 사주가 바뀌거나 삭제되면 [SajuChartChangedEventListener]가 해당 캐시를 함께 비운다.
  */
 @Service
 class CreateYearSelectionFortuneService(

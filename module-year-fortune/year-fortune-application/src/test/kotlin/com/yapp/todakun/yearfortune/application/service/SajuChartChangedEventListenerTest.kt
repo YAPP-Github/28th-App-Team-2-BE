@@ -1,6 +1,7 @@
 package com.yapp.todakun.yearfortune.application.service
 
 import com.yapp.todakun.common.cache.CacheNames
+import com.yapp.todakun.shared.event.SajuChartChangedEvent
 import com.yapp.todakun.yearfortune.repository.YearSelectionFortuneRepository
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.Runs
@@ -16,24 +17,24 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 @ExperimentalUuidApi
-class EvictYearSelectionFortunesServiceTest : DescribeSpec({
+class SajuChartChangedEventListenerTest : DescribeSpec({
     val yearSelectionFortuneRepository = mockk<YearSelectionFortuneRepository>()
     val cacheManager = mockk<CacheManager>()
     val cache = mockk<Cache>()
-    val service = EvictYearSelectionFortunesService(yearSelectionFortuneRepository, cacheManager)
+    val listener = SajuChartChangedEventListener(yearSelectionFortuneRepository, cacheManager)
 
     val memberId = Uuid.generateV7().toJavaUuid()
 
     afterTest { clearMocks(yearSelectionFortuneRepository, cacheManager, cache) }
 
-    describe("evictByMemberId") {
+    describe("evictYearSelectionFortunes") {
         context("회원이 생성한 연도별 운세가 있으면") {
             it("생성된 연도들의 캐시 키만 개별 evict한다") {
                 every { yearSelectionFortuneRepository.findYearsByMemberId(memberId) } returns listOf(2025, 2026)
                 every { cacheManager.getCache(CacheNames.YEAR_FORTUNE) } returns cache
                 every { cache.evict(any()) } just Runs
 
-                service.evictByMemberId(memberId)
+                listener.evictYearSelectionFortunes(SajuChartChangedEvent(memberId))
 
                 verify(exactly = 1) { cache.evict("$memberId:2025") }
                 verify(exactly = 1) { cache.evict("$memberId:2026") }
@@ -44,7 +45,7 @@ class EvictYearSelectionFortunesServiceTest : DescribeSpec({
             it("아무 것도 하지 않는다") {
                 every { cacheManager.getCache(CacheNames.YEAR_FORTUNE) } returns null
 
-                service.evictByMemberId(memberId)
+                listener.evictYearSelectionFortunes(SajuChartChangedEvent(memberId))
 
                 verify(exactly = 0) { yearSelectionFortuneRepository.findYearsByMemberId(any()) }
             }
