@@ -5,6 +5,9 @@ spring:
   ai:
     model:
       chat: none  # 테스트 컨텍스트에서 Vertex AI 빈 생성 자체를 막는다(project-id 미설정 시 기동 실패 방지, 실제 호출 금지)
+  batch:
+    job:
+      enabled: false  # main의 application.yaml은 테스트 클래스패스에서 로드되지 않는다 — 배치 Job 자동 실행 방지를 테스트에도 동일하게 적용
 
 token:
   jwt:
