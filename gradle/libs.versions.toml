@@ -24,6 +24,10 @@ firebaseAdmin = "9.10.0"
 nimbusJoseJwt = "10.9.1"
 # Lombok (Java JPA 엔티티 보일러플레이트 생성). JDK 25 지원 버전.
 lombok = "1.18.46"
+# KSP(Kotlin Symbol Processing): @Loggable 어노테이션 처리(로거 필드 자동 생성)용.
+# Kotlin(2.3.21)과 정확히 같은 패치 버전의 KSP 릴리즈가 아직 없어 최신 릴리즈(2.3.11)를 사용한다 —
+# Kotlin 패치 버전 간에는 컴파일러 플러그인 API가 깨지지 않는 게 일반적이라 위험이 낮다.
+ksp = "2.3.11"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
@@ -33,6 +37,9 @@ kotlin-allopen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref =
 kotlin-lombok-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-lombok", version.ref = "kotlin" }
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
 ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin", version.ref = "ktlint" }
+ksp-gradle-plugin = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+# common-logging(KSP 프로세서 구현) 전용 API. SymbolProcessor/SymbolProcessorProvider 계약.
+ksp-symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 # --- 문서화 / Swagger (adapter-in) ---
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdocOpenapi" }
