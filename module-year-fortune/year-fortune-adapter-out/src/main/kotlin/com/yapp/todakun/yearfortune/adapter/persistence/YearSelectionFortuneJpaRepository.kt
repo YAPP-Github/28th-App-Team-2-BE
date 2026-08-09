@@ -11,6 +11,11 @@ interface YearSelectionFortuneJpaRepository : JpaRepository<YearSelectionFortune
         year: Int,
     ): YearSelectionFortuneJpaEntity?
 
+    @Query("SELECT e.year FROM YearSelectionFortuneJpaEntity e WHERE e.memberId = :memberId")
+    fun findYearsByMemberId(
+        @Param("memberId") memberId: UUID,
+    ): List<Int>
+
     @Query(value = "SELECT pg_advisory_xact_lock(hashtext(CAST(:memberId AS text)), :year)", nativeQuery = true)
     fun lock(
         @Param("memberId") memberId: UUID,

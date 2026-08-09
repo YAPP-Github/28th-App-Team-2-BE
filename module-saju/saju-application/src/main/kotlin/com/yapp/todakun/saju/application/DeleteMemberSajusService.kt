@@ -5,6 +5,7 @@ import com.yapp.todakun.common.cache.CacheNames
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import com.yapp.todakun.shared.DeleteMemberSajusPort
+import com.yapp.todakun.shared.EvictYearSelectionFortunesPort
 import org.springframework.cache.annotation.CacheEvict
 import java.util.UUID
 
@@ -16,10 +17,14 @@ import java.util.UUID
 class DeleteMemberSajusService(
     private val sajuChartRepository: SajuChartRepository,
     private val memberSajuLinkRepository: MemberSajuLinkRepository,
+    private val evictYearSelectionFortunesPort: EvictYearSelectionFortunesPort,
 ) : DeleteMemberSajusPort {
     // 탈퇴로 명식 자체가 사라지므로 GetMySajuService/GetSajuChartService 캐시도 함께 비운다(이슈 #56).
     @CacheEvict(cacheNames = [CacheNames.SAJU_CHART_DETAIL, CacheNames.SAJU_CHART_SUMMARY], key = "#memberId")
     override fun deleteByMemberId(memberId: UUID) {
+        // 명식 자체가 사라지므로 연도별 운세 캐시도 함께 비운다(이슈 #56).
+        evictYearSelectionFortunesPort.evictByMemberId(memberId)
+
         val links =
             buildList {
                 memberSajuLinkRepository.findSelfByMemberId(memberId)?.let { add(it) }

@@ -5,6 +5,7 @@ import com.yapp.todakun.saju.fixture.SajuFixture
 import com.yapp.todakun.saju.port.outbound.ManseryeokPort
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
+import com.yapp.todakun.shared.EvictYearSelectionFortunesPort
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.Runs
 import io.mockk.clearMocks
@@ -20,9 +21,11 @@ class ReplaceSelfSajuChartServiceTest : DescribeSpec({
     val manseryeokPort = mockk<ManseryeokPort>()
     val sajuChartRepository = mockk<SajuChartRepository>()
     val memberSajuLinkRepository = mockk<MemberSajuLinkRepository>()
-    val service = ReplaceSelfSajuChartService(manseryeokPort, sajuChartRepository, memberSajuLinkRepository)
+    val evictYearSelectionFortunesPort = mockk<EvictYearSelectionFortunesPort>()
+    val service =
+        ReplaceSelfSajuChartService(manseryeokPort, sajuChartRepository, memberSajuLinkRepository, evictYearSelectionFortunesPort)
 
-    afterTest { clearMocks(manseryeokPort, sajuChartRepository, memberSajuLinkRepository) }
+    afterTest { clearMocks(manseryeokPort, sajuChartRepository, memberSajuLinkRepository, evictYearSelectionFortunesPort) }
 
     fun callReplace() =
         service.replace(
@@ -43,25 +46,29 @@ class ReplaceSelfSajuChartServiceTest : DescribeSpec({
                 every { memberSajuLinkRepository.findSelfByMemberId(SajuFixture.MEMBER_ID) } returns SajuFixture.selfLink()
                 every { sajuChartRepository.deleteById(SajuFixture.CHART_ID) } just Runs
                 every { memberSajuLinkRepository.save(any()) } answers { firstArg() }
+                every { evictYearSelectionFortunesPort.evictByMemberId(SajuFixture.MEMBER_ID) } just Runs
 
                 callReplace()
 
                 verify(exactly = 1) { sajuChartRepository.deleteById(SajuFixture.CHART_ID) }
                 verify(exactly = 1) { memberSajuLinkRepository.save(match { it.role == SajuRole.SELF }) }
+                verify(exactly = 1) { evictYearSelectionFortunesPort.evictByMemberId(SajuFixture.MEMBER_ID) }
             }
         }
 
         context("기존 SELF 링크가 없으면") {
-            it("새 SELF 링크를 생성하고 삭제는 하지 않는다") {
+            it("새로운 SELF 링크를 생성하고 삭제는 하지 않는다") {
                 every { manseryeokPort.calculate(any(), any(), any(), any()) } returns SajuFixture.fourPillars()
                 every { sajuChartRepository.save(any()) } answers { firstArg() }
                 every { memberSajuLinkRepository.findSelfByMemberId(SajuFixture.MEMBER_ID) } returns null
                 every { memberSajuLinkRepository.save(any()) } answers { firstArg() }
+                every { evictYearSelectionFortunesPort.evictByMemberId(SajuFixture.MEMBER_ID) } just Runs
 
                 callReplace()
 
                 verify(exactly = 0) { sajuChartRepository.deleteById(any()) }
                 verify(exactly = 1) { memberSajuLinkRepository.save(match { it.role == SajuRole.SELF }) }
+                verify(exactly = 1) { evictYearSelectionFortunesPort.evictByMemberId(SajuFixture.MEMBER_ID) }
             }
         }
     }
