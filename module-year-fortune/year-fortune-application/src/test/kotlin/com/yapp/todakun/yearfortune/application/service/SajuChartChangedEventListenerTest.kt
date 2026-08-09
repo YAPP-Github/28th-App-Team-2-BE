@@ -50,5 +50,18 @@ class SajuChartChangedEventListenerTest : DescribeSpec({
                 verify(exactly = 0) { yearSelectionFortuneRepository.findYearsByMemberId(any()) }
             }
         }
+
+        context("Redis 장애로 evict가 실패하면") {
+            it("예외를 전파하지 않고 나머지 연도의 evict를 계속 시도한다") {
+                every { yearSelectionFortuneRepository.findYearsByMemberId(memberId) } returns listOf(2025, 2026)
+                every { cacheManager.getCache(CacheNames.YEAR_FORTUNE) } returns cache
+                every { cache.evict("$memberId:2025") } throws RuntimeException("Redis 연결 실패")
+                every { cache.evict("$memberId:2026") } just Runs
+
+                listener.evictYearSelectionFortunes(SajuChartChangedEvent(memberId))
+
+                verify(exactly = 1) { cache.evict("$memberId:2026") }
+            }
+        }
     }
 })
