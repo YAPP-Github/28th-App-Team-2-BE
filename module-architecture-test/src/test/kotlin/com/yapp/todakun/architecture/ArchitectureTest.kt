@@ -241,6 +241,18 @@ class ArchitectureTest {
     }
 
     @Test
+    fun `LoggerFactory를 직접 사용하지 않고 Loggable 어노테이션을 사용한다`() {
+        scope.files
+            .filterNot { it.path.contains("${java.io.File.separator}build${java.io.File.separator}") }
+            .filter { file -> file.imports.any { it.name == "org.slf4j.LoggerFactory" } }
+            .forEach { file ->
+                check(false) {
+                    "${file.name}: org.slf4j.LoggerFactory 직접 사용 금지, @Loggable 어노테이션을 사용할 것"
+                }
+            }
+    }
+
+    @Test
     fun `Fcm 어댑터는 adapter_fcm 패키지에만 위치한다`() {
         scope
             .classes()
