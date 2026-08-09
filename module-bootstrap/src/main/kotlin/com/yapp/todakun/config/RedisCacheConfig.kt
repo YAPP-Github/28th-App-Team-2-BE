@@ -28,11 +28,14 @@ import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
  * 값 직렬화는 역직렬화 시 구체 타입을 복원해야 하므로 다형 타입 정보를 함께 저장하는 [GenericJacksonJsonRedisSerializer]를 사용하되,
  * 임의 클래스 역직렬화(가젯 공격)를 막기 위해 [BasicPolymorphicTypeValidator]로 허용 패키지를 `com.yapp.todakun` 하위로 제한한다.
  *
- * `order`: `ReplaceSelfSajuChartService.replace()`/`DeleteMemberSajusService.deleteByMemberId()`처럼
- * `@CommandService`(=`@Transactional`) 메서드에 `@CacheEvict`를 붙이는 경우,
- * 캐싱 어드바이저가 트랜잭션 어드바이저보다 안쪽에서 실행되면 커밋 전에 무효화가 일어나 롤백 시에도 여전히 유효한 캐시를 불필요하게 비우게 된다.
- * 트랜잭션 기본 순서([Ordered.LOWEST_PRECEDENCE])보다 한 단계 앞세워 캐싱이 항상 트랜잭션 바깥(커밋 이후)에서 동작하도록 고정한다.
- * 읽기 전용 캐시(today-fortune 등)에는 영향이 없다.
+ * `order`: `ToggleLuckActionService.toggle()`처럼 `@CommandService`(=`@Transactional`) 메서드에
+ * `@CacheEvict`를 직접 붙이는 경우, 캐싱 어드바이저가 트랜잭션 어드바이저보다 안쪽에서 실행되면 커밋 전에 무효화가 일어나 롤백 시에도 여전히 유효한 캐시를 불필요하게 비우게 된다.
+ * 트랜잭션 기본 순서([Ordered.LOWEST_PRECEDENCE])보다 한 단계 앞세워 캐싱이 항상 트랜잭션 바깥(커밋 이후)에서 동작하도록 고정한다. 읽기 전용 캐시(today-fortune 등)에는 영향이 없다.
+ * 다만 이 순서 조정은 `@CacheEvict`가 붙은 메서드 자체가 최외곽 트랜잭션일 때만 유효하다. 그 메서드가 다른 `@CommandService` 안에서 호출되는 중첩 트랜잭션이면
+ * (예: `ReplaceSelfSajuChartService.replace()`/`DeleteMemberSajusService.deleteByMemberId()`) REQUIRED 전파로
+ * 안쪽 트랜잭션 어드바이저가 물리 커밋 없이 반환한 직후 evict가 실행돼 바깥 트랜잭션 커밋 전에 캐시가 비워진다.
+ * 이런 경우는 `order`로 해결할 수 없어 `SajuChartChangedEvent` + `@TransactionalEventListener(AFTER_COMMIT)`로 별도 처리한다
+ * (`SajuChartCacheEvictListener`, `YearFortune`의 `SajuChartChangedEventListener` 참고).
  *
  * `cacheManager()`에 `@Bean`을 붙여 [CachingConfigurer]가 내부적으로 쓰는 것과는 별개로 컨테이너에 `CacheManager` 빈으로도 등록한다.
  *  `@Bean` 없이 override만 하면 캐싱 AOP 프록시는 정상 동작하지만 다른 컴포넌트(테스트 등)가 `CacheManager`를 주입받을 수 없다.

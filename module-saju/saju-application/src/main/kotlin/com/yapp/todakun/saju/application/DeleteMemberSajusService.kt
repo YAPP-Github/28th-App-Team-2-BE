@@ -1,12 +1,10 @@
 package com.yapp.todakun.saju.application
 
 import com.yapp.todakun.common.annotation.CommandService
-import com.yapp.todakun.common.cache.CacheNames
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import com.yapp.todakun.shared.DeleteMemberSajusPort
 import com.yapp.todakun.shared.event.SajuChartChangedEvent
-import org.springframework.cache.annotation.CacheEvict
 import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 
@@ -20,8 +18,6 @@ class DeleteMemberSajusService(
     private val memberSajuLinkRepository: MemberSajuLinkRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
 ) : DeleteMemberSajusPort {
-    // 탈퇴로 명식 자체가 사라지므로 GetMySajuService/GetSajuChartService 캐시도 함께 비운다(이슈 #56).
-    @CacheEvict(cacheNames = [CacheNames.SAJU_CHART_DETAIL, CacheNames.SAJU_CHART_SUMMARY], key = "#memberId")
     override fun deleteByMemberId(memberId: UUID) {
         val links =
             buildList {

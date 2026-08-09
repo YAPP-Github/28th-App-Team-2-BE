@@ -1,7 +1,6 @@
 package com.yapp.todakun.saju.application
 
 import com.yapp.todakun.common.annotation.CommandService
-import com.yapp.todakun.common.cache.CacheNames
 import com.yapp.todakun.saju.BirthTime
 import com.yapp.todakun.saju.CalendarType
 import com.yapp.todakun.saju.Gender
@@ -12,7 +11,6 @@ import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import com.yapp.todakun.shared.ReplaceSelfSajuChartPort
 import com.yapp.todakun.shared.event.SajuChartChangedEvent
-import org.springframework.cache.annotation.CacheEvict
 import org.springframework.context.ApplicationEventPublisher
 import java.time.LocalDate
 import java.util.UUID
@@ -29,8 +27,6 @@ class ReplaceSelfSajuChartService(
     private val memberSajuLinkRepository: MemberSajuLinkRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
 ) : ReplaceSelfSajuChartPort {
-    // 명식이 바뀌었으니 GetMySajuService/GetSajuChartService가 채운 캐시를 함께 비운다(이슈 #56).
-    @CacheEvict(cacheNames = [CacheNames.SAJU_CHART_DETAIL, CacheNames.SAJU_CHART_SUMMARY], key = "#memberId")
     @ExperimentalUuidApi
     override fun replace(
         memberId: UUID,
