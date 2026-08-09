@@ -2,6 +2,7 @@ package com.yapp.todakun.saju.application
 
 import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.common.cache.CacheNames
+import com.yapp.todakun.common.transaction.runAfterCommit
 import com.yapp.todakun.saju.BirthTime
 import com.yapp.todakun.saju.CalendarType
 import com.yapp.todakun.saju.Gender
@@ -40,9 +41,6 @@ class ReplaceSelfSajuChartService(
         birthTime: String,
         isLeapMonth: Boolean,
     ) {
-        // 연도별 운세도 이 명식을 기반으로 생성되므로 함께 비운다(이슈 #56).
-        evictYearSelectionFortunesPort.evictByMemberId(memberId)
-
         val fourPillars =
             manseryeokPort.calculate(
                 birthDate = birthDate,
@@ -72,5 +70,9 @@ class ReplaceSelfSajuChartService(
         } else {
             memberSajuLinkRepository.save(MemberSajuLink.self(memberId = memberId, chartId = newChartId))
         }
+
+        // 연도별 운세도 이 명식을 기반으로 생성되므로 함께 비운다. 커밋 전에 비우면 그 사이 다른 트랜잭션이
+        // 아직 이전 명식으로 캐시를 다시 채울 수 있어, 커밋 후에만 실행되도록 미룬다(이슈 #56).
+        runAfterCommit { evictYearSelectionFortunesPort.evictByMemberId(memberId) }
     }
 }

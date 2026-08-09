@@ -2,6 +2,7 @@ package com.yapp.todakun.saju.application
 
 import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.common.cache.CacheNames
+import com.yapp.todakun.common.transaction.runAfterCommit
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import com.yapp.todakun.shared.DeleteMemberSajusPort
@@ -22,9 +23,6 @@ class DeleteMemberSajusService(
     // 탈퇴로 명식 자체가 사라지므로 GetMySajuService/GetSajuChartService 캐시도 함께 비운다(이슈 #56).
     @CacheEvict(cacheNames = [CacheNames.SAJU_CHART_DETAIL, CacheNames.SAJU_CHART_SUMMARY], key = "#memberId")
     override fun deleteByMemberId(memberId: UUID) {
-        // 명식 자체가 사라지므로 연도별 운세 캐시도 함께 비운다(이슈 #56).
-        evictYearSelectionFortunesPort.evictByMemberId(memberId)
-
         val links =
             buildList {
                 memberSajuLinkRepository.findSelfByMemberId(memberId)?.let { add(it) }
@@ -33,5 +31,9 @@ class DeleteMemberSajusService(
 
         sajuChartRepository.deleteAllByIds(links.map { it.chartId })
         memberSajuLinkRepository.deleteByMemberId(memberId)
+
+        // 명식 자체가 사라지므로 연도별 운세 캐시도 함께 비운다. 커밋 전에 비우면 그 사이 다른 트랜잭션이
+        // 아직 삭제되지 않은 명식으로 캐시를 다시 채울 수 있어, 커밋 후에만 실행되도록 미룬다(이슈 #56).
+        runAfterCommit { evictYearSelectionFortunesPort.evictByMemberId(memberId) }
     }
 }
