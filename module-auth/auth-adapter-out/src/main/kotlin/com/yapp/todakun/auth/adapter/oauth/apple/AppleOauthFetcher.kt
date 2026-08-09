@@ -11,13 +11,12 @@ import com.yapp.todakun.auth.adapter.oauth.requireVerifiedEmail
 import com.yapp.todakun.auth.exception.OauthProviderUnavailableException
 import com.yapp.todakun.auth.exception.OauthTokenInvalidException
 import com.yapp.todakun.auth.port.outbound.AppleOauthCredentialPort
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.shared.OauthProvider
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
-private val log = LoggerFactory.getLogger(AppleOauthFetcher::class.java)
-
 @Component
+@Loggable
 class AppleOauthFetcher(
     private val appleIdTokenProcessor: ConfigurableJWTProcessor<SecurityContext>,
     private val appleOauthProperties: AppleOauthProperties,

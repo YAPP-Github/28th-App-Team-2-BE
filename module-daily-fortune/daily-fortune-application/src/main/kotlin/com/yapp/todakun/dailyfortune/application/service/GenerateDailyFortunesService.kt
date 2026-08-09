@@ -1,9 +1,9 @@
 package com.yapp.todakun.dailyfortune.application.service
 
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.dailyfortune.port.inbound.GenerateDailyFortunesUseCase
 import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.GetMemberIdsPort
-import org.slf4j.LoggerFactory
 import java.time.LocalDate
 import java.util.UUID
 
@@ -19,6 +19,7 @@ internal const val PAGE_SIZE = 100
  * [CreateDailyFortunePort] 구현체(오케스트레이터)가 저장 단계에서 회원별로 독립 트랜잭션을 커밋하기 때문에, 이 배치에는 트랜잭션을 걸지 않는다.
  * 따라서 회원별 호출은 각각 독립된 트랜잭션으로 커밋되고, AI 호출은 트랜잭션 밖에서 수행된다.
  */
+@Loggable
 class GenerateDailyFortunesService(
     private val getMemberIdsPort: GetMemberIdsPort,
     private val createDailyFortunePort: CreateDailyFortunePort,
@@ -42,5 +43,3 @@ class GenerateDailyFortunesService(
         }
     }
 }
-
-private val log = LoggerFactory.getLogger(GenerateDailyFortunesService::class.java)

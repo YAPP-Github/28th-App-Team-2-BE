@@ -1,5 +1,6 @@
 package com.yapp.todakun.notification.application
 
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.notification.NotificationSetting
 import com.yapp.todakun.notification.port.inbound.DispatchScheduledNotificationUseCase
 import com.yapp.todakun.notification.port.inbound.PublishNoticeUseCase
@@ -12,7 +13,6 @@ import com.yapp.todakun.shared.NotificationPayload
 import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Service
 import java.time.LocalTime
@@ -38,6 +38,7 @@ private const val NOTICE_LOCK_KEY = 8_412_037_604L
  * 다만 서로 다른 시점의 반복 호출까지 막는 완전한 멱등성은 별도 과제다.
  */
 @Service
+@Loggable
 class NotificationDispatchService(
     private val notificationSettingRepository: NotificationSettingRepository,
     private val sendNotificationPort: SendNotificationPort,
@@ -118,5 +119,3 @@ class NotificationDispatchService(
         }
     }
 }
-
-private val log = LoggerFactory.getLogger(NotificationDispatchService::class.java)

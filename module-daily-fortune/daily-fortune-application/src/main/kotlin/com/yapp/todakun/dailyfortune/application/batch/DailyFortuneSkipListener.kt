@@ -1,7 +1,6 @@
 package com.yapp.todakun.dailyfortune.application.batch
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import com.yapp.todakun.common.logging.Loggable
 import org.springframework.batch.core.configuration.annotation.StepScope
 import org.springframework.batch.core.listener.SkipListener
 import org.springframework.batch.core.listener.StepExecutionListener
@@ -15,6 +14,7 @@ import java.util.UUID
  * 클래스 레벨의 [StepScope]는 kotlin-allopen의 CGLIB 프록시 대상 표시용([MemberIdItemReader] 참고).
  */
 @StepScope
+@Loggable
 class DailyFortuneSkipListener : SkipListener<UUID, UUID>, StepExecutionListener {
     private lateinit var fortuneDate: LocalDate
 
@@ -29,5 +29,3 @@ class DailyFortuneSkipListener : SkipListener<UUID, UUID>, StepExecutionListener
         log.error("일일 운세 생성 실패(재시도 소진, skip): memberId=$item, fortuneDate=$fortuneDate", t)
     }
 }
-
-private val log: Logger = LoggerFactory.getLogger(DailyFortuneSkipListener::class.java)
