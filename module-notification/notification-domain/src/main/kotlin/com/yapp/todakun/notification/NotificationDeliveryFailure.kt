@@ -20,12 +20,19 @@ data class NotificationDeliveryFailure(
     val title: String,
     val content: String,
     val deepLink: String?,
+    // 일시 실패한 디바이스 토큰만 기록 — 재시도 시 이미 성공한 토큰까지 다시 발송하지 않기 위함이다.
+    val failedTokens: List<String>,
     val attemptCount: Int,
     val nextRetryAt: Instant,
 ) {
-    /** 재시도가 다시 실패했을 때 다음 재시도 정보로 갱신한 새 인스턴스를 반환한다(불변). */
-    fun scheduleNextRetry(nextRetryAt: Instant): NotificationDeliveryFailure =
-        copy(attemptCount = attemptCount + 1, nextRetryAt = nextRetryAt)
+    /**
+     * 재시도가 다시 실패했을 때 다음 재시도 정보로 갱신한 새 인스턴스를 반환한다(불변).
+     * [failedTokens]를 생략하면 이번에도 여전히 실패한 토큰 목록이 바뀌지 않았다고 간주한다.
+     */
+    fun scheduleNextRetry(
+        nextRetryAt: Instant,
+        failedTokens: List<String> = this.failedTokens,
+    ): NotificationDeliveryFailure = copy(attemptCount = attemptCount + 1, nextRetryAt = nextRetryAt, failedTokens = failedTokens)
 
     companion object {
         @ExperimentalUuidApi
@@ -36,6 +43,7 @@ data class NotificationDeliveryFailure(
             title: String,
             content: String,
             deepLink: String?,
+            failedTokens: List<String>,
             nextRetryAt: Instant,
         ): NotificationDeliveryFailure =
             NotificationDeliveryFailure(
@@ -46,6 +54,7 @@ data class NotificationDeliveryFailure(
                 title = title,
                 content = content,
                 deepLink = deepLink,
+                failedTokens = failedTokens,
                 attemptCount = 0,
                 nextRetryAt = nextRetryAt,
             )
@@ -59,9 +68,21 @@ data class NotificationDeliveryFailure(
             title: String,
             content: String,
             deepLink: String?,
+            failedTokens: List<String>,
             attemptCount: Int,
             nextRetryAt: Instant,
         ): NotificationDeliveryFailure =
-            NotificationDeliveryFailure(id, memberId, notificationId, type, title, content, deepLink, attemptCount, nextRetryAt)
+            NotificationDeliveryFailure(
+                id,
+                memberId,
+                notificationId,
+                type,
+                title,
+                content,
+                deepLink,
+                failedTokens,
+                attemptCount,
+                nextRetryAt,
+            )
     }
 }

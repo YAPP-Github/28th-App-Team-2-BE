@@ -21,8 +21,9 @@ class PostgresDispatchLockAdapter(
     ): T? =
         dataSource.connection.use { connection ->
             val acquired =
-                connection.createStatement().use { statement ->
-                    statement.executeQuery("SELECT pg_try_advisory_lock($key)").use { it.next() && it.getBoolean(1) }
+                connection.prepareStatement("SELECT pg_try_advisory_lock(?)").use { statement ->
+                    statement.setLong(1, key)
+                    statement.executeQuery().use { it.next() && it.getBoolean(1) }
                 }
             if (!acquired) {
                 return@use null
@@ -31,7 +32,10 @@ class PostgresDispatchLockAdapter(
             try {
                 block()
             } finally {
-                connection.createStatement().use { it.execute("SELECT pg_advisory_unlock($key)") }
+                connection.prepareStatement("SELECT pg_advisory_unlock(?)").use { statement ->
+                    statement.setLong(1, key)
+                    statement.execute()
+                }
             }
         }
 }

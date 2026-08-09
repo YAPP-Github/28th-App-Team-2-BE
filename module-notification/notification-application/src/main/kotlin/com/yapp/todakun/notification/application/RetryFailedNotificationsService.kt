@@ -18,8 +18,8 @@ private const val RETRY_LOCK_KEY = 8_412_037_603L
 /**
  * FCM 발송이 일시적으로 실패한 건을 재시도한다([NotificationRetryPolicy]: 최대 3회, 1분→5분→30분 지수 백오프).
  * 트랜잭션을 걸지 않는다 — 회원별 FCM 재호출(외부 I/O)을 DB 트랜잭션 밖에서 수행하기 위함이다(#41과 동일 원칙).
- * 재시도 시점의 최신 디바이스 토큰을 다시 조회한다 — 실패 등록 이후 로그아웃 등으로 토큰이 바뀌었을 수 있어
- * 등록 시점의 토큰을 캐시해두지 않는다.
+ * 재시도 대상은 [NotificationDeliveryFailure.failedTokens](일시 실패한 토큰만)와 재시도 시점의 최신
+ * 디바이스 토큰의 교집합이다 — 이미 성공한 토큰을 다시 발송하지 않고, 로그아웃 등으로 사라진 토큰도 걸러낸다.
  * 대상 건별 처리는 예외를 격리해 한 건의 실패가 나머지 건의 재시도를 중단시키지 않는다.
  * Blue/Green 배포 전환 구간의 중복 실행은 [dispatchLockPort]로 인스턴스 간 직렬화한다.
  */
@@ -43,30 +43,48 @@ class RetryFailedNotificationsService(
     }
 
     private fun retry(failure: NotificationDeliveryFailure) {
-        val tokens = notificationTransactionalStore.getDeviceTokens(failure.memberId)
+        // 실패 등록 이후 로그아웃 등으로 사라졌을 수 있으니, 최신 토큰 목록과 교집합을 취한다.
+        // 이미 성공한 토큰은 대상에서 빠지므로 같은 알림을 두 번 받지 않는다.
+        val currentTokens = notificationTransactionalStore.getDeviceTokens(failure.memberId).associateBy { it.token }
+        val tokens = failure.failedTokens.mapNotNull { currentTokens[it] }
         if (tokens.isEmpty()) {
             notificationTransactionalStore.deleteDeliveryFailure(failure.id)
             return
         }
 
         val results =
-            pushNotificationPort.sendAll(
-                tokens.map { token ->
-                    PushNotification(
-                        token = token.token,
-                        title = failure.title,
-                        body = failure.content,
-                        data = buildPushData(failure.type, failure.notificationId, failure.deepLink),
-                    )
-                },
-            )
+            try {
+                pushNotificationPort.sendAll(
+                    tokens.map { token ->
+                        PushNotification(
+                            token = token.token,
+                            title = failure.title,
+                            body = failure.content,
+                            data = buildPushData(failure.type, failure.notificationId, failure.deepLink),
+                        )
+                    },
+                )
+            } catch (e: Exception) {
+                // 배치 호출 자체가 실패하면 결과를 알 수 없으니 이번에 시도한 토큰 전부를 여전히 실패로 간주한다.
+                log.warn("알림 재시도 중 FCM 배치 호출이 실패했습니다: memberId=${failure.memberId}, type=${failure.type}", e)
+                rescheduleOrGiveUp(failure, tokens.map { it.token })
+                return
+            }
         notificationTransactionalStore.cleanupExpiredTokens(results)
 
-        if (results.none { !it.success && !it.tokenExpired }) {
+        val stillFailingTokens = results.filter { !it.success && !it.tokenExpired }.map { it.token }
+        if (stillFailingTokens.isEmpty()) {
             notificationTransactionalStore.deleteDeliveryFailure(failure.id)
             return
         }
 
+        rescheduleOrGiveUp(failure, stillFailingTokens)
+    }
+
+    private fun rescheduleOrGiveUp(
+        failure: NotificationDeliveryFailure,
+        stillFailingTokens: List<String>,
+    ) {
         // 방금 실행한 이 시도까지 포함한 횟수 — attemptCount는 "이전에 이미 마친 재시도 횟수"라 +1을 더해야 한다.
         val attemptsMadeIncludingThis = failure.attemptCount + 1
         if (NotificationRetryPolicy.shouldGiveUp(attemptsMadeIncludingThis)) {
@@ -77,7 +95,10 @@ class RetryFailedNotificationsService(
         }
 
         notificationTransactionalStore.saveDeliveryFailure(
-            failure.scheduleNextRetry(Instant.now().plus(NotificationRetryPolicy.backoffFor(failure.attemptCount))),
+            failure.scheduleNextRetry(
+                nextRetryAt = Instant.now().plus(NotificationRetryPolicy.backoffFor(attemptsMadeIncludingThis)),
+                failedTokens = stillFailingTokens,
+            ),
         )
     }
 }

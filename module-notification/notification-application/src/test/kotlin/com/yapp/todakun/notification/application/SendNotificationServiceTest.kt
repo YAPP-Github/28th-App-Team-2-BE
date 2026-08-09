@@ -159,10 +159,14 @@ class SendNotificationServiceTest :
                                 osPushPermission = null,
                             )
                         every { notificationSettingRepository.findByMemberId(memberId) } returns setting
-                        every { notificationTransactionalStore.getDeviceTokens(memberId) } returns emptyList()
+                        every { notificationTransactionalStore.getDeviceTokens(memberId) } returns
+                            listOf(DeviceToken.reconstitute(settingId, memberId, "valid", Platform.IOS))
+                        every { pushNotificationPort.sendAll(any()) } returns listOf(PushResult(token = "valid", success = true))
+                        every { notificationTransactionalStore.cleanupExpiredTokens(any()) } returns Unit
 
                         service.send(command())
 
+                        verify(exactly = 1) { pushNotificationPort.sendAll(any()) }
                         verify(exactly = 0) { pushConsentPort.getIfAvailable() }
                     }
                 }
@@ -193,6 +197,7 @@ class SendNotificationServiceTest :
                         verify(exactly = 1) { notificationMetrics.record(NotificationType.FORTUNE, NotificationDispatchResult.FAILURE) }
                         captured.captured.memberId shouldBe memberId
                         captured.captured.attemptCount shouldBe 0
+                        captured.captured.failedTokens shouldBe listOf("flaky")
                     }
                 }
             }

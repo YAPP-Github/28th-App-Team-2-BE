@@ -24,6 +24,8 @@ import org.springframework.beans.factory.ObjectProvider
 import java.time.LocalTime
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 @ExperimentalUuidApi
 class NotificationDispatchServiceTest :
@@ -62,7 +64,7 @@ class NotificationDispatchServiceTest :
 
             fun setting(memberId: UUID) =
                 NotificationSetting.reconstitute(
-                    UUID.randomUUID(),
+                    Uuid.generateV7().toJavaUuid(),
                     memberId,
                     morningReportEnabled = true,
                     morningReportTime = LocalTime.of(8, 0),
@@ -152,6 +154,16 @@ class NotificationDispatchServiceTest :
                     verify(exactly = 2) { sendNotificationPort.send(any()) }
                     commands.map { it.type }.toSet() shouldBe setOf(NotificationType.NOTICE)
                     commands.map { it.memberId } shouldContainExactlyInAnyOrder listOf(m1, m2)
+                }
+
+                context("다른 인스턴스가 이미 공지를 발송 중이면") {
+                    it("대상 조회조차 하지 않고 스킵한다") {
+                        every { dispatchLockPort.tryRun<Unit>(any(), any()) } returns null
+
+                        service.publish("공지 제목", "공지 내용", "notice/1")
+
+                        verify(exactly = 0) { getMemberIdsPort.getMemberIds(any(), any()) }
+                    }
                 }
             }
         },

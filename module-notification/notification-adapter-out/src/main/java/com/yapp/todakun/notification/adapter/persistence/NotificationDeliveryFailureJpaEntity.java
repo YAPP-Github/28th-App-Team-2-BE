@@ -3,13 +3,19 @@ package com.yapp.todakun.notification.adapter.persistence;
 import com.yapp.todakun.notification.NotificationDeliveryFailure;
 import com.yapp.todakun.persistence.BaseEntity;
 import com.yapp.todakun.shared.NotificationType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -46,6 +52,18 @@ public class NotificationDeliveryFailureJpaEntity extends BaseEntity {
     @Column(name = "deep_link", updatable = false)
     private String deepLink;
 
+    @ElementCollection
+    @CollectionTable(
+            name = "notification_delivery_failure_token",
+            joinColumns = @JoinColumn(
+                    name = "notification_delivery_failure_id",
+                    nullable = false,
+                    foreignKey = @ForeignKey(name = "fk_notification_delivery_failure_token_failure_id")
+            )
+    )
+    @Column(name = "token", nullable = false)
+    private List<String> failedTokens = new ArrayList<>();
+
     @Column(name = "attempt_count", nullable = false)
     private int attemptCount;
 
@@ -61,6 +79,7 @@ public class NotificationDeliveryFailureJpaEntity extends BaseEntity {
                 .title(failure.getTitle())
                 .content(failure.getContent())
                 .deepLink(failure.getDeepLink())
+                .failedTokens(new ArrayList<>(failure.getFailedTokens()))
                 .attemptCount(failure.getAttemptCount())
                 .nextRetryAt(failure.getNextRetryAt())
                 .build();
@@ -75,6 +94,9 @@ public class NotificationDeliveryFailureJpaEntity extends BaseEntity {
                 title,
                 content,
                 deepLink,
+                // @ElementCollection(LAZY)인 PersistentBag을 도메인에 그대로 넘기면 세션 종료(OSIV off) 후
+                // 접근 시 LazyInitializationException이 난다. 트랜잭션 안에서 새 리스트로 매핑해 프록시 분리.
+                new ArrayList<>(failedTokens),
                 attemptCount,
                 nextRetryAt
         );

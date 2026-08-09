@@ -147,7 +147,8 @@ class NotificationControllerIntegrationTest(
                                 .andReturn()
                                 .response.contentAsString,
                         )
-                    patchedBody["data"]["osPushPermission"].asBoolean() shouldBe false
+                    patchedBody["data"]["osPushPermission"].isBoolean shouldBe true
+                    patchedBody["data"]["osPushPermission"].booleanValue() shouldBe false
                 }
             }
 

@@ -120,7 +120,7 @@ private fun legacyTokenWithoutAdminClaim(
     val now = Date()
     return Jwts.builder()
         .subject(memberId.toString())
-        .id(Uuid.generateV7().toString())
+        .id(Uuid.generateV7().toJavaUuid().toString())
         .issuedAt(now)
         .expiration(Date(now.time + properties.expirySeconds * 1000))
         .signWith(Keys.hmacShaKeyFor(properties.secret.toByteArray(Charsets.UTF_8)))

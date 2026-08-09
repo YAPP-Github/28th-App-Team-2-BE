@@ -5,6 +5,7 @@ import com.yapp.todakun.notification.config.TestContainersConfig
 import com.yapp.todakun.shared.NotificationType
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
@@ -33,6 +34,7 @@ class NotificationDeliveryFailureRepositoryAdapterTest(
                     title = "제목",
                     content = "본문",
                     deepLink = "fortune/today",
+                    failedTokens = listOf("token-a"),
                     nextRetryAt = nextRetryAt,
                 )
 
@@ -54,6 +56,30 @@ class NotificationDeliveryFailureRepositoryAdapterTest(
                         adapter.save(failure(Instant.now().plus(1, ChronoUnit.HOURS)))
 
                         adapter.findDue(Instant.now(), limit = 10).shouldBeEmpty()
+                    }
+                }
+            }
+
+            describe("save") {
+                context("failedTokens를 저장하면") {
+                    it("조회 시 그대로 복원된다") {
+                        val saved =
+                            adapter.save(
+                                NotificationDeliveryFailure.create(
+                                    memberId = Uuid.generateV7().toJavaUuid(),
+                                    notificationId = Uuid.generateV7().toJavaUuid(),
+                                    type = NotificationType.FORTUNE,
+                                    title = "제목",
+                                    content = "본문",
+                                    deepLink = "fortune/today",
+                                    failedTokens = listOf("token-a", "token-b"),
+                                    nextRetryAt = Instant.now().minus(1, ChronoUnit.MINUTES),
+                                ),
+                            )
+
+                        val found = adapter.findDue(Instant.now(), limit = 10).single { it.id == saved.id }
+
+                        found.failedTokens shouldContainExactlyInAnyOrder listOf("token-a", "token-b")
                     }
                 }
             }

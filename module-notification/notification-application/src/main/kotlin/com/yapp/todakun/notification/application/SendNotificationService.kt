@@ -66,7 +66,8 @@ class SendNotificationService(
             )
         notificationTransactionalStore.cleanupExpiredTokens(results)
 
-        if (results.any { !it.success && !it.tokenExpired }) {
+        val failedTokens = results.filter { !it.success && !it.tokenExpired }.map { it.token }
+        if (failedTokens.isNotEmpty()) {
             notificationMetrics.record(command.type, NotificationDispatchResult.FAILURE)
             notificationTransactionalStore.saveDeliveryFailure(
                 NotificationDeliveryFailure.create(
@@ -76,6 +77,7 @@ class SendNotificationService(
                     title = command.title,
                     content = command.content,
                     deepLink = command.deepLink,
+                    failedTokens = failedTokens,
                     nextRetryAt = Instant.now().plus(NotificationRetryPolicy.backoffFor(0)),
                 ),
             )

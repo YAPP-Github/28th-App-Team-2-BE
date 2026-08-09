@@ -23,6 +23,7 @@ private const val PAGE_SIZE = 100
 // pg_advisory_lock 키(임의 상수). 다른 advisory lock 용도(BatchJdbcConfig 등)와 겹치지만 않으면 된다.
 private const val MORNING_REPORT_LOCK_KEY = 8_412_037_601L
 private const val LUCKY_ACTION_LOCK_KEY = 8_412_037_602L
+private const val NOTICE_LOCK_KEY = 8_412_037_604L
 
 /**
  * 알림 발송(아침 운 리포트/행운 액션 리마인드/공지) 대상 선별·콘텐츠 조달·발송 오케스트레이션.
@@ -32,8 +33,9 @@ private const val LUCKY_ACTION_LOCK_KEY = 8_412_037_602L
  * 해당 회원 발송을 스킵한다.
  * 대상 회원별 발송은 예외를 격리해 한 명의 실패가 나머지 회원의 발송을 중단시키지 않는다.
  * OutOfMemoryError 등 복구 불가능한 [Error]는 격리 대상이 아니므로 [Exception]만 명시적으로 잡아 전파시킨다.
- * Blue/Green 배포 전환 구간의 중복 실행은 [dispatchLockPort]로 인스턴스 간 직렬화한다(공지는 운영자가 직접
- * 1회 트리거하므로 락 대상이 아니다).
+ * Blue/Green 배포 전환 구간의 중복 실행은 [dispatchLockPort]로 인스턴스 간 직렬화한다. 공지([publish])는
+ * 관리자 API로도 호출 가능해져(더 이상 운영 스크립트 단독 진입점이 아님) 동시 중복 실행 방지를 위해 락을 건다 —
+ * 다만 서로 다른 시점의 반복 호출까지 막는 완전한 멱등성은 별도 과제다.
  */
 @Service
 class NotificationDispatchService(
@@ -73,13 +75,15 @@ class NotificationDispatchService(
         content: String,
         deepLink: String?,
     ) {
-        dispatchInChunks(
-            fetchChunk = { afterId -> getMemberIdsPort.getMemberIds(afterId, PAGE_SIZE) },
-            idOf = { it },
-            memberIdOf = { it },
-            type = NotificationType.NOTICE,
-            resolvePayload = { NotificationPayload(title, content, deepLink) },
-        )
+        dispatchLockPort.tryRun(NOTICE_LOCK_KEY) {
+            dispatchInChunks(
+                fetchChunk = { afterId -> getMemberIdsPort.getMemberIds(afterId, PAGE_SIZE) },
+                idOf = { it },
+                memberIdOf = { it },
+                type = NotificationType.NOTICE,
+                resolvePayload = { NotificationPayload(title, content, deepLink) },
+            )
+        } ?: log.info("다른 인스턴스가 이미 공지를 발송 중이라 스킵합니다.")
     }
 
     private fun <T> dispatchInChunks(
