@@ -9,6 +9,7 @@ import com.yapp.todakun.shared.PillarSummary
 import com.yapp.todakun.shared.currentDate
 import com.yapp.todakun.yearfortune.FortuneCategoryStar
 import com.yapp.todakun.yearfortune.YearSelectionFortune
+import com.yapp.todakun.yearfortune.application.listener.SajuChartChangedEventListener
 import com.yapp.todakun.yearfortune.port.inbound.CreateYearSelectionFortuneUseCase
 import com.yapp.todakun.yearfortune.port.inbound.YearSelectionFortuneResult
 import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune

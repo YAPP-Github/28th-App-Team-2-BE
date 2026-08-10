@@ -1,4 +1,4 @@
-package com.yapp.todakun.yearfortune.application.service
+package com.yapp.todakun.yearfortune.application.listener
 
 import com.yapp.todakun.common.cache.CacheNames
 import com.yapp.todakun.shared.event.SajuChartChangedEvent
