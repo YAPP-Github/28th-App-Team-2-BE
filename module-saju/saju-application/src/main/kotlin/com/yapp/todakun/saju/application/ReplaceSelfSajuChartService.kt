@@ -10,6 +10,8 @@ import com.yapp.todakun.saju.port.outbound.ManseryeokPort
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import com.yapp.todakun.shared.ReplaceSelfSajuChartPort
+import com.yapp.todakun.shared.event.SajuChartChangedEvent
+import org.springframework.context.ApplicationEventPublisher
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
@@ -23,6 +25,7 @@ class ReplaceSelfSajuChartService(
     private val manseryeokPort: ManseryeokPort,
     private val sajuChartRepository: SajuChartRepository,
     private val memberSajuLinkRepository: MemberSajuLinkRepository,
+    private val applicationEventPublisher: ApplicationEventPublisher,
 ) : ReplaceSelfSajuChartPort {
     @ExperimentalUuidApi
     override fun replace(
@@ -63,5 +66,9 @@ class ReplaceSelfSajuChartService(
         } else {
             memberSajuLinkRepository.save(MemberSajuLink.self(memberId = memberId, chartId = newChartId))
         }
+
+        // 명식이 바뀌었음을 알려 연도별 운세 캐시 등 파생 데이터를 정리하게 한다. AFTER_COMMIT 리스너가
+        // 처리하므로 커밋 전 이벤트가 먼저 처리되는 경쟁이 생기지 않는다(이슈 #56).
+        applicationEventPublisher.publishEvent(SajuChartChangedEvent(memberId))
     }
 }

@@ -26,6 +26,19 @@ class ArchitectureTest {
                     clazz.annotations.none { it.name == "SpringBootApplication" }
             }
 
+    /** 도메인 클래스 안이 아니라 함수 자체(멤버 함수 포함)를 대상으로 한 순수 도메인 패키지 함수. */
+    private val domainFunctions
+        get() =
+            scope.functions().filter { function ->
+                !function.resideInPackage("..application..") &&
+                    !function.resideInPackage("..adapter..") &&
+                    !function.resideInPackage("..shared..") &&
+                    !function.resideInPackage("..common..") &&
+                    !function.resideInPackage("..architecture..") &&
+                    !function.resideInPackage("..web..") &&
+                    !function.resideInPackage("..config..")
+            }
+
     @Test
     fun `도메인 클래스는 Spring 어노테이션을 사용하지 않는다`() {
         domainClasses.forEach { clazz ->
@@ -46,6 +59,33 @@ class ArchitectureTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `도메인 함수는 Spring 어노테이션을 사용하지 않는다`() {
+        // 클래스 레벨 검사(위)만으로는 @Cacheable/@CacheEvict 같은 함수 레벨 애너테이션이 도메인으로
+        // 새는 것을 잡지 못해 함수 단위로 추가 검증한다(이슈 #56).
+        domainFunctions.forEach { function ->
+            function.annotations.forEach { annotation ->
+                check(!(annotation.fullyQualifiedName ?: "").startsWith("org.springframework")) {
+                    "도메인 함수 ${function.name}에 Spring 어노테이션(${annotation.name}) 사용 불가"
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `캐시 애너테이션은 application 패키지에만 위치한다`() {
+        // RedisCacheConfig(bootstrap)의 설계 결정 — 캐시는 인프라 관심사이지만 @Cacheable/@CacheEvict
+        // 표준 애너테이션은 application 조회·명령 서비스에만 붙이기로 했다(이슈 #56).
+        scope
+            .functions()
+            .filter { function -> function.annotations.any { it.name == "Cacheable" || it.name == "CacheEvict" } }
+            .forEach { function ->
+                check(function.resideInPackage("..application..")) {
+                    "${function.name}의 캐시 애너테이션은 application 패키지에서만 사용해야 한다"
+                }
+            }
     }
 
     @Test

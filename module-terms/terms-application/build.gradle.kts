@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     implementation(project(":terms:domain"))
+    implementation(libs.spring.context)
 }

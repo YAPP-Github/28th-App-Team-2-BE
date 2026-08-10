@@ -3,6 +3,7 @@ package com.yapp.todakun.saju.application
 import com.yapp.todakun.saju.fixture.SajuFixture
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
+import com.yapp.todakun.shared.event.SajuChartChangedEvent
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.Runs
 import io.mockk.clearMocks
@@ -10,17 +11,19 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 
 class DeleteMemberSajusServiceTest : DescribeSpec({
     val sajuChartRepository = mockk<SajuChartRepository>()
     val memberSajuLinkRepository = mockk<MemberSajuLinkRepository>()
-    val service = DeleteMemberSajusService(sajuChartRepository, memberSajuLinkRepository)
+    val applicationEventPublisher = mockk<ApplicationEventPublisher>()
+    val service = DeleteMemberSajusService(sajuChartRepository, memberSajuLinkRepository, applicationEventPublisher)
 
-    afterTest { clearMocks(sajuChartRepository, memberSajuLinkRepository) }
+    afterTest { clearMocks(sajuChartRepository, memberSajuLinkRepository, applicationEventPublisher) }
 
     describe("deleteByMemberId") {
-        it("본인·상대 명식을 모두 삭제하고 회원의 링크를 제거한다") {
+        it("본인·상대 명식을 모두 삭제하고 회원의 링크를 제거한 뒤 SajuChartChangedEvent를 발행한다") {
             val partnerChartId = UUID.fromString("018f0000-0000-7000-8000-0000000000c2")
             val self = SajuFixture.selfLink()
             val partner =
@@ -32,6 +35,7 @@ class DeleteMemberSajusServiceTest : DescribeSpec({
             every { memberSajuLinkRepository.findPartnersByMemberId(SajuFixture.MEMBER_ID) } returns listOf(partner)
             every { sajuChartRepository.deleteAllByIds(any()) } just Runs
             every { memberSajuLinkRepository.deleteByMemberId(SajuFixture.MEMBER_ID) } just Runs
+            every { applicationEventPublisher.publishEvent(any<SajuChartChangedEvent>()) } just Runs
 
             service.deleteByMemberId(SajuFixture.MEMBER_ID)
 
@@ -39,6 +43,7 @@ class DeleteMemberSajusServiceTest : DescribeSpec({
                 sajuChartRepository.deleteAllByIds(match { it.toSet() == setOf(SajuFixture.CHART_ID, partnerChartId) })
             }
             verify(exactly = 1) { memberSajuLinkRepository.deleteByMemberId(SajuFixture.MEMBER_ID) }
+            verify(exactly = 1) { applicationEventPublisher.publishEvent(SajuChartChangedEvent(SajuFixture.MEMBER_ID)) }
         }
     }
 })

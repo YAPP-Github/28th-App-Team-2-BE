@@ -4,6 +4,8 @@ import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import com.yapp.todakun.shared.DeleteMemberSajusPort
+import com.yapp.todakun.shared.event.SajuChartChangedEvent
+import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 
 /**
@@ -14,6 +16,7 @@ import java.util.UUID
 class DeleteMemberSajusService(
     private val sajuChartRepository: SajuChartRepository,
     private val memberSajuLinkRepository: MemberSajuLinkRepository,
+    private val applicationEventPublisher: ApplicationEventPublisher,
 ) : DeleteMemberSajusPort {
     override fun deleteByMemberId(memberId: UUID) {
         val links =
@@ -24,5 +27,9 @@ class DeleteMemberSajusService(
 
         sajuChartRepository.deleteAllByIds(links.map { it.chartId })
         memberSajuLinkRepository.deleteByMemberId(memberId)
+
+        // 명식 자체가 사라졌음을 알려 연도별 운세 캐시 등 파생 데이터를 정리하게 한다. AFTER_COMMIT
+        // 리스너가 처리하므로 커밋 전 이벤트가 먼저 처리되는 경쟁이 생기지 않는다(이슈 #56).
+        applicationEventPublisher.publishEvent(SajuChartChangedEvent(memberId))
     }
 }

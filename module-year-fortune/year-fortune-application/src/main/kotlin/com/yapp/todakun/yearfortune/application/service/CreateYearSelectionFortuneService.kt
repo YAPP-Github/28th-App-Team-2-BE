@@ -1,5 +1,6 @@
 package com.yapp.todakun.yearfortune.application.service
 
+import com.yapp.todakun.common.cache.CacheNames
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
 import com.yapp.todakun.shared.GetSajuChartPort
@@ -8,12 +9,14 @@ import com.yapp.todakun.shared.PillarSummary
 import com.yapp.todakun.shared.currentDate
 import com.yapp.todakun.yearfortune.FortuneCategoryStar
 import com.yapp.todakun.yearfortune.YearSelectionFortune
+import com.yapp.todakun.yearfortune.application.listener.SajuChartChangedEventListener
 import com.yapp.todakun.yearfortune.port.inbound.CreateYearSelectionFortuneUseCase
 import com.yapp.todakun.yearfortune.port.inbound.YearSelectionFortuneResult
 import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
 import com.yapp.todakun.yearfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
@@ -24,6 +27,10 @@ import kotlin.uuid.ExperimentalUuidApi
  * 1) [YearSelectionFortuneTransactionalStore.findExistingWithLock]로 락+선조회(멱등: 이미 생성된 연도면 AI를 재호출하지 않는다).
  * 2) 트랜잭션 밖에서 AI를 호출하고 도메인 엔티티를 조립(검증 포함)한다.
  * 3) [YearSelectionFortuneTransactionalStore.saveIfAbsent]로 락+재조회 후 멱등 저장한다(동시 요청 시 유니크 제약 충돌 방지).
+ *
+ * `create()` 자체는 트랜잭션을 걸지 않아 [YearSelectionFortuneTransactionalStore]의 각 단계가 이미 커밋된 뒤에야 반환되므로,
+ * `@Cacheable`이 캐시에 적립하는 시점은 항상 커밋 이후다(이슈 #56). 생성된 연도별 운세 자체는 저장 후 불변이지만, 그 값은
+ * [GetSajuChartPort]로 읽은 명식에 의존하므로 사주가 바뀌거나 삭제되면 [SajuChartChangedEventListener]가 해당 캐시를 함께 비운다.
  */
 @Service
 class CreateYearSelectionFortuneService(
@@ -33,6 +40,7 @@ class CreateYearSelectionFortuneService(
     private val getYearPillarPort: GetYearPillarPort,
     private val yearSelectionFortuneAiPort: YearSelectionFortuneAiPort,
 ) : CreateYearSelectionFortuneUseCase {
+    @Cacheable(cacheNames = [CacheNames.YEAR_FORTUNE], key = "#memberId + ':' + #year")
     @ExperimentalUuidApi
     override fun create(
         year: Int,
