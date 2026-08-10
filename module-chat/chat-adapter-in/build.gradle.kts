@@ -1,5 +1,6 @@
 plugins {
     id("todakun.adapter-web")
+    id("todakun.logging")
 }
 
 dependencies {

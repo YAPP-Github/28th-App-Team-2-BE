@@ -1,6 +1,7 @@
 // bootstrap — Spring Boot 진입점. 모든 모듈을 통합하고 웹 계층을 구동한다.
 plugins {
     id("todakun.spring-boot")
+    id("todakun.logging")
 }
 
 dependencies {

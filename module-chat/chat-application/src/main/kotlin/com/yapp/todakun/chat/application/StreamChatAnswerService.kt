@@ -5,10 +5,10 @@ import com.yapp.todakun.chat.port.inbound.ChatTurnStarted
 import com.yapp.todakun.chat.port.inbound.SendChatMessageCommand
 import com.yapp.todakun.chat.port.inbound.StreamChatAnswerUseCase
 import com.yapp.todakun.chat.port.outbound.ChatAiPort
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -24,6 +24,7 @@ private const val DEEP_LINK_PREFIX = "todakun://chat/conversations/"
  * HTTP 상태 코드가 아니라 [listener]의 `error` 이벤트로만 전달된다(동기 SSE + 생성 스레드 분리 아키텍처의 트레이드오프).
  */
 @Service
+@Loggable
 class StreamChatAnswerService(
     private val prepareChatTurnService: PrepareChatTurnService,
     private val completeChatTurnService: CompleteChatTurnService,
@@ -31,8 +32,6 @@ class StreamChatAnswerService(
     private val chatAiPort: ChatAiPort,
     private val sendNotificationPort: SendNotificationPort,
 ) : StreamChatAnswerUseCase {
-    private val log = LoggerFactory.getLogger(javaClass)
-
     @ExperimentalUuidApi
     override fun stream(
         command: SendChatMessageCommand,

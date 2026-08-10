@@ -1,6 +1,7 @@
 plugins {
     id("todakun.kotlin-common")
     kotlin("plugin.spring")
+    id("todakun.logging")
 }
 
 dependencies {

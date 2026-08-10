@@ -1,9 +1,9 @@
 package com.yapp.todakun.web.exception.handler
 
 import com.yapp.todakun.common.exception.BusinessException
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.web.code.CommonErrorCode
 import com.yapp.todakun.web.response.CommonResponse
-import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -19,9 +19,8 @@ import tools.jackson.module.kotlin.KotlinInvalidNullException
  * bootstrap의 컴포넌트 스캔으로 전역 등록된다. HTTP 상태는 [BusinessException.errorCode]가 결정한다.
  */
 @RestControllerAdvice
+@Loggable
 class GlobalExceptionHandler {
-    private val log = LoggerFactory.getLogger(javaClass)
-
     @ExceptionHandler(BusinessException::class)
     fun handleBusinessException(e: BusinessException): ResponseEntity<CommonResponse<Unit>> {
         if (e.errorCode.status >= 500) {

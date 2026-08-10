@@ -1,10 +1,8 @@
 package com.yapp.todakun.config
 
-import org.slf4j.LoggerFactory
+import com.yapp.todakun.common.logging.Loggable
 import org.springframework.cache.Cache
 import org.springframework.cache.interceptor.CacheErrorHandler
-
-private val log = LoggerFactory.getLogger(FailOpenCacheErrorHandler::class.java)
 
 /**
  * Redis 장애가 API 장애로 번지지 않도록 캐시 조작 실패를 흡수한다(fail-open, 이슈 #56).
@@ -16,6 +14,7 @@ private val log = LoggerFactory.getLogger(FailOpenCacheErrorHandler::class.java)
  * 이는 로그만 남겨서는 아무도 모르고 지나치는 사건이라 ERROR로 올려
  * 기존 Discord ERROR 웹훅(Grafana Cloud, `error-discord-alert.yaml`) 알림이 걸리게 한다.
  */
+@Loggable
 object FailOpenCacheErrorHandler : CacheErrorHandler {
     override fun handleCacheGetError(
         exception: RuntimeException,

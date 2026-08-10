@@ -241,6 +241,26 @@ class ArchitectureTest {
     }
 
     @Test
+    fun `LoggerFactory를 직접 사용하지 않고 Loggable 어노테이션을 사용한다`() {
+        // .은 정규식에서 임의의 한 문자를 뜻하므로 리터럴 마침표를 매치하려면 \.으로 이스케이프해야 한다.
+        val fullyQualifiedCallRegex = Regex("""org\.slf4j\.LoggerFactory\.getLogger""")
+
+        scope.files
+            .filterNot { it.path.contains("${java.io.File.separator}build${java.io.File.separator}") }
+            .filterNot { it.hasPackage("..architecture..") }
+            .filter { file ->
+                file.imports.any { it.name == "org.slf4j.LoggerFactory" } ||
+                    file.imports.any { it.isWildcard && it.name == "org.slf4j" } ||
+                    file.hasTextMatching(fullyQualifiedCallRegex)
+            }
+            .forEach { file ->
+                check(false) {
+                    "${file.name}: org.slf4j.LoggerFactory 직접 사용 금지, @Loggable 어노테이션을 사용할 것"
+                }
+            }
+    }
+
+    @Test
     fun `Fcm 어댑터는 adapter_fcm 패키지에만 위치한다`() {
         scope
             .classes()

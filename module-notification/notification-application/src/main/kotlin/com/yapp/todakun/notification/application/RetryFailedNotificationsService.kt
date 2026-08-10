@@ -1,12 +1,12 @@
 package com.yapp.todakun.notification.application
 
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.notification.NotificationDeliveryFailure
 import com.yapp.todakun.notification.PushNotification
 import com.yapp.todakun.notification.policy.NotificationRetryPolicy
 import com.yapp.todakun.notification.port.inbound.RetryFailedNotificationsUseCase
 import com.yapp.todakun.notification.port.outbound.DispatchLockPort
 import com.yapp.todakun.notification.port.outbound.PushNotificationPort
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Instant
 
@@ -24,6 +24,7 @@ private const val RETRY_LOCK_KEY = 8_412_037_603L
  * Blue/Green 배포 전환 구간의 중복 실행은 [dispatchLockPort]로 인스턴스 간 직렬화한다.
  */
 @Service
+@Loggable
 class RetryFailedNotificationsService(
     private val notificationTransactionalStore: NotificationTransactionalStore,
     private val pushNotificationPort: PushNotificationPort,
@@ -102,5 +103,3 @@ class RetryFailedNotificationsService(
         )
     }
 }
-
-private val log = LoggerFactory.getLogger(RetryFailedNotificationsService::class.java)

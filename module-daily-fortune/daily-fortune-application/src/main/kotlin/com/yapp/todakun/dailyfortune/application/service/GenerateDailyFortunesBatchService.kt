@@ -1,7 +1,7 @@
 package com.yapp.todakun.dailyfortune.application.service
 
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.dailyfortune.port.inbound.GenerateDailyFortunesUseCase
-import org.slf4j.LoggerFactory
 import org.springframework.batch.core.job.Job
 import org.springframework.batch.core.job.JobExecutionException
 import org.springframework.batch.core.job.parameters.JobParametersBuilder
@@ -18,6 +18,7 @@ import java.time.LocalDate
  * 배치 실행 이후의 회원별 실패는 DailyFortuneJobExecutionListener와 아이템 필터링이 담당한다.
  */
 @Service
+@Loggable
 class GenerateDailyFortunesBatchService(
     private val jobOperator: JobOperator,
     private val generateDailyFortunesJob: Job,
@@ -32,5 +33,3 @@ class GenerateDailyFortunesBatchService(
         }
     }
 }
-
-private val log = LoggerFactory.getLogger(GenerateDailyFortunesBatchService::class.java)
