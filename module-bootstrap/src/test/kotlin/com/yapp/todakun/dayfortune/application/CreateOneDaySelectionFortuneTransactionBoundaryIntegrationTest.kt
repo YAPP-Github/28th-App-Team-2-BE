@@ -3,8 +3,8 @@ package com.yapp.todakun.dayfortune.application
 import com.ninjasquad.springmockk.MockkBean
 import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
+import com.yapp.todakun.config.TransactionBoundaryProbe
 import com.yapp.todakun.config.TransactionBoundarySnapshot
-import com.yapp.todakun.config.captureTransactionBoundarySnapshot
 import com.yapp.todakun.dayfortune.DaySelectionFortune
 import com.yapp.todakun.dayfortune.DaySelectionPurpose
 import com.yapp.todakun.dayfortune.application.service.CreateOneDaySelectionFortuneService
@@ -25,6 +25,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.verify
+import jakarta.persistence.EntityManagerFactory
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.transaction.PlatformTransactionManager
@@ -35,6 +36,10 @@ import javax.sql.DataSource
 import kotlin.uuid.ExperimentalUuidApi
 
 private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000301")
+
+// 시나리오 간 영속 데이터가 섞이지 않도록 멱등성 검증은 별도 회원으로 수행한다(선언 순서에 의존하지 않게).
+private val IDEMPOTENT_MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000302")
+
 private val PURPOSE = DaySelectionPurpose.TRAVEL
 private val TARGET_DATE: LocalDate = currentDate().plusDays(7)
 
@@ -82,9 +87,11 @@ class CreateOneDaySelectionFortuneTransactionBoundaryIntegrationTest(
     private val createOneDaySelectionFortuneService: CreateOneDaySelectionFortuneService,
     private val daySelectionFortuneAiPort: DaySelectionFortuneAiPort,
     private val daySelectionFortuneRepository: DaySelectionFortuneRepository,
-    private val dataSource: DataSource,
+    dataSource: DataSource,
+    entityManagerFactory: EntityManagerFactory,
     transactionManager: PlatformTransactionManager,
 ) : DescribeSpec() {
+    private val probe = TransactionBoundaryProbe(dataSource, entityManagerFactory)
     private val transactionTemplate = TransactionTemplate(transactionManager)
 
     @MockkBean
@@ -102,20 +109,25 @@ class CreateOneDaySelectionFortuneTransactionBoundaryIntegrationTest(
         describe("택일 운세 생성(createOne)") {
             context("AI 생성이 필요한 새 (memberId, purpose, targetDate) 조합이면") {
                 it("AI 호출 시점에 활성 트랜잭션도 DB 커넥션 점유도 없다") {
-                    every { getMemberFortuneProfilePort.getProfile(MEMBER_ID) } returns MEMBER_PROFILE
-                    every { getSajuChartPort.getChart(MEMBER_ID) } returns SAJU_CHART
-                    every { getDailyPillarPort.getPillar(TARGET_DATE) } returns PILLAR
+                    stubCollaborators(MEMBER_ID)
 
                     lateinit var snapshot: TransactionBoundarySnapshot
                     every { daySelectionFortuneAiPort.generate(any(), PURPOSE, TARGET_DATE, any()) } answers {
-                        snapshot = dataSource.captureTransactionBoundarySnapshot()
+                        snapshot = probe.capture()
                         GENERATED_FORTUNE
                     }
 
                     val result = createOneDaySelectionFortuneService.createOne(PURPOSE, TARGET_DATE, MEMBER_ID)
 
                     snapshot.transactionActive shouldBe false
-                    snapshot.activeConnections shouldBe 0
+                    snapshot.entityManagerBound shouldBe false
+                    verify(exactly = 1) { daySelectionFortuneAiPort.generate(any(), PURPOSE, TARGET_DATE, any()) }
+
+                    // 위 단언이 공허하지 않음을 보장하는 대조군 — 프로브는 트랜잭션 안에서는 점유를 실제로 감지한다.
+                    val insideTransaction = transactionTemplate.execute<TransactionBoundarySnapshot> { probe.capture() }
+                    insideTransaction?.transactionActive shouldBe true
+                    insideTransaction?.entityManagerBound shouldBe true
+
                     val persisted =
                         transactionTemplate.execute<DaySelectionFortune?> {
                             daySelectionFortuneRepository.findByMemberIdAndPurposeAndTargetDate(MEMBER_ID, PURPOSE, TARGET_DATE)
@@ -126,20 +138,25 @@ class CreateOneDaySelectionFortuneTransactionBoundaryIntegrationTest(
 
             context("이미 생성된 조합이면") {
                 it("AI를 재호출하지 않고 기존 결과를 반환한다") {
-                    every { getMemberFortuneProfilePort.getProfile(MEMBER_ID) } returns MEMBER_PROFILE
-                    every { getSajuChartPort.getChart(MEMBER_ID) } returns SAJU_CHART
-                    every { getDailyPillarPort.getPillar(TARGET_DATE) } returns PILLAR
+                    stubCollaborators(IDEMPOTENT_MEMBER_ID)
                     every { daySelectionFortuneAiPort.generate(any(), PURPOSE, TARGET_DATE, any()) } returns GENERATED_FORTUNE
 
-                    val first = createOneDaySelectionFortuneService.createOne(PURPOSE, TARGET_DATE, MEMBER_ID)
-                    clearMocks(daySelectionFortuneAiPort, answers = false, recordedCalls = true)
+                    val first = createOneDaySelectionFortuneService.createOne(PURPOSE, TARGET_DATE, IDEMPOTENT_MEMBER_ID)
+                    verify(exactly = 1) { daySelectionFortuneAiPort.generate(any(), PURPOSE, TARGET_DATE, any()) }
 
-                    val second = createOneDaySelectionFortuneService.createOne(PURPOSE, TARGET_DATE, MEMBER_ID)
+                    val second = createOneDaySelectionFortuneService.createOne(PURPOSE, TARGET_DATE, IDEMPOTENT_MEMBER_ID)
 
                     second.id shouldBe first.id
-                    verify(exactly = 0) { daySelectionFortuneAiPort.generate(any(), any(), any(), any()) }
+                    // 두 번째 호출에서 누적 호출 수가 늘지 않는다 = 선조회로 끝났다.
+                    verify(exactly = 1) { daySelectionFortuneAiPort.generate(any(), PURPOSE, TARGET_DATE, any()) }
                 }
             }
         }
+    }
+
+    private fun stubCollaborators(memberId: UUID) {
+        every { getMemberFortuneProfilePort.getProfile(memberId) } returns MEMBER_PROFILE
+        every { getSajuChartPort.getChart(memberId) } returns SAJU_CHART
+        every { getDailyPillarPort.getPillar(TARGET_DATE) } returns PILLAR
     }
 }

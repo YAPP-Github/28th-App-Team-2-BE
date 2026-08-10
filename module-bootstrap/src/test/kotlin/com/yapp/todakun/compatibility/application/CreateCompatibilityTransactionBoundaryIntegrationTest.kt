@@ -9,8 +9,8 @@ import com.yapp.todakun.compatibility.port.outbound.GeneratedCompatibility
 import com.yapp.todakun.compatibility.port.outbound.SajuCompatibilityRepository
 import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
+import com.yapp.todakun.config.TransactionBoundaryProbe
 import com.yapp.todakun.config.TransactionBoundarySnapshot
-import com.yapp.todakun.config.captureTransactionBoundarySnapshot
 import com.yapp.todakun.shared.CompatibilityChartView
 import com.yapp.todakun.shared.CompatibilityChartsView
 import com.yapp.todakun.shared.GetSajuChartsForCompatibilityPort
@@ -20,6 +20,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.verify
+import jakarta.persistence.EntityManagerFactory
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.transaction.PlatformTransactionManager
@@ -31,6 +32,10 @@ private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000401")
 private val PARTNER_LINK_ID = UUID.fromString("018f0000-0000-7000-8000-000000000402")
 private val MY_CHART_ID = UUID.fromString("018f0000-0000-7000-8000-000000000403")
 private val PARTNER_CHART_ID = UUID.fromString("018f0000-0000-7000-8000-000000000404")
+
+// 시나리오 간 영속 데이터가 섞이지 않도록 멱등성 검증은 별도 회원으로 수행한다(선언 순서에 의존하지 않게).
+// 유니크 제약이 (member_id, my_chart_id, partner_chart_id)라 회원만 분리해도 별개 행이 된다.
+private val IDEMPOTENT_MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000405")
 
 private val PILLAR = PillarSummary(stem = "갑", branch = "자", stemSipseong = "비견", branchSipseong = "정인", sibiunseong = "제왕")
 private val CHART_VIEW =
@@ -72,9 +77,11 @@ class CreateCompatibilityTransactionBoundaryIntegrationTest(
     private val createCompatibilityUseCase: CreateCompatibilityUseCase,
     private val compatibilityAiPort: CompatibilityAiPort,
     private val sajuCompatibilityRepository: SajuCompatibilityRepository,
-    private val dataSource: DataSource,
+    dataSource: DataSource,
+    entityManagerFactory: EntityManagerFactory,
     transactionManager: PlatformTransactionManager,
 ) : DescribeSpec() {
+    private val probe = TransactionBoundaryProbe(dataSource, entityManagerFactory)
     private val transactionTemplate = TransactionTemplate(transactionManager)
 
     @MockkBean
@@ -90,14 +97,21 @@ class CreateCompatibilityTransactionBoundaryIntegrationTest(
 
                     lateinit var snapshot: TransactionBoundarySnapshot
                     every { compatibilityAiPort.generate(any()) } answers {
-                        snapshot = dataSource.captureTransactionBoundarySnapshot()
+                        snapshot = probe.capture()
                         GENERATED_COMPATIBILITY
                     }
 
                     val result = createCompatibilityUseCase.create(MEMBER_ID, PARTNER_LINK_ID)
 
                     snapshot.transactionActive shouldBe false
-                    snapshot.activeConnections shouldBe 0
+                    snapshot.entityManagerBound shouldBe false
+                    verify(exactly = 1) { compatibilityAiPort.generate(any()) }
+
+                    // 위 단언이 공허하지 않음을 보장하는 대조군 — 프로브는 트랜잭션 안에서는 점유를 실제로 감지한다.
+                    val insideTransaction = transactionTemplate.execute<TransactionBoundarySnapshot> { probe.capture() }
+                    insideTransaction?.transactionActive shouldBe true
+                    insideTransaction?.entityManagerBound shouldBe true
+
                     val persisted =
                         transactionTemplate.execute<SajuCompatibility?> {
                             sajuCompatibilityRepository.findByMemberIdAndCharts(MEMBER_ID, MY_CHART_ID, PARTNER_CHART_ID)
@@ -108,16 +122,17 @@ class CreateCompatibilityTransactionBoundaryIntegrationTest(
 
             context("이미 생성된 조합이면") {
                 it("AI를 재호출하지 않고 기존 결과를 반환한다") {
-                    every { getSajuChartsForCompatibilityPort.getCharts(MEMBER_ID, PARTNER_LINK_ID) } returns CHARTS_VIEW
+                    every { getSajuChartsForCompatibilityPort.getCharts(IDEMPOTENT_MEMBER_ID, PARTNER_LINK_ID) } returns CHARTS_VIEW
                     every { compatibilityAiPort.generate(any()) } returns GENERATED_COMPATIBILITY
 
-                    val first = createCompatibilityUseCase.create(MEMBER_ID, PARTNER_LINK_ID)
-                    clearMocks(compatibilityAiPort, answers = false, recordedCalls = true)
+                    val first = createCompatibilityUseCase.create(IDEMPOTENT_MEMBER_ID, PARTNER_LINK_ID)
+                    verify(exactly = 1) { compatibilityAiPort.generate(any()) }
 
-                    val second = createCompatibilityUseCase.create(MEMBER_ID, PARTNER_LINK_ID)
+                    val second = createCompatibilityUseCase.create(IDEMPOTENT_MEMBER_ID, PARTNER_LINK_ID)
 
                     second.id shouldBe first.id
-                    verify(exactly = 0) { compatibilityAiPort.generate(any()) }
+                    // 두 번째 호출에서 누적 호출 수가 늘지 않는다 = 선조회로 끝났다.
+                    verify(exactly = 1) { compatibilityAiPort.generate(any()) }
                 }
             }
         }
