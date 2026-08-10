@@ -1,8 +1,8 @@
 package com.yapp.todakun.saju.application.listener
 
 import com.yapp.todakun.common.cache.CacheNames
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.shared.event.SajuChartChangedEvent
-import org.slf4j.LoggerFactory
 import org.springframework.cache.Cache
 import org.springframework.cache.CacheManager
 import org.springframework.stereotype.Service
@@ -27,6 +27,7 @@ import java.util.UUID
  * `FailOpenCacheErrorHandler.handleCacheEvictError`와 동일하게 ERROR로 남겨 기존 Discord ERROR 웹훅(Grafana Cloud) 알림이 걸리게 한다.
  */
 @Service
+@Loggable
 class SajuChartCacheEvictListener(
     private val cacheManager: CacheManager,
 ) {
@@ -48,5 +49,3 @@ class SajuChartCacheEvictListener(
         }
     }
 }
-
-private val log = LoggerFactory.getLogger(SajuChartCacheEvictListener::class.java)

@@ -1,9 +1,9 @@
 package com.yapp.todakun.yearfortune.application.listener
 
 import com.yapp.todakun.common.cache.CacheNames
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.shared.event.SajuChartChangedEvent
 import com.yapp.todakun.yearfortune.repository.YearSelectionFortuneRepository
-import org.slf4j.LoggerFactory
 import org.springframework.cache.CacheManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.event.TransactionPhase
@@ -26,6 +26,7 @@ import org.springframework.transaction.event.TransactionalEventListener
  * handleCacheEvictError`와 동일하게 ERROR로 남겨 기존 Discord ERROR 웹훅(Grafana Cloud) 알림이 걸리게 한다.
  */
 @Service
+@Loggable
 class SajuChartChangedEventListener(
     private val yearSelectionFortuneRepository: YearSelectionFortuneRepository,
     private val cacheManager: CacheManager,
@@ -44,5 +45,3 @@ class SajuChartChangedEventListener(
         }
     }
 }
-
-private val log = LoggerFactory.getLogger(SajuChartChangedEventListener::class.java)
