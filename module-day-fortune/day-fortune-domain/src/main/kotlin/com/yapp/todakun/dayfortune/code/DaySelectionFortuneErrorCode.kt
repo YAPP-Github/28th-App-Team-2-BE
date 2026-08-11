@@ -18,4 +18,6 @@ enum class DaySelectionFortuneErrorCode(
     DAY_SELECTION_FORTUNE_INVALID_PURPOSE("FORTUNE-400", "올바른 택일 목적 값이 아닙니다.", 400),
     DAY_SELECTION_FORTUNE_GENERATION_FAILED("FORTUNE-500", "택일 운세 생성에 실패했습니다.", 500),
     DAY_SELECTION_FORTUNE_EMPTY_RESPONSE("FORTUNE-500", "AI로부터 빈 응답을 받았습니다.", 500),
+    DAY_SELECTION_FORTUNE_CIRCUIT_OPEN("FORTUNE-503", "지금은 요청이 많아 택일 운세를 생성할 수 없습니다. 잠시 후 다시 시도해 주세요.", 503),
+    DAY_SELECTION_FORTUNE_TIMEOUT("FORTUNE-504", "택일 운세 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.", 504),
 }

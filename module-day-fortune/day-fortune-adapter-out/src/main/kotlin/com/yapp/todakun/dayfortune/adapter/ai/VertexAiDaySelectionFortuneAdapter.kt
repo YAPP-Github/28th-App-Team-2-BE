@@ -1,23 +1,32 @@
 package com.yapp.todakun.dayfortune.adapter.ai
 
+import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.dayfortune.DaySelectionPurpose
+import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneCircuitOpenException
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneEmptyResponseException
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneGenerationFailedException
+import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneTimeoutException
 import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.GeneratedDaySelectionFortune
 import com.yapp.todakun.dayfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dayfortune.port.outbound.Pillar
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.stereotype.Component
 import java.time.LocalDate
+import java.util.concurrent.TimeoutException
+
+private const val AI_RESILIENCE_INSTANCE_NAME = "day-fortune-ai"
 
 /**
  * Vertex AI(Gemini)로 택일 운세를 생성하는 [DaySelectionFortuneAiPort] 구현체.
  * 프롬프트 구성과 구조화 출력(JSON → [GeneratedDaySelectionFortune]) 매핑을 전담한다.
+ * AI 호출은 [AiResilienceSupport]로 CircuitBreaker+Retry+TimeLimiter를 적용한다.
  */
 @Component
 class VertexAiDaySelectionFortuneAdapter(
     chatClientBuilder: ChatClient.Builder,
+    private val resilience: AiResilienceSupport,
 ) : DaySelectionFortuneAiPort {
     private val chatClient = chatClientBuilder.build()
 
@@ -29,7 +38,11 @@ class VertexAiDaySelectionFortuneAdapter(
     ): GeneratedDaySelectionFortune {
         val generated =
             try {
-                callAi(profile, purpose, targetDate, dayPillar)
+                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, purpose, targetDate, dayPillar) }
+            } catch (e: CallNotPermittedException) {
+                throw DaySelectionFortuneCircuitOpenException(e)
+            } catch (e: TimeoutException) {
+                throw DaySelectionFortuneTimeoutException(e)
             } catch (e: Exception) {
                 throw DaySelectionFortuneGenerationFailedException(e)
             }
