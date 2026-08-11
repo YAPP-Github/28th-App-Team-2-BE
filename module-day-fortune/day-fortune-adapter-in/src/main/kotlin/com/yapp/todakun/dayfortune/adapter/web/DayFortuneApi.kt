@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import java.util.UUID
@@ -25,4 +27,16 @@ interface DayFortuneApi {
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
     ): ResponseEntity<CommonResponse<List<DaySelectionFortuneResponse>>>
+
+    @Operation(
+        summary = "택일 운세 단건 조회",
+        description = "생성된 택일 운세를 ID로 단건 조회한다. 공유하기 화면에서 사용한다.",
+    )
+    @GetMapping("api/v1/day-fortunes/{dayFortuneId}")
+    fun getById(
+        @Parameter(description = "택일 운세 ID", example = "018f0000-0000-7000-8000-000000000004")
+        @PathVariable dayFortuneId: UUID,
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal memberId: UUID,
+    ): ResponseEntity<CommonResponse<DaySelectionFortuneResponse>>
 }
