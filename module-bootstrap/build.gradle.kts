@@ -59,6 +59,11 @@ dependencies {
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.micrometer.registry.prometheus)
+    // AiResilienceConfig — 도메인별 CircuitBreaker/Retry/TimeLimiter 레지스트리 구성 + 메트릭 바인딩(이슈 #54).
+    implementation(libs.resilience4j.circuitbreaker)
+    implementation(libs.resilience4j.retry)
+    implementation(libs.resilience4j.timelimiter)
+    implementation(libs.resilience4j.micrometer)
     implementation(libs.spring.boot.starter.security)
     implementation(libs.sentry.spring.boot4.starter)
     implementation(libs.sentry.logback)

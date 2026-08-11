@@ -27,12 +27,12 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-# 헬스 체크(Blue/Green) + Prometheus 메트릭 노출(/actuator/prometheus).
+# 헬스 체크(Blue/Green) + Prometheus 메트릭 노출(/actuator/prometheus) + CircuitBreaker 상태 조회(운영 가시성).
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,circuitbreakers
   endpoint:
     health:
       probes:
@@ -40,6 +40,32 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+# Resilience4j — 도메인별 Vertex AI 호출 CircuitBreaker/Retry/TimeLimiter 설정(이슈 #54, AiResilienceConfig).
+# circuitBreaker는 5개 도메인이 모두 같은 값을 쓰므로 인스턴스별이 아닌 레지스트리 공통 기본값 하나만 둔다(미설정 시 AiResilienceProperties 기본값 사용).
+# retries/timeLimiters에 이름이 없는 인스턴스는 해당 단계를 적용하지 않는다:
+#   - chat-ai: 이미 리액티브 스트림 자체 Duration 타임아웃이 있어 TimeLimiter 생략, 스트리밍 중 재전송 위험 때문에 retry도 생략.
+#   - daily-fortune-ai: 배치 Step이 이미 3회 재시도하므로 retry를 또 두면 최대 3x3회까지 AI 호출이 낭비돼 생략.
+ai-resilience:
+  retries:
+    day-fortune-ai:
+      max-attempts: 2
+      wait-duration-millis: 500
+    year-fortune-ai:
+      max-attempts: 2
+      wait-duration-millis: 500
+    compatibility-ai:
+      max-attempts: 2
+      wait-duration-millis: 500
+  time-limiters:
+    daily-fortune-ai:
+      timeout-duration-seconds: 20
+    day-fortune-ai:
+      timeout-duration-seconds: 15
+    year-fortune-ai:
+      timeout-duration-seconds: 15
+    compatibility-ai:
+      timeout-duration-seconds: 15
 
 # 카카오/구글이 정한 고정 API 규격 — 환경(local/dev/prod) 무관하게 동일한 값.
 oauth:
