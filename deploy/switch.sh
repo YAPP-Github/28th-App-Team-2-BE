@@ -37,7 +37,8 @@ echo "[switch] active=$ACTIVE → idle 배포: $IDLE (image=$APP_IMAGE)"
 # 이미지는 배포 단계(deploy.yaml)가 GHCR 인증(`docker --config`)으로 미리 받아둔다.
 # 여기선 로컬 이미지를 그대로 기동한다(--pull never) — switch.sh가 레지스트리 인증에
 # 의존하지 않게 해 become 환경변수 전파 이슈를 회피한다.
-COLOR="$IDLE" APP_IMAGE="$APP_IMAGE" \
+# SENTRY_RELEASE = 이미지 태그(dev-<git sha>) — Sentry Java SDK가 자동으로 읽어 이슈를 커밋 단위로 묶는다.
+COLOR="$IDLE" APP_IMAGE="$APP_IMAGE" SENTRY_RELEASE="${APP_IMAGE##*:}" \
   docker compose -p "todakun-$IDLE" -f "$APP_COMPOSE" up -d --pull never
 
 # health 대기 — todakun-net 안에서 일회성 curl 컨테이너로 컨테이너명에 직접 요청.
