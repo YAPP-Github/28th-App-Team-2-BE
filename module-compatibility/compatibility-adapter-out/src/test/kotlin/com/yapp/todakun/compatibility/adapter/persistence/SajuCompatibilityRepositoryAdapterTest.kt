@@ -25,6 +25,30 @@ class SajuCompatibilityRepositoryAdapterTest(
                     .save(SajuCompatibilityJpaEntity.fromDomain(CompatibilityFixture.create()))
                     .toDomain()
 
+            describe("findById") {
+                context("저장된 id로 조회하면") {
+                    it("해당 궁합을 오행 5개와 함께 반환한다") {
+                        val compatibility = savedCompatibility()
+
+                        val found = adapter.findById(compatibility.id)
+
+                        found.shouldNotBeNull()
+                        found shouldBe compatibility
+                        found.ohaengs.size shouldBe 5
+                    }
+                }
+
+                context("일치하는 id가 없으면") {
+                    it("null을 반환한다") {
+                        val nonExistentId = UUID.fromString("018f0000-0000-7000-8000-0000000000ff")
+
+                        val found = adapter.findById(nonExistentId)
+
+                        found.shouldBeNull()
+                    }
+                }
+            }
+
             describe("findByMemberIdAndCharts") {
                 context("저장된 (memberId, myChartId, partnerChartId)로 조회하면") {
                     it("해당 궁합을 오행 5개와 함께 반환한다") {

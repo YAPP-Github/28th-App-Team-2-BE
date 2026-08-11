@@ -30,6 +30,29 @@ class DaySelectionFortuneRepositoryAdapterTest(
                     .save(DaySelectionFortuneJpaEntity.fromDomain(DaySelectionFortuneFixture.create()))
                     .toDomain()
 
+            describe("findById") {
+                context("저장된 id로 조회하면") {
+                    it("해당 택일 운세를 반환한다") {
+                        val daySelectionFortune = savedDaySelectionFortune()
+
+                        val found = adapter.findById(daySelectionFortune.id)
+
+                        found.shouldNotBeNull()
+                        found shouldBe daySelectionFortune
+                    }
+                }
+
+                context("일치하는 id가 없으면") {
+                    it("null을 반환한다") {
+                        val nonExistentId = Uuid.generateV7().toJavaUuid()
+
+                        val found = adapter.findById(nonExistentId)
+
+                        found.shouldBeNull()
+                    }
+                }
+            }
+
             describe("findByMemberIdAndPurposeAndTargetDate") {
                 context("저장된 memberId·purpose·targetDate로 조회하면") {
                     it("해당 택일 운세를 반환한다") {
