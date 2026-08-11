@@ -1,22 +1,31 @@
 package com.yapp.todakun.dailyfortune.adapter.ai
 
+import com.yapp.todakun.common.resilience.AiResilienceSupport
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneCircuitOpenException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneEmptyResponseException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneTimeoutException
 import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
 import com.yapp.todakun.dailyfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dailyfortune.port.outbound.Pillar
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.stereotype.Component
 import java.time.LocalDate
+import java.util.concurrent.TimeoutException
+
+private const val AI_RESILIENCE_INSTANCE_NAME = "daily-fortune-ai"
 
 /**
  * Vertex AI(Gemini)로 오늘의 운세를 생성하는 [DailyFortuneAiPort] 구현체.
  * 프롬프트 구성과 구조화 출력(JSON → [GeneratedDailyFortune]) 매핑을 전담한다.
+ * AI 호출은 [AiResilienceSupport]로 CircuitBreaker+TimeLimiter를 적용한다(Retry는 배치 Step이 이미 재시도하므로 미적용).
  */
 @Component
 class VertexAiDailyFortuneAdapter(
     chatClientBuilder: ChatClient.Builder,
+    private val resilience: AiResilienceSupport,
 ) : DailyFortuneAiPort {
     private val chatClient = chatClientBuilder.build()
 
@@ -27,7 +36,11 @@ class VertexAiDailyFortuneAdapter(
     ): GeneratedDailyFortune {
         val generated =
             try {
-                callAi(profile, fortuneDate, todayPillar)
+                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, fortuneDate, todayPillar) }
+            } catch (e: CallNotPermittedException) {
+                throw DailyFortuneCircuitOpenException(e)
+            } catch (e: TimeoutException) {
+                throw DailyFortuneTimeoutException(e)
             } catch (e: Exception) {
                 throw DailyFortuneGenerationFailedException(e)
             }
