@@ -29,7 +29,7 @@ deploy/
 ├── monitoring/
 │   ├── docker-compose.monitoring.yaml  # Alloy 엣지 에이전트(단일)
 │   ├── alloy/config.alloy              # host+actuator 메트릭 → GC Prometheus, Docker 로그 → GC Loki
-│   └── grafana-cloud/                  # GC 설정 가이드 + Discord ERROR 알림 룰 스펙
+│   └── grafana-cloud/                  # GC 자격증명/대시보드 설정 가이드 (Alerting 미사용)
 └── .env.example                     # 앱 런타임 시크릿 + GC 자격증명 (VM의 .env로 복사)
 
 .github/workflows/deploy-dev.yaml     # CI: 빌드 → 이미지 푸시 → Ansible 프로비저닝 + 배포
@@ -94,16 +94,16 @@ VM에는 **Alloy 엣지 에이전트만** 띄우고, Prometheus/Loki/Grafana는 
 | 구성 | 역할 |
 |------|------|
 | **Alloy** (VM) | host 메트릭(node_exporter 대체) + 앱 `/actuator/prometheus`(blue/green) 스크레이프 → **GC Prometheus** remote_write / Docker 로그 JSON `level` 파싱 → **GC Loki** |
-| **Grafana Cloud** | 관리형 Prometheus/Loki + 대시보드 + **Discord ERROR 알림** (Alerting) |
-| **Sentry** | 앱 예외/성능 추적(APM). SDK가 `SENTRY_DSN`으로 전송 |
+| **Grafana Cloud** | 관리형 Prometheus/Loki + 대시보드 — **조회·사후 분석 전용(Alerting 미사용)** |
+| **Sentry** | 앱 예외/성능 추적(APM) + ERROR 로그 이슈 적재(`sentry-logback`). SDK가 `SENTRY_DSN`으로 전송 |
 
-**로그 알림 흐름**: 앱이 `logstash` 구조화 로그(JSON) stdout 출력 → Alloy가 `level` 라벨 부여 → GC Loki 적재 →
-GC Alerting 룰이 `{container=~"todakun-app-.*", level="ERROR"}` 5분 카운트 > 0 감지 → **Discord 웹훅**.
+**ERROR → Discord 알림 흐름**: 앱 내장 logback appender(`DiscordWebhookAppender`)가 ERROR 로그
+발생 시 그 자리에서 직접 Discord 웹훅으로 POST한다(스택 트레이스 포함, 지연 없음). `DISCORD_WEBHOOK_URL`
+환경변수로 켜고 끈다(비우면 no-op). **GC Alerting 기반 로그 알림 룰은 사용하지 않는다**(지연·룰 관리 비용·중복 알림).
 
-**필요 env**(VM `.env`): `SENTRY_DSN`, `GC_TOKEN`, `GC_PROM_URL`, `GC_PROM_USER`, `GC_LOKI_URL`, `GC_LOKI_USER`.
-Discord 웹훅은 Grafana Cloud Alerting의 Contact point에 직접 등록한다(`.env` 아님).
+**필요 env**(VM `.env`): `SENTRY_DSN`, `DISCORD_WEBHOOK_URL`, `GC_TOKEN`, `GC_PROM_URL`, `GC_PROM_USER`, `GC_LOKI_URL`, `GC_LOKI_USER`.
 
-> Alloy 이미지 태그(`grafana/alloy:v1.16.1`)와 GC 엔드포인트는 배포 시점 기준으로 확인. 알림 룰은 GC UI에서 로드/발화 확인.
+> Alloy 이미지 태그(`grafana/alloy:v1.16.1`)와 GC 엔드포인트는 배포 시점 기준으로 확인.
 
 ## 도메인 / HTTPS (Cloudflare, 은닉 방식)
 
