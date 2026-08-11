@@ -48,6 +48,9 @@ sentry:
   environment: local
   traces-sample-rate: 0
   debug: true
+  logging:
+    minimum-event-level: error       # ERROR 로그를 Sentry 이슈로 적재
+    minimum-breadcrumb-level: info   # INFO 이상은 이슈에 붙는 breadcrumb으로만 기록
 
 token:
   jwt:

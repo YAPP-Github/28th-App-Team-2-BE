@@ -44,6 +44,9 @@ sentry:
   dsn: ${SENTRY_DSN:}
   environment: prod
   traces-sample-rate: 0.1
+  logging:
+    minimum-event-level: error       # ERROR 로그를 Sentry 이슈로 적재
+    minimum-breadcrumb-level: info   # INFO 이상은 이슈에 붙는 breadcrumb으로만 기록
 
 token:
   jwt:
@@ -66,8 +69,13 @@ oauth:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS}  # 콤마 구분
 
+# ERROR 로그 → Discord 웹훅 직접 발송(logback appender). URL 미설정 시 자동 no-op.
+discord:
+  webhook-url: ${DISCORD_WEBHOOK_URL:}
+
 logging:
-  # 구조화 로그(JSON) → stdout → Alloy가 level 파싱 → Loki. Discord ERROR 알림의 기반.
+  # 구조화 로그(JSON) → stdout → Alloy가 level 파싱 → Loki(조회·대시보드용).
+  # ERROR 알림은 이 경로가 아니라 위 discord.webhook-url(앱이 직접 발송)이 담당한다.
   structured:
     format:
       console: logstash
