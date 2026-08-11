@@ -18,4 +18,6 @@ enum class CompatibilityErrorCode(
     COMPATIBILITY_OHAENG_COUNT_NEGATIVE("COMPATIBILITY-500", "오행 글자 수는 음수일 수 없습니다.", 500),
     COMPATIBILITY_GENERATION_FAILED("COMPATIBILITY-500", "궁합 분석 생성에 실패했습니다.", 500),
     COMPATIBILITY_EMPTY_RESPONSE("COMPATIBILITY-500", "AI로부터 빈 응답을 받았습니다.", 500),
+    COMPATIBILITY_CIRCUIT_OPEN("COMPATIBILITY-503", "지금은 요청이 많아 궁합을 분석할 수 없습니다. 잠시 후 다시 시도해 주세요.", 503),
+    COMPATIBILITY_TIMEOUT("COMPATIBILITY-504", "궁합 분석 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.", 504),
 }

@@ -1,22 +1,31 @@
 package com.yapp.todakun.compatibility.adapter.ai
 
+import com.yapp.todakun.common.resilience.AiResilienceSupport
+import com.yapp.todakun.compatibility.exception.CompatibilityCircuitOpenException
 import com.yapp.todakun.compatibility.exception.CompatibilityEmptyResponseException
 import com.yapp.todakun.compatibility.exception.CompatibilityGenerationFailedException
+import com.yapp.todakun.compatibility.exception.CompatibilityTimeoutException
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiInput
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiPort
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityChartProfile
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityPillar
 import com.yapp.todakun.compatibility.port.outbound.GeneratedCompatibility
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.stereotype.Component
+import java.util.concurrent.TimeoutException
+
+private const val AI_RESILIENCE_INSTANCE_NAME = "compatibility-ai"
 
 /**
  * Vertex AI(Gemini)로 두 명식의 궁합 총운을 생성하는 [CompatibilityAiPort] 구현체.
  * 프롬프트 구성과 구조화 출력(JSON → [GeneratedCompatibility]) 매핑을 전담한다. 오행 비율은 도메인이 결정적으로 계산하므로 생성하지 않는다.
+ * AI 호출은 [AiResilienceSupport]로 CircuitBreaker+Retry+TimeLimiter를 적용한다.
  */
 @Component
 class VertexAiCompatibilityAdapter(
     chatClientBuilder: ChatClient.Builder,
+    private val resilience: AiResilienceSupport,
 ) : CompatibilityAiPort {
     private val chatClient = chatClientBuilder.build()
 
@@ -24,7 +33,11 @@ class VertexAiCompatibilityAdapter(
         // runCatching은 Error(OOM 등)까지 삼키므로, Exception만 잡아 도메인 예외로 변환하고 그 외 JVM 오류는 전파한다.
         val generated =
             try {
-                callAi(input)
+                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(input) }
+            } catch (e: CallNotPermittedException) {
+                throw CompatibilityCircuitOpenException(e)
+            } catch (e: TimeoutException) {
+                throw CompatibilityTimeoutException(e)
             } catch (e: Exception) {
                 throw CompatibilityGenerationFailedException(e)
             }
