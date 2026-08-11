@@ -17,4 +17,6 @@ enum class YearSelectionFortuneErrorCode(
     YEAR_SELECTION_FORTUNE_SCORE_OUT_OF_RANGE("FORTUNE-400", "점수는 0점에서 100점 사이여야 합니다.", 400),
     YEAR_SELECTION_FORTUNE_GENERATION_FAILED("FORTUNE-500", "연도별 운세 생성에 실패했습니다.", 500),
     YEAR_SELECTION_FORTUNE_EMPTY_RESPONSE("FORTUNE-500", "AI로부터 빈 응답을 받았습니다.", 500),
+    YEAR_SELECTION_FORTUNE_CIRCUIT_OPEN("FORTUNE-503", "지금은 요청이 많아 연도별 운세를 생성할 수 없습니다. 잠시 후 다시 시도해 주세요.", 503),
+    YEAR_SELECTION_FORTUNE_TIMEOUT("FORTUNE-504", "연도별 운세 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.", 504),
 }
