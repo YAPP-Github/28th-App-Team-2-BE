@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.micrometer.registry.prometheus)
     implementation(libs.spring.boot.starter.security)
     implementation(libs.sentry.spring.boot4.starter)
+    implementation(libs.sentry.logback)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
     runtimeOnly(libs.postgresql)
 
