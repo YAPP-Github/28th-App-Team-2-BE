@@ -12,6 +12,8 @@ class SajuCompatibilityRepositoryAdapter(
     override fun save(compatibility: SajuCompatibility): SajuCompatibility =
         sajuCompatibilityJpaRepository.save(SajuCompatibilityJpaEntity.fromDomain(compatibility)).toDomain()
 
+    override fun findById(id: UUID): SajuCompatibility? = sajuCompatibilityJpaRepository.findById(id).map { it.toDomain() }.orElse(null)
+
     override fun findByMemberIdAndCharts(
         memberId: UUID,
         myChartId: UUID,

@@ -6,7 +6,7 @@ import com.yapp.todakun.dayfortune.FortuneCategoryStar
 import java.time.LocalDate
 import java.util.UUID
 
-/** 택일 운세 생성 결과. */
+/** 택일 운세 생성·조회 결과. */
 data class DaySelectionFortuneResult(
     val id: UUID,
     val purpose: DaySelectionPurpose,

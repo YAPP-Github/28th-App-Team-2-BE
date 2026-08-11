@@ -5,6 +5,7 @@ import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneCategoryCountMis
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneCategoryDuplicatedException
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneContentTooLongException
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneDateInPastException
+import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneNotFoundException
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneScoreOutOfRangeException
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneStarOutOfRangeException
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneTitleTooLongException
@@ -35,6 +36,13 @@ data class DaySelectionFortune(
     val content: String,
     val fortuneCategories: List<FortuneCategoryStar>,
 ) {
+    /** 다른 회원의 택일 운세 존재 여부가 드러나지 않도록 소유자가 다르면 동일하게 404로 처리한다. */
+    fun validateOwner(memberId: UUID) {
+        if (this.memberId != memberId) {
+            throw DaySelectionFortuneNotFoundException()
+        }
+    }
+
     companion object {
         @ExperimentalUuidApi
         fun create(

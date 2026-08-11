@@ -12,6 +12,9 @@ class YearSelectionFortuneRepositoryAdapter(
     override fun save(yearSelectionFortune: YearSelectionFortune): YearSelectionFortune =
         yearSelectionFortuneJpaRepository.save(YearSelectionFortuneJpaEntity.fromDomain(yearSelectionFortune)).toDomain()
 
+    override fun findById(id: UUID): YearSelectionFortune? =
+        yearSelectionFortuneJpaRepository.findById(id).map { it.toDomain() }.orElse(null)
+
     override fun findByMemberIdAndYear(
         memberId: UUID,
         year: Int,

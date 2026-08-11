@@ -4,7 +4,7 @@ import com.yapp.todakun.yearfortune.FortuneCategoryStar
 import com.yapp.todakun.yearfortune.YearSelectionFortune
 import java.util.UUID
 
-/** 연도 선택 운세 생성 결과. */
+/** 연도 선택 운세 생성·조회 결과. */
 data class YearSelectionFortuneResult(
     val id: UUID,
     val year: Int,

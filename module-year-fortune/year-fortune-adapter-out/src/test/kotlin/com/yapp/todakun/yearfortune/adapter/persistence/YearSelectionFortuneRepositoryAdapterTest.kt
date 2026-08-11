@@ -28,6 +28,29 @@ class YearSelectionFortuneRepositoryAdapterTest(
                     .save(YearSelectionFortuneJpaEntity.fromDomain(YearSelectionFortuneFixture.create()))
                     .toDomain()
 
+            describe("findById") {
+                context("저장된 id로 조회하면") {
+                    it("해당 연도별 운세를 반환한다") {
+                        val yearSelectionFortune = savedYearSelectionFortune()
+
+                        val found = adapter.findById(yearSelectionFortune.id)
+
+                        found.shouldNotBeNull()
+                        found shouldBe yearSelectionFortune
+                    }
+                }
+
+                context("일치하는 id가 없으면") {
+                    it("null을 반환한다") {
+                        val nonExistentId = Uuid.generateV7().toJavaUuid()
+
+                        val found = adapter.findById(nonExistentId)
+
+                        found.shouldBeNull()
+                    }
+                }
+            }
+
             describe("findByMemberIdAndYear") {
                 context("저장된 memberId와 year로 조회하면") {
                     it("해당 연도별 운세를 반환한다") {

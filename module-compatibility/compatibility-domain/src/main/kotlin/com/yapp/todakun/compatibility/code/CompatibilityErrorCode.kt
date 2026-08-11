@@ -7,6 +7,7 @@ enum class CompatibilityErrorCode(
     override val message: String,
     override val status: Int,
 ) : ResponseCode {
+    COMPATIBILITY_NOT_FOUND("COMPATIBILITY-404", "존재하지 않는 궁합입니다.", 404),
     COMPATIBILITY_SCORE_OUT_OF_RANGE("COMPATIBILITY-400", "궁합 점수는 0점에서 100점 사이여야 합니다.", 400),
     COMPATIBILITY_HEADLINE_TOO_LONG("COMPATIBILITY-400", "헤드라인은 최대 50자까지 입력할 수 있습니다.", 400),
     COMPATIBILITY_SUBHEADLINE_TOO_LONG("COMPATIBILITY-400", "서브헤드라인은 최대 100자까지 입력할 수 있습니다.", 400),

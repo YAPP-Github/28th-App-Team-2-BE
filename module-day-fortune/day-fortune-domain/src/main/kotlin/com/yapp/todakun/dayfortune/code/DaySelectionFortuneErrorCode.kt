@@ -7,6 +7,7 @@ enum class DaySelectionFortuneErrorCode(
     override val message: String,
     override val status: Int,
 ) : ResponseCode {
+    DAY_SELECTION_FORTUNE_NOT_FOUND("FORTUNE-404", "존재하지 않는 택일 운세입니다.", 404),
     DAY_SELECTION_FORTUNE_TITLE_TOO_LONG("FORTUNE-500", "제목은 최대 30자까지 입력할 수 있습니다.", 500),
     DAY_SELECTION_FORTUNE_CONTENT_TOO_LONG("FORTUNE-500", "내용은 최대 500자까지 입력할 수 있습니다.", 500),
     DAY_SELECTION_FORTUNE_CATEGORY_COUNT_MISMATCH("FORTUNE-500", "행운 카테고리는 3개여야 합니다.", 500),

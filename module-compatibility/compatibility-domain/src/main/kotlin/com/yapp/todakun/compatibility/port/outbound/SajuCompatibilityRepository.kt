@@ -7,6 +7,8 @@ import java.util.UUID
 interface SajuCompatibilityRepository {
     fun save(compatibility: SajuCompatibility): SajuCompatibility
 
+    fun findById(id: UUID): SajuCompatibility?
+
     fun findByMemberIdAndCharts(
         memberId: UUID,
         myChartId: UUID,

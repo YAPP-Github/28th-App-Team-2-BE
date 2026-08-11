@@ -14,6 +14,8 @@ class DaySelectionFortuneRepositoryAdapter(
     override fun save(daySelectionFortune: DaySelectionFortune): DaySelectionFortune =
         daySelectionFortuneJpaRepository.save(DaySelectionFortuneJpaEntity.fromDomain(daySelectionFortune)).toDomain()
 
+    override fun findById(id: UUID): DaySelectionFortune? = daySelectionFortuneJpaRepository.findById(id).map { it.toDomain() }.orElse(null)
+
     override fun findByMemberIdAndPurposeAndTargetDate(
         memberId: UUID,
         purpose: DaySelectionPurpose,
