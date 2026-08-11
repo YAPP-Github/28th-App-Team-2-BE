@@ -8,6 +8,8 @@ import java.util.UUID
 interface DaySelectionFortuneRepository {
     fun save(daySelectionFortune: DaySelectionFortune): DaySelectionFortune
 
+    fun findById(id: UUID): DaySelectionFortune?
+
     fun findByMemberIdAndPurposeAndTargetDate(
         memberId: UUID,
         purpose: DaySelectionPurpose,

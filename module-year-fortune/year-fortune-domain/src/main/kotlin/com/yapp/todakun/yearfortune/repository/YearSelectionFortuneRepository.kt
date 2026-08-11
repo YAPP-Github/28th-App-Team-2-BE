@@ -6,6 +6,8 @@ import java.util.UUID
 interface YearSelectionFortuneRepository {
     fun save(yearSelectionFortune: YearSelectionFortune): YearSelectionFortune
 
+    fun findById(id: UUID): YearSelectionFortune?
+
     fun findByMemberIdAndYear(
         memberId: UUID,
         year: Int,

@@ -2,6 +2,7 @@ package com.yapp.todakun.compatibility
 
 import com.yapp.todakun.common.validation.validateMaxLength
 import com.yapp.todakun.compatibility.exception.CompatibilityHeadlineTooLongException
+import com.yapp.todakun.compatibility.exception.CompatibilityNotFoundException
 import com.yapp.todakun.compatibility.exception.CompatibilityOhaengElementMismatchException
 import com.yapp.todakun.compatibility.exception.CompatibilityScoreOutOfRangeException
 import com.yapp.todakun.compatibility.exception.CompatibilitySubheadlineTooLongException
@@ -39,6 +40,13 @@ data class SajuCompatibility private constructor(
     val analysisBasis: String,
     val ohaengs: List<CompatibilityOhaeng>,
 ) {
+    /** 다른 회원의 궁합 존재 여부가 드러나지 않도록 소유자가 다르면 동일하게 404로 처리한다. */
+    fun validateOwner(memberId: UUID) {
+        if (this.memberId != memberId) {
+            throw CompatibilityNotFoundException()
+        }
+    }
+
     companion object {
         @ExperimentalUuidApi
         @Suppress("LongParameterList")

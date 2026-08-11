@@ -1,0 +1,6 @@
+package com.yapp.todakun.dayfortune.exception
+
+import com.yapp.todakun.common.exception.NotFoundException
+import com.yapp.todakun.dayfortune.code.DaySelectionFortuneErrorCode
+
+class DaySelectionFortuneNotFoundException : NotFoundException(DaySelectionFortuneErrorCode.DAY_SELECTION_FORTUNE_NOT_FOUND)
