@@ -1,4 +1,14 @@
 spring:
+  # 통합 테스트 클래스마다 @MockkBean 조합이 달라 Spring 컨텍스트 캐시 키가 전부 분리되고, 캐시된 컨텍스트는
+  # JVM이 끝날 때까지 각자의 커넥션 풀을 붙들고 있다. Hikari 기본값(maximum-pool-size 10, minimum-idle=풀 크기)이면
+  # 컨텍스트 12개 × 10 = 120개가 하나의 공유 Postgres 컨테이너(max_connections 기본 100)에 몰려
+  # "FATAL: sorry, too many clients already"로 컨텍스트 로딩이 실패한다(이슈 #66 CI 실패).
+  # 통합 테스트는 커넥션을 동시에 여러 개 쓰지 않으므로 풀을 작게 잡는다
+  # (배치 스키마 초기화가 락용 커넥션 + 스크립트 실행용 커넥션을 함께 쓰므로 2개로는 부족해 4로 둔다).
+  datasource:
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
   jpa:
     hibernate:
       ddl-auto: create-drop
