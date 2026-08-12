@@ -244,6 +244,68 @@ class DiscordWebhookAppenderTest : DescribeSpec({
         }
     }
 
+    describe("종료 시 큐 드레인") {
+        it("stop() 시점에 큐에 쌓여 있던 알림을 모두 전송한 뒤 종료한다") {
+            // 종료 직전 ERROR(SIGTERM 직전 예외·OOM 등)가 가장 중요한 알림이므로 유실되면 안 된다.
+            val backlog = 5
+            val received = AtomicInteger(0)
+            val server = HttpServer.create(InetSocketAddress(0), 0)
+            server.createContext("/webhook") { exchange ->
+                exchange.requestBody.readBytes()
+                // 워커를 느리게 만들어 stop() 호출 시점에 큐에 backlog가 남아 있게 한다.
+                Thread.sleep(50)
+                exchange.sendResponseHeaders(204, -1)
+                exchange.close()
+                received.incrementAndGet()
+            }
+            server.start()
+
+            try {
+                val appender = newAppender()
+                appender.webhookUrl = "http://localhost:${server.address.port}/webhook"
+                appender.start()
+
+                repeat(backlog) { i -> appender.doAppend(errorEvent("종료 직전 에러 $i")) }
+                appender.stop()
+
+                // stop()이 반환한 시점엔 드레인이 끝나 있어야 한다(추가 대기 없이 단언).
+                received.get() shouldBe backlog
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        it("드레인 제한시간을 넘기면 남은 알림을 버리고 종료한다(무한 대기 금지)") {
+            val server = HttpServer.create(InetSocketAddress(0), 0)
+            server.createContext("/webhook") { exchange ->
+                exchange.requestBody.readBytes()
+                Thread.sleep(400) // 제한시간 안에 다 비울 수 없을 만큼 느리게
+                exchange.sendResponseHeaders(204, -1)
+                exchange.close()
+            }
+            server.start()
+
+            try {
+                val appender = newAppender()
+                appender.webhookUrl = "http://localhost:${server.address.port}/webhook"
+                appender.drainTimeoutMs = 200
+                appender.start()
+
+                repeat(20) { i -> appender.doAppend(errorEvent("느린 전송 $i")) }
+
+                val startedAt = System.nanoTime()
+                appender.stop()
+                val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+
+                // 드레인(200ms) + join 상한 안에서 끝나야 한다 — graceful shutdown을 막으면 안 된다.
+                elapsedMs shouldBeLessThan 6_000L
+                appender.isStarted shouldBe false
+            } finally {
+                server.stop(0)
+            }
+        }
+    }
+
     describe("stop()") {
         it("워커 스레드를 정리하고 isStarted를 false로 만든다") {
             val server = startStubServer()

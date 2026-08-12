@@ -47,6 +47,9 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
     /** Discord로의 HTTP 요청(응답 포함) 타임아웃(ms). */
     var requestTimeoutMs: Long = DEFAULT_REQUEST_TIMEOUT_MS
 
+    /** 종료 시 큐에 남은 알림을 보내려고 기다리는 최대 시간(ms). graceful shutdown 상한을 위해 유한하다. */
+    var drainTimeoutMs: Long = DEFAULT_DRAIN_TIMEOUT_MS
+
     private val objectMapper = ObjectMapper()
 
     @Volatile
@@ -98,18 +101,59 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
         super.start()
     }
 
+    /**
+     * 종료 순서: ①새 이벤트 수락 중지 → ②큐 드레인(제한시간까지) → ③워커 자연 종료 대기 →
+     * ④그래도 살아 있으면 인터럽트.
+     *
+     * 종료 직전에 쌓인 ERROR야말로 가장 받아봐야 할 알림이다(SIGTERM 직전 예외, OOM 등).
+     * 곧바로 인터럽트하면 그게 통째로 유실된다. 반대로 무한정 기다리면 Blue/Green 배포의
+     * graceful shutdown을 막으므로, 전체 대기는 [drainTimeoutMs] + join 2회로 상한이 있다.
+     */
     override fun stop() {
         if (!isStarted) return
 
+        val wasEnabled = enabled
+        enabled = false // 이 시점 이후의 append()는 즉시 반환한다(큐가 다시 차지 않게)
+
+        if (wasEnabled) {
+            drainQueue()
+        }
+
         running = false
-        worker?.interrupt()
+        // 인터럽트를 먼저 쏘면 전송 중인 요청까지 끊긴다. 워커는 poll 타임아웃(1초) 후
+        // running=false를 보고 스스로 빠져나오므로, 자연 종료를 먼저 기다린다.
+        joinWorker()
+        if (worker?.isAlive == true) {
+            worker?.interrupt()
+            joinWorker()
+        }
+        worker = null
+
+        super.stop()
+    }
+
+    /** 큐가 빌 때까지(또는 제한시간까지) 워커가 남은 알림을 보내도록 기다린다. */
+    private fun drainQueue() {
+        val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(drainTimeoutMs)
+        try {
+            while (queue.isNotEmpty() && System.nanoTime() < deadlineNanos) {
+                Thread.sleep(DRAIN_POLL_INTERVAL_MS)
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+        val remaining = queue.size
+        if (remaining > 0) {
+            addWarn("종료 드레인 제한시간(${drainTimeoutMs}ms) 안에 보내지 못한 Discord 알림 ${remaining}건을 버립니다")
+        }
+    }
+
+    private fun joinWorker() {
         try {
             worker?.join(WORKER_JOIN_TIMEOUT_MS)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         }
-
-        super.stop()
     }
 
     override fun append(eventObject: ILoggingEvent) {
@@ -197,6 +241,8 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
         private const val WORKER_THREAD_NAME_PREFIX = "discord-webhook-appender"
         private const val WORKER_JOIN_TIMEOUT_MS = 2000L
         private const val WORKER_POLL_TIMEOUT_SECONDS = 1L
+        private const val DEFAULT_DRAIN_TIMEOUT_MS = 2000L
+        private const val DRAIN_POLL_INTERVAL_MS = 20L
 
         /** 워커 스레드 이름을 인스턴스마다 고유하게 만들기 위한 일련번호. */
         private val INSTANCE_COUNTER = AtomicInteger(0)
