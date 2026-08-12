@@ -1,10 +1,13 @@
 package com.yapp.todakun.notification.application
 
 import com.yapp.todakun.common.logging.Loggable
+import com.yapp.todakun.notification.NoticeDispatchHistory
 import com.yapp.todakun.notification.NotificationSetting
 import com.yapp.todakun.notification.port.inbound.DispatchScheduledNotificationUseCase
+import com.yapp.todakun.notification.port.inbound.PublishNoticeCommand
 import com.yapp.todakun.notification.port.inbound.PublishNoticeUseCase
 import com.yapp.todakun.notification.port.outbound.DispatchLockPort
+import com.yapp.todakun.notification.port.outbound.NoticeDispatchHistoryRepository
 import com.yapp.todakun.notification.port.outbound.NotificationSettingRepository
 import com.yapp.todakun.shared.DailyFortuneNotificationPort
 import com.yapp.todakun.shared.GetMemberIdsPort
@@ -15,8 +18,10 @@ import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Service
+import java.time.Instant
 import java.time.LocalTime
 import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
 
 private const val PAGE_SIZE = 100
 
@@ -33,9 +38,10 @@ private const val NOTICE_LOCK_KEY = 8_412_037_604L
  * 해당 회원 발송을 스킵한다.
  * 대상 회원별 발송은 예외를 격리해 한 명의 실패가 나머지 회원의 발송을 중단시키지 않는다.
  * OutOfMemoryError 등 복구 불가능한 [Error]는 격리 대상이 아니므로 [Exception]만 명시적으로 잡아 전파시킨다.
- * Blue/Green 배포 전환 구간의 중복 실행은 [dispatchLockPort]로 인스턴스 간 직렬화한다. 공지([publish])는
- * 관리자 API로도 호출 가능해져(더 이상 운영 스크립트 단독 진입점이 아님) 동시 중복 실행 방지를 위해 락을 건다 —
- * 다만 서로 다른 시점의 반복 호출까지 막는 완전한 멱등성은 별도 과제다.
+ * 공지([publish])는 관리자 API로도 호출 가능해져(더 이상 운영 스크립트 단독 진입점이 아님) 이중 방어로 멱등성을 보장한다:
+ * ① [dispatchLockPort] advisory lock은 Blue/Green 배포 전환 구간 등 동시 실행을 인스턴스 간 직렬화하고,
+ * ② [noticeDispatchHistoryRepository] 처리 이력의 유니크 제약은 서로 다른 시점의 순차 재기동(반복 호출)까지
+ * 걸러내 실제 발송이 최초 1회만 일어나게 한다.
  */
 @Service
 @Loggable
@@ -44,6 +50,7 @@ class NotificationDispatchService(
     private val sendNotificationPort: SendNotificationPort,
     private val getMemberIdsPort: GetMemberIdsPort,
     private val dispatchLockPort: DispatchLockPort,
+    private val noticeDispatchHistoryRepository: NoticeDispatchHistoryRepository,
     private val dailyFortunePort: ObjectProvider<DailyFortuneNotificationPort>,
     private val luckyActionPort: ObjectProvider<LuckyActionNotificationPort>,
 ) : DispatchScheduledNotificationUseCase, PublishNoticeUseCase {
@@ -71,18 +78,26 @@ class NotificationDispatchService(
         } ?: log.info("다른 인스턴스가 이미 행운 액션 리마인드를 처리 중이라 스킵합니다.")
     }
 
-    override fun publish(
-        title: String,
-        content: String,
-        deepLink: String?,
-    ) {
+    @ExperimentalUuidApi
+    override fun publish(command: PublishNoticeCommand) {
+        val idempotencyKey =
+            NoticeDispatchHistory.deriveIdempotencyKey(command.title, command.content, command.deepLink, command.idempotencyKey)
         dispatchLockPort.tryRun(NOTICE_LOCK_KEY) {
+            val claimed =
+                noticeDispatchHistoryRepository.saveIfAbsent(
+                    NoticeDispatchHistory.create(idempotencyKey, command.title, command.content, command.deepLink, Instant.now()),
+                )
+            if (!claimed) {
+                log.info("이미 발송 처리된 공지라 스킵합니다: idempotencyKey=$idempotencyKey")
+                return@tryRun
+            }
+
             dispatchInChunks(
                 fetchChunk = { afterId -> getMemberIdsPort.getMemberIds(afterId, PAGE_SIZE) },
                 idOf = { it },
                 memberIdOf = { it },
                 type = NotificationType.NOTICE,
-                resolvePayload = { NotificationPayload(title, content, deepLink) },
+                resolvePayload = { NotificationPayload(command.title, command.content, command.deepLink) },
             )
         } ?: log.info("다른 인스턴스가 이미 공지를 발송 중이라 스킵합니다.")
     }

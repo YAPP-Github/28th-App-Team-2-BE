@@ -12,4 +12,6 @@ data class PublishNoticeRequest(
     val content: String,
     @field:Schema(description = "딥링크(선택)", example = "todakun://notice/1")
     val deepLink: String? = null,
+    @field:Schema(description = "멱등성 키(선택) — 같은 내용을 의도적으로 재발송할 때만 새 값을 지정한다", example = "notice-2026-08-12-01")
+    val idempotencyKey: String? = null,
 )

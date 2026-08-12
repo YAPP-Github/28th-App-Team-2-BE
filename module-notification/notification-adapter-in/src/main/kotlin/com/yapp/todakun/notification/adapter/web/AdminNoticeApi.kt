@@ -11,7 +11,12 @@ import org.springframework.web.bind.annotation.RequestBody
 
 @Tag(name = "AdminNotice", description = "관리자 공지 발송 API(ROLE_ADMIN 전용)")
 interface AdminNoticeApi {
-    @Operation(summary = "공지 발송", description = "전체 회원에게 NOTICE 타입 알림을 fan-out 발송한다. ROLE_ADMIN 권한이 있어야 호출할 수 있다.")
+    @Operation(
+        summary = "공지 발송",
+        description =
+            "전체 회원에게 NOTICE 타입 알림을 fan-out 발송한다. ROLE_ADMIN 권한이 있어야 호출할 수 있다. " +
+                "제목·본문·딥링크(또는 idempotencyKey)가 같은 요청을 반복해도 실제 발송은 최초 1회만 일어난다(영속 멱등성).",
+    )
     @PostMapping("api/v1/admin/notifications/notice")
     fun publishNotice(
         @RequestBody @Valid request: PublishNoticeRequest,
