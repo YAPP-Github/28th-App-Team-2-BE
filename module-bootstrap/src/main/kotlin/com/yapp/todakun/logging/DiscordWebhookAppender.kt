@@ -11,7 +11,8 @@ import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * ERROR 로그를 Discord 웹훅으로 직접 발송하는 logback appender.
@@ -54,7 +55,14 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
     @Volatile
     private var running = false
 
-    private val queueFullWarned = AtomicBoolean(false)
+    /** 누적 드롭 수. 일회성 플래그로 두면 첫 드롭 이후의 지속적인 유실이 로그에 남지 않는다. */
+    private val droppedCount = AtomicLong(0)
+
+    /**
+     * 워커 스레드 이름. 인스턴스마다 고유하다 — 이름이 같으면 여러 appender(특히 테스트)가
+     * 서로의 워커 스레드를 자기 것으로 오인한다.
+     */
+    internal val workerThreadName: String = "$WORKER_THREAD_NAME_PREFIX-${INSTANCE_COUNTER.incrementAndGet()}"
 
     private lateinit var queue: ArrayBlockingQueue<String>
     private lateinit var httpClient: HttpClient
@@ -83,7 +91,7 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
         worker =
             Thread(::runWorkerLoop).apply {
                 isDaemon = true
-                name = WORKER_THREAD_NAME
+                name = workerThreadName
             }
         worker?.start()
 
@@ -109,8 +117,13 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
 
         try {
             val payload = buildPayloadJson(eventObject)
-            if (!queue.offer(payload) && queueFullWarned.compareAndSet(false, true)) {
-                addWarn("Discord 웹훅 큐가 가득 차 로그 이벤트를 드롭합니다(queueSize=$queueSize)")
+            if (!queue.offer(payload)) {
+                // 첫 드롭과 이후 일정 간격마다 누적 수를 남긴다 — 일회성 플래그로 두면
+                // 드롭이 계속되는 상황과 한 번 튄 상황을 운영에서 구분할 수 없다.
+                val dropped = droppedCount.incrementAndGet()
+                if (dropped == 1L || dropped % DROP_WARN_INTERVAL == 0L) {
+                    addWarn("Discord 웹훅 큐가 가득 차 로그 이벤트를 드롭합니다(queueSize=$queueSize, 누적 드롭=$dropped)")
+                }
             }
         } catch (t: Throwable) {
             addError("Discord 웹훅 페이로드 생성 실패", t)
@@ -123,8 +136,11 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
                 try {
                     queue.poll(WORKER_POLL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 } catch (e: InterruptedException) {
+                    // 인터럽트 플래그만 복원하고 continue하면, running이 true인 채로 외부가
+                    // 인터럽트했을 때 poll()이 즉시 예외를 던지는 과정을 반복해 CPU를 태운다.
+                    // 인터럽트는 종료 신호로 보고 루프를 빠져나간다.
                     Thread.currentThread().interrupt()
-                    null
+                    return
                 }
             if (payload == null) continue
 
@@ -145,7 +161,12 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(payloadJson, Charsets.UTF_8))
                     .build()
-            httpClient.send(request, HttpResponse.BodyHandlers.discarding())
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            // 상태 코드를 버리면 Discord의 429(요청 제한)·40x가 조용히 묻혀,
+            // "알림이 안 온다"는 상황의 원인을 운영에서 진단할 수 없다.
+            if (response.statusCode() !in 200..299) {
+                addWarn("Discord 웹훅 응답이 비정상입니다(status=${response.statusCode()}, body=${response.body().take(RESPONSE_BODY_LOG_LIMIT)})")
+            }
         } catch (t: Throwable) {
             addError("Discord 웹훅 HTTP 요청 실패", t)
         }
@@ -154,23 +175,39 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
     private fun buildPayloadJson(event: ILoggingEvent): String {
         val stackTrace = event.throwableProxy?.let { ThrowableProxyUtil.asString(it) }
         val header = "**[${event.level}]** `${event.loggerName}` (thread: ${event.threadName})\n${event.formattedMessage}"
-        val content = if (stackTrace != null) "$header\n```\n$stackTrace\n```" else header
-        return objectMapper.writeValueAsString(mapOf("content" to truncate(content)))
+        val content = if (stackTrace != null) "$header\n$CODE_FENCE\n$stackTrace\n$CODE_FENCE" else header
+        // 코드 블록으로 감싼 경우 절단 접미사에 닫는 펜스를 포함해야 한다. 스택 트레이스는 대부분
+        // 상한을 넘기므로, 그냥 끝을 자르면 여는 ```만 남아 Discord 메시지 렌더링이 깨진다.
+        val suffix = if (stackTrace != null) "$TRUNCATION_SUFFIX\n$CODE_FENCE" else TRUNCATION_SUFFIX
+        return objectMapper.writeValueAsString(mapOf("content" to truncate(content, suffix)))
     }
 
-    private fun truncate(content: String): String {
+    private fun truncate(
+        content: String,
+        suffix: String,
+    ): String {
         if (content.length <= DISCORD_CONTENT_MAX_LENGTH) return content
-        val cutoff = DISCORD_CONTENT_MAX_LENGTH - TRUNCATION_SUFFIX.length
-        return content.take(cutoff) + TRUNCATION_SUFFIX
+        return content.take(DISCORD_CONTENT_MAX_LENGTH - suffix.length) + suffix
     }
 
     companion object {
         private const val DEFAULT_QUEUE_SIZE = 256
         private const val DEFAULT_CONNECT_TIMEOUT_MS = 3000L
         private const val DEFAULT_REQUEST_TIMEOUT_MS = 5000L
-        private const val WORKER_THREAD_NAME = "discord-webhook-appender"
+        private const val WORKER_THREAD_NAME_PREFIX = "discord-webhook-appender"
         private const val WORKER_JOIN_TIMEOUT_MS = 2000L
         private const val WORKER_POLL_TIMEOUT_SECONDS = 1L
+
+        /** 워커 스레드 이름을 인스턴스마다 고유하게 만들기 위한 일련번호. */
+        private val INSTANCE_COUNTER = AtomicInteger(0)
+
+        /** 드롭 경고를 남기는 간격(누적 드롭 수 기준). 매 드롭마다 남기면 그 자체가 로그 폭주가 된다. */
+        private const val DROP_WARN_INTERVAL = 100L
+
+        /** 비정상 응답 진단용으로 남길 응답 본문 길이 상한. */
+        private const val RESPONSE_BODY_LOG_LIMIT = 200
+
+        private const val CODE_FENCE = "```"
 
         // Discord 웹훅 content 필드 상한은 2000자. JSON 이스케이프/래핑 오버헤드를 감안해 여유를 둔다.
         private const val DISCORD_CONTENT_MAX_LENGTH = 1900

@@ -125,14 +125,26 @@ class LogbackSpringConfigTest : DescribeSpec({
     }
 
     describe("prod 프로필") {
-        it("dev와 동일하게 CONSOLE과 DISCORD가 붙는다") {
+        // prod는 장애 영향이 가장 큰 환경이므로 dev와 같은 깊이로 검증한다.
+        it("dev와 동일하게 CONSOLE과 DISCORD가 붙고 구조화 인코더도 유지된다") {
             val context = configuredContext("prod")
             try {
                 val appenders = appendersOf(context)
+                appenders shouldHaveSize 2
                 appenders.map { it.name }.toSet() shouldBe setOf("CONSOLE", "DISCORD")
 
                 val discord = appenders.first { it.name == "DISCORD" }.shouldBeInstanceOf<DiscordWebhookAppender>()
-                discord.copyOfAttachedFiltersList.filterIsInstance<ThresholdFilter>() shouldHaveSize 1
+                val thresholdFilter = discord.copyOfAttachedFiltersList.filterIsInstance<ThresholdFilter>().singleOrNull()
+                requireNotNull(thresholdFilter) { "DISCORD appender에 ThresholdFilter가 없습니다" }
+                val testLogger = context.getLogger("com.yapp.todakun.LogbackSpringConfigTest")
+                thresholdFilter.decide(LoggingEvent(Logger::class.java.name, testLogger, Level.WARN, "warn", null, null)) shouldBe
+                    FilterReply.DENY
+                thresholdFilter.decide(LoggingEvent(Logger::class.java.name, testLogger, Level.ERROR, "error", null, null)) shouldBe
+                    FilterReply.NEUTRAL
+
+                val console =
+                    appenders.first { it.name == "CONSOLE" }.shouldBeInstanceOf<ConsoleAppender<ILoggingEvent>>()
+                console.encoder.shouldBeInstanceOf<StructuredLogEncoder>()
             } finally {
                 disposeContext(context)
             }

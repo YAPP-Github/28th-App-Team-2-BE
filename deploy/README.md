@@ -101,7 +101,8 @@ VM에는 **Alloy 엣지 에이전트만** 띄우고, Prometheus/Loki/Grafana는 
 발생 시 그 자리에서 직접 Discord 웹훅으로 POST한다(스택 트레이스 포함, 지연 없음). `DISCORD_WEBHOOK_URL`
 환경변수로 켜고 끈다(비우면 no-op). **GC Alerting 기반 로그 알림 룰은 사용하지 않는다**(지연·룰 관리 비용·중복 알림).
 
-**필요 env**(VM `.env`): `SENTRY_DSN`, `DISCORD_WEBHOOK_URL`, `GC_TOKEN`, `GC_PROM_URL`, `GC_PROM_USER`, `GC_LOKI_URL`, `GC_LOKI_USER`.
+**필요 env**(VM `.env`): `SENTRY_DSN`, `GC_TOKEN`, `GC_PROM_URL`, `GC_PROM_USER`, `GC_LOKI_URL`, `GC_LOKI_USER`.
+**선택 env**(VM `.env`): `DISCORD_WEBHOOK_URL` — 비우면 appender가 no-op이라 앱은 정상 기동한다(알림만 안 감).
 
 > Alloy 이미지 태그(`grafana/alloy:v1.16.1`)와 GC 엔드포인트는 배포 시점 기준으로 확인.
 

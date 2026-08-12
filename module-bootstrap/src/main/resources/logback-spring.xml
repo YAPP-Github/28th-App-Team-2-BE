@@ -24,6 +24,8 @@
         <level>ERROR</level>
       </filter>
     </appender>
+    <!-- 여기 level은 부트스트랩 기본값일 뿐이다. 최종 레벨은 Spring Boot가 logback 구성 이후
+         application-{profile}.yaml의 logging.level.*을 적용해 덮어쓴다(예: prod는 root=WARN). -->
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
       <appender-ref ref="DISCORD"/>
@@ -37,6 +39,8 @@
          자체가 없으므로 발송 경로가 존재하지 않는다(appender의 빈 URL no-op보다 강한 차단).
          local의 Sentry 차단은 application-local.yaml의 sentry.enabled=false가 담당한다. -->
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <!-- 여기 level은 부트스트랩 기본값일 뿐이다. 최종 레벨은 Spring Boot가 logback 구성 이후
+         application-{profile}.yaml의 logging.level.*을 적용해 덮어쓴다(예: prod는 root=WARN). -->
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
     </root>

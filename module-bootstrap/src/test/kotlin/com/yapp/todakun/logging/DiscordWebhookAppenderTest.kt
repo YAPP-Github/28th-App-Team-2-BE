@@ -7,9 +7,11 @@ import ch.qos.logback.classic.spi.LoggingEvent
 import com.sun.net.httpserver.HttpServer
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import tools.jackson.databind.ObjectMapper
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
@@ -17,7 +19,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-private const val WORKER_THREAD_NAME = "discord-webhook-appender"
+/** Discord content 필드의 실제 상한. appender는 이보다 낮은 값으로 절단한다. */
+private const val DISCORD_CONTENT_HARD_LIMIT = 2000
 
 /**
  * [DiscordWebhookAppender] 순수 단위 테스트. 스프링 컨텍스트를 띄우지 않고, 실제 Discord
@@ -39,7 +42,10 @@ class DiscordWebhookAppenderTest : DescribeSpec({
         return LoggingEvent(Logger::class.java.name, logger, Level.ERROR, message, throwable, null)
     }
 
-    fun workerThreadAlive(): Boolean = Thread.getAllStackTraces().keys.any { it.name == WORKER_THREAD_NAME && it.isAlive }
+    // appender 인스턴스가 실제로 띄운 스레드만 본다. 이름이 인스턴스마다 고유하므로
+    // 다른 테스트가 남긴 워커를 자기 것으로 오인하지 않는다(순서·병렬 실행에 영향받지 않음).
+    fun workerThreadAlive(appender: DiscordWebhookAppender): Boolean =
+        Thread.getAllStackTraces().keys.any { it.name == appender.workerThreadName && it.isAlive }
 
     fun startStubServer(onRequest: (String) -> Unit = {}): HttpServer {
         val server = HttpServer.create(InetSocketAddress(0), 0)
@@ -70,7 +76,7 @@ class DiscordWebhookAppenderTest : DescribeSpec({
 
                 Thread.sleep(300)
                 requestCount.get() shouldBe 0
-                workerThreadAlive() shouldBe false
+                workerThreadAlive(appender) shouldBe false
 
                 appender.stop()
             } finally {
@@ -86,7 +92,7 @@ class DiscordWebhookAppenderTest : DescribeSpec({
                 appender.start()
                 appender.doAppend(errorEvent("공백 webhookUrl 케이스"))
             }
-            workerThreadAlive() shouldBe false
+            workerThreadAlive(appender) shouldBe false
 
             appender.stop()
         }
@@ -136,16 +142,21 @@ class DiscordWebhookAppenderTest : DescribeSpec({
 
             // 워커가 백그라운드에서 전송 실패를 처리할 시간을 준다 — 예외로 죽지 않고 살아있어야 한다.
             Thread.sleep(300)
-            workerThreadAlive() shouldBe true
+            workerThreadAlive(appender) shouldBe true
 
             appender.stop()
         }
 
         it("500 응답을 반환해도 append()는 예외를 던지지 않는다") {
+            // 요청이 실제로 도달했는지까지 확인한다 — shouldNotThrowAny만 두면
+            // 워커가 아예 전송하지 않아도 테스트가 통과해 버린다.
+            val latch = CountDownLatch(1)
             val server = HttpServer.create(InetSocketAddress(0), 0)
             server.createContext("/webhook") { exchange ->
+                exchange.requestBody.readBytes()
                 exchange.sendResponseHeaders(500, -1)
                 exchange.close()
+                latch.countDown()
             }
             server.start()
 
@@ -157,7 +168,74 @@ class DiscordWebhookAppenderTest : DescribeSpec({
                 shouldNotThrowAny {
                     appender.doAppend(errorEvent("500 응답 케이스"))
                 }
-                Thread.sleep(300)
+
+                latch.await(5, TimeUnit.SECONDS) shouldBe true
+                // 비2xx여도 워커는 살아남아 다음 이벤트를 계속 처리해야 한다.
+                workerThreadAlive(appender) shouldBe true
+
+                appender.stop()
+            } finally {
+                server.stop(0)
+            }
+        }
+    }
+
+    describe("Discord 길이 상한(2000자) 절단") {
+        it("스택 트레이스가 잘려도 코드 블록이 닫힌 채로 전송된다") {
+            val latch = CountDownLatch(1)
+            val receivedBody = AtomicReference<String>()
+            val server =
+                startStubServer { body ->
+                    receivedBody.set(body)
+                    latch.countDown()
+                }
+
+            try {
+                val appender = newAppender()
+                appender.webhookUrl = "http://localhost:${server.address.port}/webhook"
+                appender.start()
+
+                // 상한을 확실히 넘기도록 깊은 원인 체인을 만든다.
+                var deep: Throwable = IllegalStateException("가장 깊은 원인")
+                repeat(50) { i -> deep = RuntimeException("래핑 $i", deep) }
+                appender.doAppend(errorEvent("아주 긴 스택 트레이스", deep))
+
+                latch.await(5, TimeUnit.SECONDS) shouldBe true
+
+                // 전송된 JSON에서 content 값을 꺼내 실제 Discord가 받는 문자열로 검증한다.
+                val content = ObjectMapper().readTree(receivedBody.get()).get("content").asString()
+                content.length shouldBeLessThanOrEqual DISCORD_CONTENT_HARD_LIMIT
+                content shouldContain "... (truncated)"
+                // 여는 펜스와 닫는 펜스 개수가 같아야 렌더링이 깨지지 않는다.
+                content.windowed(3).count { it == "```" } % 2 shouldBe 0
+                content.trimEnd().endsWith("```") shouldBe true
+
+                appender.stop()
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        it("스택 트레이스가 없는 짧은 메시지에는 코드 블록 표시가 붙지 않는다") {
+            val latch = CountDownLatch(1)
+            val receivedBody = AtomicReference<String>()
+            val server =
+                startStubServer { body ->
+                    receivedBody.set(body)
+                    latch.countDown()
+                }
+
+            try {
+                val appender = newAppender()
+                appender.webhookUrl = "http://localhost:${server.address.port}/webhook"
+                appender.start()
+
+                appender.doAppend(errorEvent("스택 트레이스 없는 에러"))
+
+                latch.await(5, TimeUnit.SECONDS) shouldBe true
+                val content = ObjectMapper().readTree(receivedBody.get()).get("content").asString()
+                content shouldContain "스택 트레이스 없는 에러"
+                content.contains("```") shouldBe false
 
                 appender.stop()
             } finally {
@@ -175,17 +253,17 @@ class DiscordWebhookAppenderTest : DescribeSpec({
                 appender.webhookUrl = "http://localhost:${server.address.port}/webhook"
                 appender.start()
 
-                workerThreadAlive() shouldBe true
+                workerThreadAlive(appender) shouldBe true
 
                 appender.stop()
 
                 appender.isStarted shouldBe false
 
                 val deadlineMs = System.currentTimeMillis() + 2000
-                var stillAlive = workerThreadAlive()
+                var stillAlive = workerThreadAlive(appender)
                 while (stillAlive && System.currentTimeMillis() < deadlineMs) {
                     Thread.sleep(100)
-                    stillAlive = workerThreadAlive()
+                    stillAlive = workerThreadAlive(appender)
                 }
                 stillAlive shouldBe false
             } finally {
