@@ -1,7 +1,10 @@
 package com.yapp.todakun.notification.application
 
+import com.yapp.todakun.notification.NoticeDispatchHistory
 import com.yapp.todakun.notification.NotificationSetting
+import com.yapp.todakun.notification.port.inbound.PublishNoticeCommand
 import com.yapp.todakun.notification.port.outbound.DispatchLockPort
+import com.yapp.todakun.notification.port.outbound.NoticeDispatchHistoryRepository
 import com.yapp.todakun.notification.port.outbound.NotificationSettingRepository
 import com.yapp.todakun.shared.DailyFortuneNotificationPort
 import com.yapp.todakun.shared.GetMemberIdsPort
@@ -13,6 +16,7 @@ import com.yapp.todakun.shared.SendNotificationPort
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
@@ -35,6 +39,7 @@ class NotificationDispatchServiceTest :
             val sendNotificationPort = mockk<SendNotificationPort>()
             val getMemberIdsPort = mockk<GetMemberIdsPort>()
             val dispatchLockPort = mockk<DispatchLockPort>()
+            val noticeDispatchHistoryRepository = mockk<NoticeDispatchHistoryRepository>()
             val dailyFortunePort = mockk<ObjectProvider<DailyFortuneNotificationPort>>()
             val luckyActionPort = mockk<ObjectProvider<LuckyActionNotificationPort>>()
             val service =
@@ -43,6 +48,7 @@ class NotificationDispatchServiceTest :
                     sendNotificationPort,
                     getMemberIdsPort,
                     dispatchLockPort,
+                    noticeDispatchHistoryRepository,
                     dailyFortunePort,
                     luckyActionPort,
                 )
@@ -50,6 +56,8 @@ class NotificationDispatchServiceTest :
             beforeTest {
                 // 락은 항상 획득에 성공해 block을 즉시 실행하는 것으로 기본 스텁.
                 every { dispatchLockPort.tryRun<Unit>(any(), any()) } answers { secondArg<() -> Unit>().invoke() }
+                // 공지 처리 이력은 기본적으로 선점에 성공하는 것으로 기본 스텁(멱등성 스킵 케이스는 개별 오버라이드).
+                every { noticeDispatchHistoryRepository.saveIfAbsent(any()) } returns true
             }
             afterTest {
                 clearMocks(
@@ -57,6 +65,7 @@ class NotificationDispatchServiceTest :
                     sendNotificationPort,
                     getMemberIdsPort,
                     dispatchLockPort,
+                    noticeDispatchHistoryRepository,
                     dailyFortunePort,
                     luckyActionPort,
                 )
@@ -149,7 +158,7 @@ class NotificationDispatchServiceTest :
                     val commands = mutableListOf<SendNotificationCommand>()
                     every { sendNotificationPort.send(capture(commands)) } just Runs
 
-                    service.publish("공지 제목", "공지 내용", "notice/1")
+                    service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1"))
 
                     verify(exactly = 2) { sendNotificationPort.send(any()) }
                     commands.map { it.type }.toSet() shouldBe setOf(NotificationType.NOTICE)
@@ -160,9 +169,51 @@ class NotificationDispatchServiceTest :
                     it("대상 조회조차 하지 않고 스킵한다") {
                         every { dispatchLockPort.tryRun<Unit>(any(), any()) } returns null
 
-                        service.publish("공지 제목", "공지 내용", "notice/1")
+                        service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1"))
 
                         verify(exactly = 0) { getMemberIdsPort.getMemberIds(any(), any()) }
+                    }
+                }
+
+                context("이미 처리된 idempotency key면") {
+                    it("회원 조회·발송을 하지 않는다") {
+                        every { noticeDispatchHistoryRepository.saveIfAbsent(any()) } returns false
+
+                        service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1"))
+
+                        verify(exactly = 0) { getMemberIdsPort.getMemberIds(any(), any()) }
+                        verify(exactly = 0) { sendNotificationPort.send(any()) }
+                    }
+                }
+
+                context("같은 인자로 두 번 호출하면") {
+                    it("발송은 한 번뿐이다") {
+                        val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000006")
+                        val m2 = UUID.fromString("018f0000-0000-7000-8000-000000000007")
+                        every { getMemberIdsPort.getMemberIds(null, 100) } returns listOf(m1, m2)
+                        every { getMemberIdsPort.getMemberIds(m2, 100) } returns emptyList()
+                        every { sendNotificationPort.send(any()) } just Runs
+                        // 첫 호출은 이력 선점에 성공하고, 두 번째(같은 키) 호출은 실패한다.
+                        every { noticeDispatchHistoryRepository.saveIfAbsent(any()) } returnsMany listOf(true, false)
+
+                        val command = PublishNoticeCommand("공지 제목", "공지 내용", "notice/1")
+                        service.publish(command)
+                        service.publish(command)
+
+                        verify(exactly = 2) { sendNotificationPort.send(any()) }
+                    }
+                }
+
+                context("명시적 idempotency key를 주면") {
+                    it("내용이 같아도 다른 키로 저장한다") {
+                        every { getMemberIdsPort.getMemberIds(any(), any()) } returns emptyList()
+                        val captured = mutableListOf<NoticeDispatchHistory>()
+                        every { noticeDispatchHistoryRepository.saveIfAbsent(capture(captured)) } returns true
+
+                        service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1", idempotencyKey = "key-a"))
+                        service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1", idempotencyKey = "key-b"))
+
+                        captured.map { it.idempotencyKey }[0] shouldNotBe captured.map { it.idempotencyKey }[1]
                     }
                 }
             }
