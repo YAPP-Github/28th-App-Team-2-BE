@@ -31,7 +31,11 @@
   </springProfile>
 
   <springProfile name="!dev &amp; !prod">
-    <!-- local 등 그 외 프로필: 사람이 읽는 콘솔 로그만, Discord appender 없음(DB DSN 필요 없이 완전 no-op이긴 하지만 굳이 안 붙인다) -->
+    <!-- local 등 그 외 프로필: 사람이 읽는 콘솔 로그만.
+         DISCORD appender를 의도적으로 붙이지 않는다 — 로컬 디버깅 중 발생한 ERROR가 팀 Discord 채널로
+         새어 나가면 안 되기 때문. .env에 DISCORD_WEBHOOK_URL이 채워져 있어도 이 분기에는 appender
+         자체가 없으므로 발송 경로가 존재하지 않는다(appender의 빈 URL no-op보다 강한 차단).
+         local의 Sentry 차단은 application-local.yaml의 sentry.enabled=false가 담당한다. -->
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>

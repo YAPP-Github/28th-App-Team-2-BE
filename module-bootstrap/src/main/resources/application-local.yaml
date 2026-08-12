@@ -42,15 +42,19 @@ fcm:
   enabled: ${FCM_ENABLED:false}   # false면 Firebase 빈 미생성(no-op) → 로컬 실행에 Firebase 불필요
   project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
 
-# Sentry — DSN 미설정 시 자동 비활성(no-op). debug는 로컬 연동 점검용(전송 로그 출력).
+# Sentry — local은 완전 비활성. 로컬 디버깅 노이즈가 운영 이슈 트래커로 새는 것을 막는다.
+# `dsn: ${SENTRY_DSN:}`만으로는 부족하다: Sentry 오토컨피그 게이트가 @ConditionalOnProperty("sentry.dsn")라
+# 값이 비어 있어도 "프로퍼티 존재"로 통과하고, .env의 SENTRY_DSN은 relaxed binding으로 sentry.dsn에 그대로 붙는다.
+# 그래서 SDK 자체를 끄는 enabled=false를 명시한다(SentryProperties extends SentryOptions).
+# 로컬에서 Sentry 연동을 점검해야 하면 enabled를 true로 바꾸고 dsn/environment/debug를 잠시 넣을 것.
 sentry:
-  dsn: ${SENTRY_DSN:}
-  environment: local
-  traces-sample-rate: 0
-  debug: true
+  enabled: false        # SDK 전송 차단 — .env에 SENTRY_DSN이 채워져 있어도 아무것도 보내지 않는다
   logging:
-    minimum-event-level: error       # ERROR 로그를 Sentry 이슈로 적재
-    minimum-breadcrumb-level: info   # INFO 이상은 이슈에 붙는 breadcrumb으로만 기록
+    enabled: false      # SentryAppender를 root 로거에 붙이지 않는다(로그 기반 적재도 차단)
+
+# Discord ERROR 웹훅 — local은 발송 경로 자체가 없다. logback-spring.xml의 `!dev & !prod` 분기에
+# DISCORD appender를 선언하지 않으므로, .env에 DISCORD_WEBHOOK_URL이 채워져 있어도
+# 로컬 디버깅 중 발생한 ERROR가 팀 Discord 채널로 새지 않는다(그래서 여기 webhook-url을 두지 않는다).
 
 token:
   jwt:
