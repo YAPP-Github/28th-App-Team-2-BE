@@ -47,12 +47,18 @@ class DiscordWebhookAppenderTest : DescribeSpec({
     fun workerThreadAlive(appender: DiscordWebhookAppender): Boolean =
         Thread.getAllStackTraces().keys.any { it.name == appender.workerThreadName && it.isAlive }
 
-    fun startStubServer(onRequest: (String) -> Unit = {}): HttpServer {
+    /** 스텁 웹훅 서버. 상태 코드·지연을 파라미터로 받아, 테스트마다 서버를 새로 짜지 않는다. */
+    fun startStubServer(
+        statusCode: Int = 204,
+        delayMs: Long = 0L,
+        onRequest: (String) -> Unit = {},
+    ): HttpServer {
         val server = HttpServer.create(InetSocketAddress(0), 0)
         server.createContext("/webhook") { exchange ->
             val body = exchange.requestBody.readBytes().toString(Charsets.UTF_8)
             onRequest(body)
-            exchange.sendResponseHeaders(204, -1)
+            if (delayMs > 0) Thread.sleep(delayMs)
+            exchange.sendResponseHeaders(statusCode, -1)
             exchange.close()
         }
         server.start()
@@ -151,14 +157,7 @@ class DiscordWebhookAppenderTest : DescribeSpec({
             // 요청이 실제로 도달했는지까지 확인한다 — shouldNotThrowAny만 두면
             // 워커가 아예 전송하지 않아도 테스트가 통과해 버린다.
             val latch = CountDownLatch(1)
-            val server = HttpServer.create(InetSocketAddress(0), 0)
-            server.createContext("/webhook") { exchange ->
-                exchange.requestBody.readBytes()
-                exchange.sendResponseHeaders(500, -1)
-                exchange.close()
-                latch.countDown()
-            }
-            server.start()
+            val server = startStubServer(statusCode = 500) { latch.countDown() }
 
             try {
                 val appender = newAppender()
@@ -249,16 +248,8 @@ class DiscordWebhookAppenderTest : DescribeSpec({
             // 종료 직전 ERROR(SIGTERM 직전 예외·OOM 등)가 가장 중요한 알림이므로 유실되면 안 된다.
             val backlog = 5
             val received = AtomicInteger(0)
-            val server = HttpServer.create(InetSocketAddress(0), 0)
-            server.createContext("/webhook") { exchange ->
-                exchange.requestBody.readBytes()
-                // 워커를 느리게 만들어 stop() 호출 시점에 큐에 backlog가 남아 있게 한다.
-                Thread.sleep(50)
-                exchange.sendResponseHeaders(204, -1)
-                exchange.close()
-                received.incrementAndGet()
-            }
-            server.start()
+            // 워커를 느리게 만들어 stop() 호출 시점에 큐에 backlog가 남아 있게 한다.
+            val server = startStubServer(delayMs = 50) { received.incrementAndGet() }
 
             try {
                 val appender = newAppender()
@@ -276,14 +267,8 @@ class DiscordWebhookAppenderTest : DescribeSpec({
         }
 
         it("드레인 제한시간을 넘기면 남은 알림을 버리고 종료한다(무한 대기 금지)") {
-            val server = HttpServer.create(InetSocketAddress(0), 0)
-            server.createContext("/webhook") { exchange ->
-                exchange.requestBody.readBytes()
-                Thread.sleep(400) // 제한시간 안에 다 비울 수 없을 만큼 느리게
-                exchange.sendResponseHeaders(204, -1)
-                exchange.close()
-            }
-            server.start()
+            // 제한시간 안에 다 비울 수 없을 만큼 느리게 응답한다.
+            val server = startStubServer(delayMs = 400)
 
             try {
                 val appender = newAppender()
@@ -336,14 +321,8 @@ class DiscordWebhookAppenderTest : DescribeSpec({
 
     describe("큐 포화") {
         it("queueSize를 초과해도 append()는 블로킹하지 않는다") {
-            val server = HttpServer.create(InetSocketAddress(0), 0)
-            server.createContext("/webhook") { exchange ->
-                // 워커가 계속 바쁘도록 응답을 지연시켜 큐가 비워지지 않게 한다.
-                Thread.sleep(200)
-                exchange.sendResponseHeaders(204, -1)
-                exchange.close()
-            }
-            server.start()
+            // 워커가 계속 바쁘도록 응답을 지연시켜 큐가 비워지지 않게 한다.
+            val server = startStubServer(delayMs = 200)
 
             try {
                 val appender = newAppender()
