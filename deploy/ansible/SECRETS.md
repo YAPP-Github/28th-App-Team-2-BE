@@ -58,6 +58,32 @@ git add inventory/dev/group_vars/all.sops.yaml
 - prod도 동일 절차 (`inventory/prod/group_vars/all.sops.yaml`).
 - **Cloudflare Origin 인증서**(`cloudflare_origin_cert`/`cloudflare_origin_key`)도 이 시크릿에 PEM으로 넣으면
   Ansible(`tasks/render_certs.yaml`)이 VM `/opt/todakun/caddy/certs/`로 렌더링한다 — **수동 배치 불필요**.
+- **딥링크 검증 파일**(App Links / Universal Links)도 동일하게 시크릿에서 렌더링된다
+  (`tasks/render_wellknown.yaml` → `/opt/todakun/caddy/well-known/` → Caddy가 `/.well-known/` 아래로 서빙).
+  자세한 내용은 아래 "딥링크 검증 파일" 절 참고.
+
+## 딥링크 검증 파일 (assetlinks.json / apple-app-site-association)
+
+```text
+SOPS(지문·패키지명·bundleId) ──▶ templates/*.j2 ──▶ VM caddy/well-known/ ──:ro 마운트──▶ Caddy file_server
+                                                                                        └ /.well-known/assetlinks.json
+                                                                                        └ /.well-known/apple-app-site-association
+```
+
+| 키 | dev | prod | 비고 |
+|----|-----|------|------|
+| `android_package_name` / `android_sha256_fingerprint` | ✅ | ✅ | release 서명 지문 |
+| `android_debug_package_name` / `android_debug_sha256_fingerprint` | ✅ | ❌ | **dev 전용** — 운영 도메인에 개발용 서명키 지문 미노출. 넣거나 뺄 땐 **반드시 쌍으로** |
+| `apple_bundle_id` (+ 기존 `apple_team_id`) | ✅ | ✅ | `appID = {team_id}.{bundle_id}` |
+
+- JSON **구조**는 git의 `templates/*.j2`에 있어 리뷰 가능하고, **식별자만** SOPS에 있다.
+  경로 패턴(현재 iOS `/share/*`)을 바꾸려면 템플릿을 고친다.
+- 렌더 결과는 배치 전에 `python3 -c "json.load(...)"`로 유효성 검증된다(깨진 파일이 서빙되는 것 방지).
+- 이 파일들은 **`playbook.yaml`(프로비저닝)에서만** 렌더링된다(certs와 동일). 지문을 회전했다면
+  `deploy.yaml`만 돌리지 말고 `playbook.yaml`을 먼저 실행할 것. (CI는 provision → deploy 순으로 둘 다 돈다.)
+- ⚠️ 이 값들은 SOPS로 **저장소에서만** 보호된다. 검증 파일 자체는 규격상 HTTPS로 **공개 서빙**되므로
+  누구나 `https://<도메인>/.well-known/assetlinks.json`으로 조회할 수 있다(딥링크 동작에 필수).
+  즉 SOPS는 "git에 평문으로 남지 않게" 하는 장치이지 값 자체를 비밀로 만들지는 않는다.
 
 ## 4. CI(GitHub Actions) 연결
 
