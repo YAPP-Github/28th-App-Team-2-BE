@@ -160,6 +160,11 @@
     - name: SOPS 시크릿 → Cloudflare Origin 인증서 렌더링
       ansible.builtin.import_tasks: tasks/render_certs.yaml
 
+    # Caddy 기동 전에 렌더링해야 한다 — compose가 이 디렉터리를 :ro 마운트하므로,
+    # 없으면 도커가 root 소유 빈 디렉터리를 만들어 404가 나간다.
+    - name: SOPS 시크릿 → App Links/Universal Links 검증 파일 렌더링
+      ansible.builtin.import_tasks: tasks/render_wellknown.yaml
+
     - name: Caddy/Redis 기동
       # DOMAIN 보간을 위해 .env를 명시 지정한다. compose는 compose 파일 위치 기준으로 .env를
       # 찾으므로 CWD(chdir)의 .env를 자동으로 읽지 않는다. --env-file은 보간용일 뿐,

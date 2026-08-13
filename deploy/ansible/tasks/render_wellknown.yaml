@@ -1,0 +1,54 @@
+---
+# SOPS 시크릿 → VM /opt/todakun/caddy/well-known/ 로 App Links·Universal Links 검증 파일 렌더링.
+# 복호화는 컨트롤러(CI/로컬)에서 vars 플러그인이 수행 → VM엔 렌더 결과만 내려간다(certs와 동일 패턴).
+# Caddy(compose)가 이 디렉터리를 /etc/caddy/well-known 으로 :ro 마운트해 file_server로 서빙한다.
+#
+# 서빙 경로
+#   /.well-known/assetlinks.json              ← assetlinks.json.j2            (Android App Links)
+#   /.well-known/apple-app-site-association   ← apple-app-site-association.j2 (iOS Universal Links)
+- name: App Links/Universal Links 시크릿 로드 확인
+  ansible.builtin.assert:
+    that:
+      - android_package_name is defined
+      - android_sha256_fingerprint is defined
+      - apple_team_id is defined
+      - apple_bundle_id is defined
+      # debug 지문은 선택(dev 전용) — 한쪽만 정의되면 렌더 결과가 깨지므로 쌍으로 검사한다.
+      - (android_debug_package_name is defined) == (android_debug_sha256_fingerprint is defined)
+    fail_msg: >-
+      SOPS에 android_package_name / android_sha256_fingerprint / apple_bundle_id 누락(또는
+      android_debug_* 가 짝이 맞지 않음) — inventory/{env}/group_vars/all.sops.yaml 에 추가 후 재암호화하세요.
+  no_log: true
+
+- name: well-known 디렉터리 생성 (0755, root)
+  ansible.builtin.file:
+    path: "{{ app_dir }}/caddy/well-known"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# trim_blocks(기본 true)는 {% endif %} 뒤 개행을 지워 닫는 대괄호가 `}]`로 붙는다.
+# JSON 유효성엔 문제없지만 공개 서빙 파일이라 가독성을 위해 끈다.
+# validate로 렌더 결과가 유효한 JSON인지 배치 전에 검증한다(깨진 파일이 서빙되는 것 방지).
+- name: assetlinks.json 렌더링 (Android App Links)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/assetlinks.json.j2"
+    dest: "{{ app_dir }}/caddy/well-known/assetlinks.json"
+    owner: root
+    group: root
+    mode: "0644"
+    trim_blocks: false
+    validate: python3 -c "import json, sys; json.load(open(sys.argv[1]))" %s
+  no_log: true
+
+- name: apple-app-site-association 렌더링 (iOS Universal Links)
+  # 확장자 없는 파일명이 규격이다 — .json을 붙이면 Apple이 인식하지 못한다.
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/apple-app-site-association.j2"
+    dest: "{{ app_dir }}/caddy/well-known/apple-app-site-association"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: python3 -c "import json, sys; json.load(open(sys.argv[1]))" %s
+  no_log: true
