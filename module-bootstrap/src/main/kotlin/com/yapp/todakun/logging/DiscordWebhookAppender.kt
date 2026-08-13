@@ -14,6 +14,30 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
+private const val DEFAULT_QUEUE_SIZE = 256
+private const val DEFAULT_CONNECT_TIMEOUT_MS = 3000L
+private const val DEFAULT_REQUEST_TIMEOUT_MS = 5000L
+private const val DEFAULT_DRAIN_TIMEOUT_MS = 2000L
+private const val WORKER_THREAD_NAME_PREFIX = "discord-webhook-appender"
+private const val WORKER_JOIN_TIMEOUT_MS = 2000L
+private const val WORKER_POLL_TIMEOUT_SECONDS = 1L
+private const val DRAIN_POLL_INTERVAL_MS = 20L
+
+/** 워커 스레드 이름을 인스턴스마다 고유하게 만들기 위한 일련번호. */
+private val INSTANCE_COUNTER = AtomicInteger(0)
+
+/** 드롭 경고를 남기는 간격(누적 드롭 수 기준). 매 드롭마다 남기면 그 자체가 로그 폭주가 된다. */
+private const val DROP_WARN_INTERVAL = 100L
+
+/** 비정상 응답 진단용으로 남길 응답 본문 길이 상한. */
+private const val RESPONSE_BODY_LOG_LIMIT = 200
+
+private const val CODE_FENCE = "```"
+
+// Discord 웹훅 content 필드 상한은 2000자. JSON 이스케이프/래핑 오버헤드를 감안해 여유를 둔다.
+private const val DISCORD_CONTENT_MAX_LENGTH = 1900
+private const val TRUNCATION_SUFFIX = "\n... (truncated)"
+
 /**
  * ERROR 로그를 Discord 웹훅으로 직접 발송하는 logback appender.
  *
@@ -232,31 +256,5 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
     ): String {
         if (content.length <= DISCORD_CONTENT_MAX_LENGTH) return content
         return content.take(DISCORD_CONTENT_MAX_LENGTH - suffix.length) + suffix
-    }
-
-    companion object {
-        private const val DEFAULT_QUEUE_SIZE = 256
-        private const val DEFAULT_CONNECT_TIMEOUT_MS = 3000L
-        private const val DEFAULT_REQUEST_TIMEOUT_MS = 5000L
-        private const val WORKER_THREAD_NAME_PREFIX = "discord-webhook-appender"
-        private const val WORKER_JOIN_TIMEOUT_MS = 2000L
-        private const val WORKER_POLL_TIMEOUT_SECONDS = 1L
-        private const val DEFAULT_DRAIN_TIMEOUT_MS = 2000L
-        private const val DRAIN_POLL_INTERVAL_MS = 20L
-
-        /** 워커 스레드 이름을 인스턴스마다 고유하게 만들기 위한 일련번호. */
-        private val INSTANCE_COUNTER = AtomicInteger(0)
-
-        /** 드롭 경고를 남기는 간격(누적 드롭 수 기준). 매 드롭마다 남기면 그 자체가 로그 폭주가 된다. */
-        private const val DROP_WARN_INTERVAL = 100L
-
-        /** 비정상 응답 진단용으로 남길 응답 본문 길이 상한. */
-        private const val RESPONSE_BODY_LOG_LIMIT = 200
-
-        private const val CODE_FENCE = "```"
-
-        // Discord 웹훅 content 필드 상한은 2000자. JSON 이스케이프/래핑 오버헤드를 감안해 여유를 둔다.
-        private const val DISCORD_CONTENT_MAX_LENGTH = 1900
-        private const val TRUNCATION_SUFFIX = "\n... (truncated)"
     }
 }
