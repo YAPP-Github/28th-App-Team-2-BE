@@ -79,6 +79,8 @@ SOPS(지문·패키지명·bundleId) ──▶ templates/*.j2 ──▶ VM caddy
 - JSON **구조**는 git의 `templates/*.j2`에 있어 리뷰 가능하고, **식별자만** SOPS에 있다.
   경로 패턴(현재 iOS `/share/*`)을 바꾸려면 템플릿을 고친다.
 - 렌더 결과는 배치 전에 `python3 -c "json.load(...)"`로 유효성 검증된다(깨진 파일이 서빙되는 것 방지).
+- 필수 키는 **값이 비어 있어도** 렌더 전 `assert`에서 막힌다(키만 만들고 값을 안 채운 경우 방지).
+  빈 값은 JSON 유효성은 통과하지만 Android/Apple 측 검증에서 실패해 원인 파악이 훨씬 어렵다.
 - 이 파일들은 **`playbook.yaml`(프로비저닝)에서만** 렌더링된다(certs와 동일). 지문을 회전했다면
   `deploy.yaml`만 돌리지 말고 `playbook.yaml`을 먼저 실행할 것. (CI는 provision → deploy 순으로 둘 다 돈다.)
 - ⚠️ 이 값들은 SOPS로 **저장소에서만** 보호된다. 검증 파일 자체는 규격상 HTTPS로 **공개 서빙**되므로

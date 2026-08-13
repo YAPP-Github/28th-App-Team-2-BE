@@ -7,17 +7,20 @@
 #   /.well-known/assetlinks.json              ← assetlinks.json.j2            (Android App Links)
 #   /.well-known/apple-app-site-association   ← apple-app-site-association.j2 (iOS Universal Links)
 - name: App Links/Universal Links 시크릿 로드 확인
+  # `is defined`가 아니라 값의 비어있지 않음을 본다 — 빈 문자열은 JSON 검증(validate)은 통과하지만
+  # 배포 후 Android/Apple 측 검증에서 실패하므로, 렌더 전에 막는 편이 진단이 훨씬 빠르다.
   ansible.builtin.assert:
     that:
-      - android_package_name is defined
-      - android_sha256_fingerprint is defined
-      - apple_team_id is defined
-      - apple_bundle_id is defined
-      # debug 지문은 선택(dev 전용) — 한쪽만 정의되면 렌더 결과가 깨지므로 쌍으로 검사한다.
-      - (android_debug_package_name is defined) == (android_debug_sha256_fingerprint is defined)
+      - android_package_name | default('', true) | length > 0
+      - android_sha256_fingerprint | default('', true) | length > 0
+      - apple_team_id | default('', true) | length > 0
+      - apple_bundle_id | default('', true) | length > 0
+      # debug 지문은 선택(dev 전용) — 한쪽만 채워지면 렌더 결과가 깨지므로 쌍으로 검사한다.
+      - (android_debug_package_name | default('', true) | length > 0) == (android_debug_sha256_fingerprint | default('', true) | length > 0)
     fail_msg: >-
-      SOPS에 android_package_name / android_sha256_fingerprint / apple_bundle_id 누락(또는
-      android_debug_* 가 짝이 맞지 않음) — inventory/{env}/group_vars/all.sops.yaml 에 추가 후 재암호화하세요.
+      SOPS에 android_package_name / android_sha256_fingerprint / apple_team_id / apple_bundle_id 가
+      누락되었거나 값이 비어 있습니다(또는 android_debug_* 가 짝이 맞지 않음) —
+      inventory/{env}/group_vars/all.sops.yaml 에 추가 후 재암호화하세요.
   no_log: true
 
 - name: well-known 디렉터리 생성 (0755, root)

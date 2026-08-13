@@ -129,30 +129,36 @@
       changed_when: "'already exists' not in net_create.stderr"
       failed_when: net_create.rc != 0 and 'already exists' not in net_create.stderr
 
-    # Caddyfile은 active color 상태를 담는 파일이라 switch.sh가 소유한다(배포 성공 시 idle color로
-    # 재렌더 + `caddy reload`). provision이 매 실행마다 blue로 덮으면, health 실패로 롤백된 배포
-    # 뒤에는 disk=blue(이미 제거된 컨테이너)로 남아 Caddy 재시작/재생성 시 전체 502가 된다.
-    # → 파일이 아직 없을 때(최초 1회)만 부트스트랩 렌더하고, 이후 상태는 switch.sh에 맡긴다.
-    - name: 기존 렌더된 Caddyfile 존재 확인
-      ansible.builtin.stat:
-        path: "{{ app_dir }}/caddy/Caddyfile"
-      register: caddyfile_stat
+    # Caddyfile은 active color 상태를 담는 파일이라 업스트림 줄만큼은 switch.sh가 소유한다
+    # (배포 성공 시 idle color로 재렌더 + `caddy reload`). provision이 매 실행마다 blue로 덮으면,
+    # health 실패로 롤백된 배포 뒤에는 disk=blue(이미 제거된 컨테이너)로 남아 Caddy 재시작/재생성 시
+    # 전체 502가 된다.
+    # → 업스트림은 기존 렌더 결과에서 그대로 물려받고(파일이 없는 최초 1회만 blue), 템플릿의 나머지
+    #   변경분은 매 프로비저닝마다 반영한다. "파일이 있으면 통째로 건너뛰기"로 두면 템플릿에 새 핸들러
+    #   (/.well-known/*)를 추가해도 기존 VM에는 영원히 반영되지 않는다 — switch.sh의 재렌더는 health
+    #   통과 이후에만 실행되므로, 롤백된 배포에서는 검증 파일과 마운트만 배치되고 핸들러는 빠진다.
+    - name: 기존 렌더된 Caddyfile의 활성 업스트림 추출
+      ansible.builtin.shell: |
+        f="{{ app_dir }}/caddy/Caddyfile"
+        [ -f "$f" ] || exit 0
+        sed -n 's/.*reverse_proxy \(todakun-app-[a-z]*:[0-9]*\).*/\1/p' "$f" | head -n 1
+      register: caddy_active_upstream
+      changed_when: false
 
-    - name: 초기 Caddyfile 렌더링 (최초 1회만, blue 업스트림)
+    - name: Caddyfile 렌더링 (활성 업스트림 보존, 템플릿 변경분 반영)
       ansible.builtin.command: >
-        sed "s|__APP_UPSTREAM__|todakun-app-blue:8080|"
+        sed "s|__APP_UPSTREAM__|{{ caddy_active_upstream.stdout | trim | default('todakun-app-blue:8080', true) }}|"
         {{ app_dir }}/caddy/Caddyfile.template
       register: caddy_rendered
       changed_when: "false"
-      when: not caddyfile_stat.stat.exists
 
-    - name: Caddyfile 저장 (최초 1회만)
+    - name: Caddyfile 저장
       ansible.builtin.copy:
         content: "{{ caddy_rendered.stdout }}\n"
         dest: "{{ app_dir }}/caddy/Caddyfile"
         owner: "{{ ansible_user }}"
         mode: "0644"
-      when: not caddyfile_stat.stat.exists
+      register: caddyfile_written
 
     - name: SOPS 시크릿 → /opt/todakun/.env 렌더링
       ansible.builtin.import_tasks: tasks/render_env.yaml
@@ -176,6 +182,23 @@
         chdir: "{{ app_dir }}"
       register: infra_up
       changed_when: "'Started' in infra_up.stderr or 'Created' in infra_up.stderr"
+
+    # Caddyfile은 bind 마운트라 파일만 갱신해서는 실행 중인 Caddy에 반영되지 않는다(기동 시 1회 로드).
+    # 위 compose up이 컨테이너를 재생성했다면 이미 새 설정으로 떴지만, 변경이 없어 기존 컨테이너가
+    # 그대로 유지된 경우엔 reload가 필요하다. reload는 무중단이며 업스트림은 위에서 보존했으므로
+    # 이 시점의 트래픽 경로는 바뀌지 않는다(추가된 정적 핸들러만 반영).
+    # 재시도는 위 compose up이 방금 컨테이너를 만든 경우의 경합(admin API가 아직 안 뜸)만 흡수한다.
+    # 설정 자체가 잘못되면 재시도해도 계속 실패하므로 프로비저닝이 그대로 중단된다(의도).
+    - name: Caddy 설정 reload (Caddyfile 변경 시)
+      ansible.builtin.command: >
+        docker exec todakun-caddy
+        caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+      when: caddyfile_written.changed
+      register: caddy_reload
+      until: caddy_reload.rc == 0
+      retries: 5
+      delay: 3
+      changed_when: true
 
     - name: 모니터링 스택 산출물 동기화 (prometheus/loki/alloy/grafana)
       ansible.builtin.copy:
