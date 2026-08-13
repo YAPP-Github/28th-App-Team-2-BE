@@ -36,6 +36,23 @@ class NoticeDispatchHistoryTest :
                 }
             }
 
+            context("필드 값 자체가 인코딩 구분자를 포함하면") {
+                it("구분자를 사이에 둔 값의 분배만 다른 두 공지도 다른 키를 만든다(구분자 주입으로 인한 경계 밀림 방지)") {
+                    // 구분자로 단순히 이어 붙이면 두 재료가 모두 "제목:본문:내용"이 되어 같은 키로 뭉개진다.
+                    val key1 = NoticeDispatchHistory.deriveIdempotencyKey("제목:본문", "내용", "notice/1", null)
+                    val key2 = NoticeDispatchHistory.deriveIdempotencyKey("제목", "본문:내용", "notice/1", null)
+
+                    key1 shouldNotBe key2
+                }
+
+                it("숫자와 구분자로 길이 접두사를 흉내 내도 다른 키를 만든다") {
+                    val key1 = NoticeDispatchHistory.deriveIdempotencyKey("제목", "3:본문내용", "notice/1", null)
+                    val key2 = NoticeDispatchHistory.deriveIdempotencyKey("제목3", ":본문내용", "notice/1", null)
+
+                    key1 shouldNotBe key2
+                }
+            }
+
             context("딥링크가 null인 경우와 빈 문자열인 경우") {
                 it("orEmpty로 병합되어 같은 키를 만든다(구현상 두 경우를 구분하지 않는다)") {
                     val keyWithNullDeepLink = NoticeDispatchHistory.deriveIdempotencyKey("제목", "본문", null, null)
