@@ -32,6 +32,17 @@ private const val DROP_WARN_INTERVAL = 100L
 /** 비정상 응답 진단용으로 남길 응답 본문 길이 상한. */
 private const val RESPONSE_BODY_LOG_LIMIT = 200
 
+private const val HTTP_TOO_MANY_REQUESTS = 429
+
+/** 429 재전송 횟수 상한. 워커가 1개뿐이라 재시도를 늘릴수록 뒤따르는 이벤트의 드롭이 늘어난다. */
+private const val RATE_LIMIT_MAX_RETRIES = 1
+
+/** `Retry-After` 헤더가 없거나 파싱되지 않을 때의 대기 시간. */
+private const val DEFAULT_RATE_LIMIT_WAIT_MS = 1000L
+
+/** 429 대기 상한. 글로벌 제한은 수십 초를 요구할 수 있는데, 그만큼 워커를 묶어두면 큐가 통째로 드롭된다. */
+private const val MAX_RATE_LIMIT_WAIT_MS = 5000L
+
 private const val CODE_FENCE = "```"
 
 // Discord 웹훅 content 필드 상한은 2000자. JSON 이스케이프/래핑 오버헤드를 감안해 여유를 둔다.
@@ -54,6 +65,8 @@ private const val TRUNCATION_SUFFIX = "\n... (truncated)"
  * - 데몬 워커 스레드 1개 — JVM graceful shutdown을 막지 않는다.
  * - `append()`/워커 루프 전체를 예외로부터 격리 — 전송 실패가 애플리케이션에 전파되지 않는다.
  * - 내부 실패는 slf4j가 아니라 logback 자체 `addWarn`/`addError`로만 남긴다(로깅 재귀 방지).
+ * - 429(요청 제한)만 `Retry-After`를 존중해 제한된 횟수·시간 안에서 재전송한다 — 대기는 워커
+ *   스레드에서만 일어나므로 애플리케이션 스레드는 여전히 블로킹되지 않는다.
  *
  * HTTP 전송은 JDK 내장 [HttpClient]를 쓴다(새 의존성 추가 없음). JSON 직렬화는 Spring 빈에
  * 의존하지 않도록 [ObjectMapper]를 이 클래스가 직접 생성해 보관한다.
@@ -220,25 +233,73 @@ class DiscordWebhookAppender : UnsynchronizedAppenderBase<ILoggingEvent>() {
         }
     }
 
+    /**
+     * 429(요청 제한)만 `Retry-After`만큼 기다렸다가 [RATE_LIMIT_MAX_RETRIES]회까지 재전송한다.
+     *
+     * Discord 웹훅에는 초당 요청 제한이 있어, 정작 알림이 가장 필요한 ERROR 폭주 상황에서 429가
+     * 반복된다. 그때 바로 버리면 장애 시점의 알림만 골라 유실된다. 반대로 무제한 재시도는 워커를
+     * 묶어 뒤따르는 이벤트를 드롭시키므로, 재시도 횟수와 대기 시간에 모두 상한을 둔다.
+     */
     private fun sendToDiscord(payloadJson: String) {
-        try {
-            val request =
-                HttpRequest
-                    .newBuilder(URI.create(resolvedWebhookUrl))
-                    .timeout(Duration.ofMillis(requestTimeoutMs))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(payloadJson, Charsets.UTF_8))
-                    .build()
-            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-            // 상태 코드를 버리면 Discord의 429(요청 제한)·40x가 조용히 묻혀,
+        val request =
+            HttpRequest
+                .newBuilder(URI.create(resolvedWebhookUrl))
+                .timeout(Duration.ofMillis(requestTimeoutMs))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payloadJson, Charsets.UTF_8))
+                .build()
+
+        var retried = 0
+        while (true) {
+            val response =
+                try {
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+                } catch (t: Throwable) {
+                    addError("Discord 웹훅 HTTP 요청 실패", t)
+                    return
+                }
+
+            val status = response.statusCode()
+            if (status in 200..299) return
+
+            // 재전송 여지가 없으면 상태 코드를 남기고 포기한다. 코드를 버리면 429·40x가 조용히 묻혀
             // "알림이 안 온다"는 상황의 원인을 운영에서 진단할 수 없다.
-            if (response.statusCode() !in 200..299) {
-                addWarn("Discord 웹훅 응답이 비정상입니다(status=${response.statusCode()}, body=${response.body().take(RESPONSE_BODY_LOG_LIMIT)})")
+            if (status != HTTP_TOO_MANY_REQUESTS || retried >= RATE_LIMIT_MAX_RETRIES || !running) {
+                addWarn(
+                    "Discord 웹훅 응답이 비정상입니다(status=$status, body=${response.body().take(RESPONSE_BODY_LOG_LIMIT)})",
+                )
+                return
             }
-        } catch (t: Throwable) {
-            addError("Discord 웹훅 HTTP 요청 실패", t)
+
+            retried++
+            val waitMs = retryAfterMillis(response)
+            addWarn("Discord 웹훅 요청 제한(429) — ${waitMs}ms 후 재전송합니다($retried/$RATE_LIMIT_MAX_RETRIES)")
+            if (!sleepBeforeRetry(waitMs)) return
         }
     }
+
+    /** Discord는 `Retry-After`를 소수점 초 단위로 보낸다(예: `0.75`). 상한을 둬 워커가 오래 묶이지 않게 한다. */
+    private fun retryAfterMillis(response: HttpResponse<String>): Long {
+        val headerSeconds =
+            response
+                .headers()
+                .firstValue("retry-after")
+                .orElse(null)
+                ?.trim()
+                ?.toDoubleOrNull()
+        val waitMs = headerSeconds?.let { (it * 1000).toLong() } ?: DEFAULT_RATE_LIMIT_WAIT_MS
+        return waitMs.coerceIn(0L, MAX_RATE_LIMIT_WAIT_MS)
+    }
+
+    /** 대기 중 인터럽트되면 재전송을 포기한다 — 인터럽트는 종료 신호이고, 삼키면 종료가 늦어진다. */
+    private fun sleepBeforeRetry(waitMs: Long): Boolean =
+        try {
+            Thread.sleep(waitMs)
+            true
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        }
 
     private fun buildPayloadJson(event: ILoggingEvent): String {
         val stackTrace = event.throwableProxy?.let { ThrowableProxyUtil.asString(it) }

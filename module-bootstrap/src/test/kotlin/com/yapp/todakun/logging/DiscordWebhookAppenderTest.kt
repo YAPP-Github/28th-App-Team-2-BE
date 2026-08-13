@@ -8,12 +8,14 @@ import com.sun.net.httpserver.HttpServer
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
+import io.kotest.matchers.longs.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import tools.jackson.databind.ObjectMapper
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -47,18 +49,27 @@ class DiscordWebhookAppenderTest : DescribeSpec({
     fun workerThreadAlive(appender: DiscordWebhookAppender): Boolean =
         Thread.getAllStackTraces().keys.any { it.name == appender.workerThreadName && it.isAlive }
 
-    /** 스텁 웹훅 서버. 상태 코드·지연을 파라미터로 받아, 테스트마다 서버를 새로 짜지 않는다. */
+    /**
+     * 스텁 웹훅 서버. 상태 코드·지연·응답 헤더를 파라미터로 받아, 테스트마다 서버를 새로 짜지 않는다.
+     *
+     * [statusCodes]는 요청 순서대로 소비하고 소진되면 마지막 값을 계속 쓴다 — `429 → 204`처럼
+     * 요청마다 달라지는 시퀀스를 표현하기 위함이다. [onRequest]는 요청 본문을 받고 응답 전에 불린다.
+     */
     fun startStubServer(
-        statusCode: Int = 204,
+        statusCodes: List<Int> = listOf(204),
         delayMs: Long = 0L,
+        responseHeaders: Map<String, String> = emptyMap(),
         onRequest: (String) -> Unit = {},
     ): HttpServer {
+        val requestSeq = AtomicInteger(0)
         val server = HttpServer.create(InetSocketAddress(0), 0)
         server.createContext("/webhook") { exchange ->
             val body = exchange.requestBody.readBytes().toString(Charsets.UTF_8)
+            val status = statusCodes[minOf(requestSeq.getAndIncrement(), statusCodes.lastIndex)]
             onRequest(body)
             if (delayMs > 0) Thread.sleep(delayMs)
-            exchange.sendResponseHeaders(statusCode, -1)
+            responseHeaders.forEach { (name, value) -> exchange.responseHeaders.add(name, value) }
+            exchange.sendResponseHeaders(status, -1)
             exchange.close()
         }
         server.start()
@@ -157,7 +168,7 @@ class DiscordWebhookAppenderTest : DescribeSpec({
             // 요청이 실제로 도달했는지까지 확인한다 — shouldNotThrowAny만 두면
             // 워커가 아예 전송하지 않아도 테스트가 통과해 버린다.
             val latch = CountDownLatch(1)
-            val server = startStubServer(statusCode = 500) { latch.countDown() }
+            val server = startStubServer(statusCodes = listOf(500)) { latch.countDown() }
 
             try {
                 val appender = newAppender()
@@ -171,6 +182,42 @@ class DiscordWebhookAppenderTest : DescribeSpec({
                 latch.await(5, TimeUnit.SECONDS) shouldBe true
                 // 비2xx여도 워커는 살아남아 다음 이벤트를 계속 처리해야 한다.
                 workerThreadAlive(appender) shouldBe true
+
+                appender.stop()
+            } finally {
+                server.stop(0)
+            }
+        }
+    }
+
+    describe("요청 제한(429)") {
+        it("Retry-After만큼 기다렸다가 재전송해 알림을 유실하지 않는다") {
+            // 알림이 가장 필요한 ERROR 폭주 상황일수록 429가 반복된다. 바로 버리면 장애 시점의 알림만 골라 유실된다.
+            val retryAfterSeconds = 1.2
+            val arrivalNanos = CopyOnWriteArrayList<Long>()
+            val latch = CountDownLatch(2)
+            val server =
+                startStubServer(
+                    statusCodes = listOf(429, 204),
+                    responseHeaders = mapOf("Retry-After" to retryAfterSeconds.toString()),
+                ) {
+                    arrivalNanos.add(System.nanoTime())
+                    latch.countDown()
+                }
+
+            try {
+                val appender = newAppender()
+                appender.webhookUrl = "http://localhost:${server.address.port}/webhook"
+                appender.start()
+
+                appender.doAppend(errorEvent("429 응답 케이스"))
+
+                // 재전송(2번째 요청)까지 도달해야 한다 — 429에서 멈추면 알림이 유실된 것이다.
+                latch.await(10, TimeUnit.SECONDS) shouldBe true
+
+                // 헤더 값(1.2초)을 기본 대기(1초)보다 크게 줬으므로, 헤더를 무시했다면 이 하한을 넘을 수 없다.
+                val gapMs = (arrivalNanos[1] - arrivalNanos[0]) / 1_000_000
+                gapMs shouldBeGreaterThanOrEqual 1_100L
 
                 appender.stop()
             } finally {
