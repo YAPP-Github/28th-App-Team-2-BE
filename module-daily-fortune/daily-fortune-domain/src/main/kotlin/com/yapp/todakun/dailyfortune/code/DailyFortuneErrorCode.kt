@@ -14,4 +14,6 @@ enum class DailyFortuneErrorCode(
     DAILY_FORTUNE_HISTORY_TO_OUT_OF_RANGE("DAILY-FORTUNE-400", "조회 가능한 기간이 아닙니다.", 400),
     DAILY_FORTUNE_GENERATION_FAILED("DAILY-FORTUNE-500", "오늘의 운세 생성에 실패했습니다.", 500),
     DAILY_FORTUNE_EMPTY_RESPONSE("DAILY-FORTUNE-500", "AI로부터 빈 응답을 받았습니다.", 500),
+    DAILY_FORTUNE_BATCH_NOT_FOUND("DAILY-FORTUNE-404", "재시도할 오늘의 운세 배치 이력이 없습니다.", 404),
+    DAILY_FORTUNE_BATCH_NOT_RESTARTABLE("DAILY-FORTUNE-409", "재시도할 수 없는 배치 상태입니다.", 409),
 }

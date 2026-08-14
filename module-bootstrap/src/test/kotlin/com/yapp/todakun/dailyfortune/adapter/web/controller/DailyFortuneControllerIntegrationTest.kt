@@ -3,20 +3,21 @@ package com.yapp.todakun.dailyfortune.adapter.web.controller
 import com.ninjasquad.springmockk.MockkBean
 import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneBatchNotFoundException
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneBatchNotRestartableException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneHistoryToOutOfRangeException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
 import com.yapp.todakun.dailyfortune.fixture.DailyFortuneFixture
 import com.yapp.todakun.dailyfortune.port.inbound.DailyFortuneDetail
 import com.yapp.todakun.dailyfortune.port.inbound.DailyFortuneHistorySummary
-import com.yapp.todakun.dailyfortune.port.inbound.GenerateDailyFortunesUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneHistoryUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetTodayFortuneUseCase
+import com.yapp.todakun.dailyfortune.port.inbound.RestartDailyFortunesUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.LuckActionScore
 import com.yapp.todakun.shared.LuckActionSummary
-import com.yapp.todakun.shared.currentDate
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
@@ -92,11 +93,11 @@ class DailyFortuneControllerIntegrationTest(
     private lateinit var getFortuneHistoryUseCase: GetDailyFortuneHistoryUseCase
 
     @MockkBean
-    private lateinit var generateDailyFortunesUseCase: GenerateDailyFortunesUseCase
+    private lateinit var restartDailyFortunesUseCase: RestartDailyFortunesUseCase
 
     init {
         afterTest {
-            clearMocks(getTodayFortuneUseCase, getFortuneUseCase, getFortuneHistoryUseCase, generateDailyFortunesUseCase)
+            clearMocks(getTodayFortuneUseCase, getFortuneUseCase, getFortuneHistoryUseCase, restartDailyFortunesUseCase)
         }
 
         describe("GET /api/v1/daily-fortunes/today") {
@@ -220,24 +221,48 @@ class DailyFortuneControllerIntegrationTest(
             }
         }
 
-        describe("POST /api/v1/daily-fortunes/generate") {
-            beforeTest { every { generateDailyFortunesUseCase.generate(any()) } just runs }
+        describe("POST /api/v1/daily-fortunes/restart") {
+            beforeTest { every { restartDailyFortunesUseCase.restart(any()) } just runs }
 
             context("인증 없이 요청하면") {
                 it("401을 반환한다") {
-                    mockMvc.post("/api/v1/daily-fortunes/generate")
+                    mockMvc.post("/api/v1/daily-fortunes/restart") { param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString()) }
                         .andExpect { status { isUnauthorized() } }
 
-                    verify(exactly = 0) { generateDailyFortunesUseCase.generate(any()) }
+                    verify(exactly = 0) { restartDailyFortunesUseCase.restart(any()) }
                 }
             }
 
             context("인증된 회원이 요청하면") {
-                it("오늘(KST) 날짜로 배치를 실행하고 200을 반환한다") {
-                    mockMvc.post("/api/v1/daily-fortunes/generate") { with(authenticatedMember()) }
-                        .andExpect { status { isOk() } }
+                it("전달받은 날짜 기준 배치를 재시도하고 200을 반환한다") {
+                    mockMvc.post("/api/v1/daily-fortunes/restart") {
+                        param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString())
+                        with(authenticatedMember())
+                    }.andExpect { status { isOk() } }
 
-                    verify(exactly = 1) { generateDailyFortunesUseCase.generate(currentDate()) }
+                    verify(exactly = 1) { restartDailyFortunesUseCase.restart(DAILY_FORTUNE.fortuneDate) }
+                }
+            }
+
+            context("재시도할 배치 이력이 없으면") {
+                it("404를 반환한다") {
+                    every { restartDailyFortunesUseCase.restart(any()) } throws DailyFortuneBatchNotFoundException()
+
+                    mockMvc.post("/api/v1/daily-fortunes/restart") {
+                        param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString())
+                        with(authenticatedMember())
+                    }.andExpect { status { isNotFound() } }
+                }
+            }
+
+            context("마지막 실행이 이미 완료됐거나 실행 중이면") {
+                it("409를 반환한다") {
+                    every { restartDailyFortunesUseCase.restart(any()) } throws DailyFortuneBatchNotRestartableException()
+
+                    mockMvc.post("/api/v1/daily-fortunes/restart") {
+                        param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString())
+                        with(authenticatedMember())
+                    }.andExpect { status { isConflict() } }
                 }
             }
         }

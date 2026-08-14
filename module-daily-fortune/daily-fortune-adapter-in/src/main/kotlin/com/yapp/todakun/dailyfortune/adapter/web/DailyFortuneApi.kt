@@ -62,15 +62,18 @@ interface DailyFortuneApi {
     ): ResponseEntity<CommonResponse<List<DailyFortuneHistoryResponse>>>
 
     @Operation(
-        summary = "오늘의 운세 배치 수동 실행(임시)",
+        summary = "오늘의 운세 배치 재시도",
         description =
             """
-                운영 중 문제를 임시로 해결하기 위해 배치를 수동 실행하는 API다. 인증된 사용자라면 누구나 호출할 수 있다.
-                전체 회원을 대상으로 오늘(KST) 날짜 기준 오늘의 운세 생성 배치를 실행한다.
-                이미 완료된 배치는 재실행되지 않는다(JobInstance 재사용).
+                fortuneDate 기준 오늘의 운세 생성 배치의 마지막 실행을 재시도한다. 인증된 사용자라면 누구나 호출할 수 있다.
+                Spring Batch의 재시작 특성상 마지막으로 커밋된 회원 다음부터 이어서 처리되며, 이미 생성된 회원은 다시 생성하지 않는다.
+                재시도할 배치 이력이 없으면 404, 마지막 실행이 이미 완료됐거나 실행 중이면 409를 반환한다.
                 배치가 끝날 때까지 응답이 지연될 수 있다(동기 실행).
             """,
     )
-    @PostMapping("api/v1/daily-fortunes/generate")
-    fun generate(): ResponseEntity<CommonResponse<Unit>>
+    @PostMapping("api/v1/daily-fortunes/restart")
+    fun restart(
+        @Parameter(description = "재시도 대상 배치의 기준 날짜(KST)", example = "2026-08-14")
+        @RequestParam fortuneDate: LocalDate,
+    ): ResponseEntity<CommonResponse<Unit>>
 }

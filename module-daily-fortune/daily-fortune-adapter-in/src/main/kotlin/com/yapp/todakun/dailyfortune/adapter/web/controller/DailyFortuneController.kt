@@ -4,11 +4,10 @@ import com.yapp.todakun.dailyfortune.adapter.web.DailyFortuneApi
 import com.yapp.todakun.dailyfortune.adapter.web.dto.response.DailyFortuneHistoryResponse
 import com.yapp.todakun.dailyfortune.adapter.web.dto.response.DailyFortuneResponse
 import com.yapp.todakun.dailyfortune.adapter.web.dto.response.TodayFortuneResponse
-import com.yapp.todakun.dailyfortune.port.inbound.GenerateDailyFortunesUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneHistoryUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetTodayFortuneUseCase
-import com.yapp.todakun.shared.currentDate
+import com.yapp.todakun.dailyfortune.port.inbound.RestartDailyFortunesUseCase
 import com.yapp.todakun.shared.currentFortuneServiceDate
 import com.yapp.todakun.web.response.CommonResponse
 import org.springframework.http.ResponseEntity
@@ -21,7 +20,7 @@ class DailyFortuneController(
     private val getTodayFortuneUseCase: GetTodayFortuneUseCase,
     private val getFortuneUseCase: GetDailyFortuneUseCase,
     private val getFortuneHistoryUseCase: GetDailyFortuneHistoryUseCase,
-    private val generateDailyFortunesUseCase: GenerateDailyFortunesUseCase,
+    private val restartDailyFortunesUseCase: RestartDailyFortunesUseCase,
 ) : DailyFortuneApi {
     override fun getToday(memberId: UUID): ResponseEntity<CommonResponse<TodayFortuneResponse>> {
         val summary = getTodayFortuneUseCase.getToday(memberId, currentFortuneServiceDate())
@@ -47,8 +46,8 @@ class DailyFortuneController(
         return CommonResponse.retrieved(history.map(DailyFortuneHistoryResponse::from))
     }
 
-    override fun generate(): ResponseEntity<CommonResponse<Unit>> {
-        generateDailyFortunesUseCase.generate(currentDate())
+    override fun restart(fortuneDate: LocalDate): ResponseEntity<CommonResponse<Unit>> {
+        restartDailyFortunesUseCase.restart(fortuneDate)
 
         return CommonResponse.success(Unit)
     }
