@@ -8,6 +8,7 @@ import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
 import com.yapp.todakun.dailyfortune.fixture.DailyFortuneFixture
 import com.yapp.todakun.dailyfortune.port.inbound.DailyFortuneDetail
 import com.yapp.todakun.dailyfortune.port.inbound.DailyFortuneHistorySummary
+import com.yapp.todakun.dailyfortune.port.inbound.GenerateDailyFortunesUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneHistoryUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetTodayFortuneUseCase
@@ -15,10 +16,13 @@ import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.LuckActionScore
 import com.yapp.todakun.shared.LuckActionSummary
+import com.yapp.todakun.shared.currentDate
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.just
+import io.mockk.runs
 import io.mockk.verify
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -28,6 +32,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActionsDsl
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.util.UUID
@@ -86,8 +91,13 @@ class DailyFortuneControllerIntegrationTest(
     @MockkBean
     private lateinit var getFortuneHistoryUseCase: GetDailyFortuneHistoryUseCase
 
+    @MockkBean
+    private lateinit var generateDailyFortunesUseCase: GenerateDailyFortunesUseCase
+
     init {
-        afterTest { clearMocks(getTodayFortuneUseCase, getFortuneUseCase, getFortuneHistoryUseCase) }
+        afterTest {
+            clearMocks(getTodayFortuneUseCase, getFortuneUseCase, getFortuneHistoryUseCase, generateDailyFortunesUseCase)
+        }
 
         describe("GET /api/v1/daily-fortunes/today") {
             context("인증 헤더 없이 요청하면") {
@@ -206,6 +216,28 @@ class DailyFortuneControllerIntegrationTest(
                             with(authenticatedMember())
                         }
                         .andExpect { status { isBadRequest() } }
+                }
+            }
+        }
+
+        describe("POST /api/v1/daily-fortunes/generate") {
+            beforeTest { every { generateDailyFortunesUseCase.generate(any()) } just runs }
+
+            context("인증 없이 요청하면") {
+                it("401을 반환한다") {
+                    mockMvc.post("/api/v1/daily-fortunes/generate")
+                        .andExpect { status { isUnauthorized() } }
+
+                    verify(exactly = 0) { generateDailyFortunesUseCase.generate(any()) }
+                }
+            }
+
+            context("인증된 회원이 요청하면") {
+                it("오늘(KST) 날짜로 배치를 실행하고 200을 반환한다") {
+                    mockMvc.post("/api/v1/daily-fortunes/generate") { with(authenticatedMember()) }
+                        .andExpect { status { isOk() } }
+
+                    verify(exactly = 1) { generateDailyFortunesUseCase.generate(currentDate()) }
                 }
             }
         }

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
 import java.time.LocalDate
 import java.util.UUID
@@ -59,4 +60,17 @@ interface DailyFortuneApi {
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
     ): ResponseEntity<CommonResponse<List<DailyFortuneHistoryResponse>>>
+
+    @Operation(
+        summary = "오늘의 운세 배치 수동 실행(임시)",
+        description =
+            """
+                운영 중 문제를 임시로 해결하기 위해 배치를 수동 실행하는 API다. 인증된 사용자라면 누구나 호출할 수 있다.
+                전체 회원을 대상으로 오늘(KST) 날짜 기준 오늘의 운세 생성 배치를 실행한다.
+                이미 완료된 배치는 재실행되지 않는다(JobInstance 재사용).
+                배치가 끝날 때까지 응답이 지연될 수 있다(동기 실행).
+            """,
+    )
+    @PostMapping("api/v1/daily-fortunes/generate")
+    fun generate(): ResponseEntity<CommonResponse<Unit>>
 }
