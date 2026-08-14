@@ -14,6 +14,9 @@ gc_prom_user: ENC[AES256_GCM,data:aWQCoeB7wQ==,iv:HCqB7RDtJT4awPlc/R34MFJ4yDidSf
 gc_loki_url: ENC[AES256_GCM,data:9ilH3Lf4TA==,iv:4LuEf5ZXBdoEg02BBBdyvqskEYAxhNpQXoD+otsWHqs=,tag:+YD7LYmld3GTCZPvzKnywA==,type:str]
 gc_loki_user: ENC[AES256_GCM,data:BmlSh/vMdQ==,iv:Dlo9odXg4/642CJcguznh9k7e8/TihNlJXX6DCl35wg=,tag:vWRU2sVGbEgwfjREfY7ADg==,type:str]
 gc_token: ENC[AES256_GCM,data:3hVp0oviHQ==,iv:7XrDYe170SxwUfjTUp+R0oHRLCfvvxdo7oJRKPDstSs=,tag:Hmo+Ipj5PKt3odo2jO6gBQ==,type:str]
+android_package_name: ENC[AES256_GCM,data:3zYL7Cr2ODLOI4Cf2oymE+H9zA==,iv:GhdYNBHK2Wo9thmvs3fFU1cDwE8CW4yIhyXIf0+oq1w=,tag:AjIXvrPH+cBjSiurZrzgCg==,type:str]
+android_sha256_fingerprint: ENC[AES256_GCM,data:kVLAlX98RlMPSPIUVd1vz6JxFeiKSJJ6G0ecge5nRkZTZe5BKBPf2jx/js55L8vKXZZsjCAlecgjkeS2cwsD+y1DQQwtnWADzHml/y8KaPiZyZ0uop8nKtrLKq/ir+4=,iv:f/tAgL9q2kAFEpiYUqV3ce4BlBKYNNMjXfN4X6lX3KQ=,tag:k6Qqv5vvROAtY8LST9S9Hw==,type:str]
+apple_bundle_id: ENC[AES256_GCM,data:+2xKFOsl+yWJ/Cwc5TnVO9O2vg==,iv:YiRTq98ZDeFdO/yQT5wOGG4PCUsIWTWleXNKMjhED5E=,tag:1fH7tJ7BZadWmoX/aZxOrA==,type:str]
 sops:
     age:
         - enc: |
@@ -25,7 +28,7 @@ sops:
             +uLJXh123oTSNW6OpzUq7Ze5tK3t/WlewD1HqUYiLbwzU9F4eNOJgg==
             -----END AGE ENCRYPTED FILE-----
           recipient: age1jdem2d3d95c2lumpkgtfu9ajge7gt065952yysfve5jwppyq6utqnharl9
-    lastmodified: "2026-07-05T11:29:02Z"
-    mac: ENC[AES256_GCM,data:wkGZf/BuS9XVI4GBFyOMSSP/TGTwVXYic9lm8yTUenAjxY8+AgqlB7CkKELd0IHAsMa/iFc3nrFJQF64Naw8qjTX1/idmJNt7wOv2Ol5+GOSUGhJ598uyQTiCEl2gjPBIPuYQJUQdDpy3fY+2FpvQhNXXcNWOwswTZu6ARUPXIU=,iv:Xpek4rD0criip2K5I2CaEg5n7AdcBZ30eWtc8ucG+Hs=,tag:DEV/tSVrxM5j+FmHODwW/A==,type:str]
+    lastmodified: "2026-08-12T23:51:38Z"
+    mac: ENC[AES256_GCM,data:hmGE4CcC2CT59IWmEoo3xFv4sHAM4Ue6SWmMbcFHSJVWIMkDXlTUoZuSBsDw2vY/eF9MawlqFh1KuUuPvup3LxZxUet1boZbdAcHynFwfn+yjnZUaN4DK7ngD/jv32uO+tMdCehU/kyO+6mkSWppWEth0EzZmmSEpt6oiDl6V/c=,iv:NqqUjyoMLeC2Hw7kI/Z1AMA1dj6dd1+E8mdczqSGASg=,tag:yzC4mJIkSCKheCAYVuRpxA==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.13.2

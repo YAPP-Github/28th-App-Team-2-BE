@@ -18,6 +18,10 @@ services:
       - ../caddy/Caddyfile:/etc/caddy/Caddyfile
       # Cloudflare Origin Certificate (VM에 수동 배치, 커밋 금지).
       - ../caddy/certs:/etc/caddy/certs:ro
+      # 딥링크 검증 파일(assetlinks.json / apple-app-site-association).
+      # Ansible(tasks/render_wellknown.yaml)이 SOPS에서 렌더링해 배치 → Caddy가 file_server로 서빙.
+      # bind 마운트라 파일만 갱신하면 컨테이너 재생성 없이 즉시 반영된다.
+      - ../caddy/well-known:/etc/caddy/well-known:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:
