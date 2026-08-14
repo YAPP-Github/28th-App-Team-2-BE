@@ -94,6 +94,8 @@ micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-p
 micrometer-core = { module = "io.micrometer:micrometer-core" }
 # Sentry: DSN 미설정 시 자동 비활성(no-op).
 sentry-spring-boot4-starter = { module = "io.sentry:sentry-spring-boot-4-starter", version.ref = "sentry" }
+# Sentry logback appender. 스타터가 클래스패스에 있으면 런타임에 root 로거로 자동 부착 → log.error()가 Sentry 이슈로 적재된다.
+sentry-logback = { module = "io.sentry:sentry-logback", version.ref = "sentry" }
 
 # --- Cloud Storage (adapter-out: GCS raw 클라이언트) ---
 # Spring Cloud GCP 대신 raw 클라이언트 사용(Boot 4 호환 안전 + 헥사고날 어댑터로 격리).

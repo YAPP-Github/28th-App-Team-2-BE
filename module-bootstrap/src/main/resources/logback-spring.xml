@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 커스텀 logback 설정을 두는 유일한 이유는 ERROR 로그를 Discord 웹훅으로 직접 발송하기 위함이다.
+     - Spring Boot의 structured-console-appender include는 dev/prod의
+       logging.structured.format.console=logstash 와 한 쌍이다. 한쪽만 바꾸면 Alloy→Loki 파이프라인이 조용히 깨진다.
+     - Sentry는 sentry-logback이 클래스패스에 있으면 스타터(SentryLogbackInitializer)가 런타임에
+       root 로거로 SentryAppender를 직접 부착하므로 여기 선언하지 않는다(선언 시 이중 전송).
+
+     dev/prod 분기(<springProfile name="dev,prod">)는 logback Joran이 매칭되지 않는 springProfile
+     안의 appender를 아예 인스턴스화하지 않는 특성 때문에 local 프로필로 앱을 부팅/테스트해도 절대
+     실행되지 않는다 — 이 분기의 오타(클래스 FQCN 오기·<webhookUrl> setter 불일치·include 경로 오타)는
+     LogbackSpringConfigTest(module-bootstrap/src/test/kotlin/com/yapp/todakun/logging)가 회귀 테스트로
+     막는다. 이 파일을 수정하면 그 테스트도 함께 갱신할 것.
+-->
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <springProfile name="dev,prod">
+    <!-- 구조화 콘솔(logstash JSON) → stdout → Alloy → Loki -->
+    <include resource="org/springframework/boot/logging/logback/structured-console-appender.xml"/>
+    <springProperty scope="context" name="DISCORD_WEBHOOK_URL" source="discord.webhook-url" defaultValue=""/>
+    <appender name="DISCORD" class="com.yapp.todakun.logging.DiscordWebhookAppender">
+      <webhookUrl>${DISCORD_WEBHOOK_URL}</webhookUrl>
+      <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+        <level>ERROR</level>
+      </filter>
+    </appender>
+    <!-- 여기 level은 부트스트랩 기본값일 뿐이다. 최종 레벨은 Spring Boot가 logback 구성 이후
+         application-{profile}.yaml의 logging.level.*을 적용해 덮어쓴다(예: prod는 root=WARN). -->
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+      <appender-ref ref="DISCORD"/>
+    </root>
+  </springProfile>
+
+  <springProfile name="!dev &amp; !prod">
+    <!-- local 등 그 외 프로필: 사람이 읽는 콘솔 로그만.
+         DISCORD appender를 의도적으로 붙이지 않는다 — 로컬 디버깅 중 발생한 ERROR가 팀 Discord 채널로
+         새어 나가면 안 되기 때문. .env에 DISCORD_WEBHOOK_URL이 채워져 있어도 이 분기에는 appender
+         자체가 없으므로 발송 경로가 존재하지 않는다(appender의 빈 URL no-op보다 강한 차단).
+         local의 Sentry 차단은 application-local.yaml의 sentry.enabled=false가 담당한다. -->
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <!-- 여기 level은 부트스트랩 기본값일 뿐이다. 최종 레벨은 Spring Boot가 logback 구성 이후
+         application-{profile}.yaml의 logging.level.*을 적용해 덮어쓴다(예: prod는 root=WARN). -->
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+</configuration>
