@@ -41,17 +41,19 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
     every { chatClientBuilder.build() } returns chatClient
 
     // 회로가 열리지 않도록 넉넉한 기본 임계값(레지스트리 기본 설정)을 쓰는 공용 어댑터 — 기존 정상/실패 흐름 검증용.
+    val executorService = Executors.newFixedThreadPool(2)
     val resilience =
         AiResilienceSupport(
             CircuitBreakerRegistry.ofDefaults(),
             RetryRegistry.ofDefaults(),
             TimeLimiterRegistry.ofDefaults(),
-            Executors.newFixedThreadPool(2),
+            executorService,
         )
     val adapter = VertexAiCompatibilityAdapter(chatClientBuilder, resilience)
     val input = compatibilityAiInput()
 
     afterTest { clearMocks(chatClient, requestSpec, callResponseSpec) }
+    afterSpec { executorService.shutdownNow() }
 
     describe("generate") {
         context("AI가 정상적인 구조화 응답을 반환하면") {
@@ -105,6 +107,7 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                         .waitDurationInOpenState(Duration.ofSeconds(60))
                         .build(),
                 )
+                val openCircuitExecutorService = Executors.newFixedThreadPool(2)
                 val openCircuitAdapter =
                     VertexAiCompatibilityAdapter(
                         chatClientBuilder,
@@ -112,21 +115,25 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                             circuitBreakerRegistry,
                             RetryRegistry.ofDefaults(),
                             TimeLimiterRegistry.ofDefaults(),
-                            Executors.newFixedThreadPool(2),
+                            openCircuitExecutorService,
                         ),
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 val cause = NonTransientAiException("model call failed")
                 every { callResponseSpec.entity(GeneratedCompatibility::class.java) } throws cause
 
-                repeat(2) {
-                    shouldThrow<CompatibilityGenerationFailedException> {
+                try {
+                    repeat(2) {
+                        shouldThrow<CompatibilityGenerationFailedException> {
+                            openCircuitAdapter.generate(input)
+                        }
+                    }
+
+                    shouldThrow<CompatibilityCircuitOpenException> {
                         openCircuitAdapter.generate(input)
                     }
-                }
-
-                shouldThrow<CompatibilityCircuitOpenException> {
-                    openCircuitAdapter.generate(input)
+                } finally {
+                    openCircuitExecutorService.shutdownNow()
                 }
             }
         }
@@ -138,6 +145,7 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                     AI_RESILIENCE_INSTANCE_NAME,
                     TimeLimiterConfig.custom().timeoutDuration(Duration.ofMillis(200)).build(),
                 )
+                val timeoutExecutorService = Executors.newFixedThreadPool(2)
                 val timeoutAdapter =
                     VertexAiCompatibilityAdapter(
                         chatClientBuilder,
@@ -145,7 +153,7 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                             CircuitBreakerRegistry.ofDefaults(),
                             RetryRegistry.ofDefaults(),
                             timeLimiterRegistry,
-                            Executors.newFixedThreadPool(2),
+                            timeoutExecutorService,
                         ),
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
@@ -154,8 +162,12 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                     generatedCompatibility()
                 }
 
-                shouldThrow<CompatibilityTimeoutException> {
-                    timeoutAdapter.generate(input)
+                try {
+                    shouldThrow<CompatibilityTimeoutException> {
+                        timeoutAdapter.generate(input)
+                    }
+                } finally {
+                    timeoutExecutorService.shutdownNow()
                 }
             }
         }
