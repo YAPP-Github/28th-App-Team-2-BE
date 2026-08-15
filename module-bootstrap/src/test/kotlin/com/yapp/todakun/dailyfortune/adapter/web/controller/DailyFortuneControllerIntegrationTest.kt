@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActionsDsl
@@ -224,9 +225,31 @@ class DailyFortuneControllerIntegrationTest(
             beforeTest { every { regenerateDailyFortunesUseCase.regenerate(any()) } just runs }
 
             context("인증 없이 요청하면") {
-                it("전달받은 날짜 기준 배치를 재실행하고 200을 반환한다") {
+                it("401을 반환한다") {
                     mockMvc.post("/api/v1/daily-fortunes/regenerate") { param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString()) }
-                        .andExpect { status { isOk() } }
+                        .andExpect { status { isUnauthorized() } }
+
+                    verify(exactly = 0) { regenerateDailyFortunesUseCase.regenerate(any()) }
+                }
+            }
+
+            context("ROLE_ADMIN 권한이 없으면") {
+                it("403을 반환한다") {
+                    mockMvc.post("/api/v1/daily-fortunes/regenerate") {
+                        param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString())
+                        with(authenticatedMember())
+                    }.andExpect { status { isForbidden() } }
+
+                    verify(exactly = 0) { regenerateDailyFortunesUseCase.regenerate(any()) }
+                }
+            }
+
+            context("ROLE_ADMIN 권한으로 요청하면") {
+                it("전달받은 날짜 기준 배치를 재실행하고 200을 반환한다") {
+                    mockMvc.post("/api/v1/daily-fortunes/regenerate") {
+                        param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString())
+                        with(authenticatedAdmin())
+                    }.andExpect { status { isOk() } }
 
                     verify(exactly = 1) { regenerateDailyFortunesUseCase.regenerate(DAILY_FORTUNE.fortuneDate) }
                 }
@@ -238,6 +261,7 @@ class DailyFortuneControllerIntegrationTest(
 
                     mockMvc.post("/api/v1/daily-fortunes/regenerate") {
                         param("fortuneDate", DAILY_FORTUNE.fortuneDate.toString())
+                        with(authenticatedAdmin())
                     }.andExpect { status { isConflict() } }
                 }
             }
@@ -245,6 +269,11 @@ class DailyFortuneControllerIntegrationTest(
     }
 
     private fun authenticatedMember() = authentication(UsernamePasswordAuthenticationToken(DAILY_FORTUNE.memberId, null, emptyList()))
+
+    private fun authenticatedAdmin() =
+        authentication(
+            UsernamePasswordAuthenticationToken(DAILY_FORTUNE.memberId, null, listOf(SimpleGrantedAuthority("ROLE_ADMIN"))),
+        )
 
     private fun successData(result: ResultActionsDsl): JsonNode =
         result

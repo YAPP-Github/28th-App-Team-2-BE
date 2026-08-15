@@ -65,7 +65,7 @@ class SecurityConfig {
                 SecurityPaths.SWAGGER.forEach { pattern -> authorize(pattern, permitAll) }
                 SecurityPaths.ACTUATOR.forEach { pattern -> authorize(pattern, permitAll) }
                 SecurityPaths.PUBLIC.forEach { pattern -> authorize(pattern, permitAll) }
-                authorize(SecurityPaths.ADMIN, hasRole("ADMIN"))
+                SecurityPaths.ADMIN.forEach { pattern -> authorize(pattern, hasRole("ADMIN")) }
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {

@@ -27,10 +27,13 @@ object SecurityPaths {
             "/api/v1/auth/refresh",
             // 약관 목록은 온보딩 단계(가입 전)에서도 노출되어야 하므로 공개한다. 동의 저장(POST)은 인증 필요.
             "/api/v1/terms",
-            // 운영 재실행용 엔드포인트. 특정 회원과 무관하게 fortuneDate 단위로만 동작해 회원 인증이 의미가 없다.
-            "/api/v1/daily-fortunes/regenerate",
         )
 
     /** ROLE_ADMIN 권한이 있어야 접근 가능한 API 경로. */
-    const val ADMIN = "/api/v1/admin/**"
+    val ADMIN =
+        arrayOf(
+            "/api/v1/admin/**",
+            // 전 회원 AI 운세를 재생성하는 운영용 배치 재실행 엔드포인트. 남용 시 AI 비용 낭비로 이어져 ADMIN 권한을 요구한다.
+            "/api/v1/daily-fortunes/regenerate",
+        )
 }
