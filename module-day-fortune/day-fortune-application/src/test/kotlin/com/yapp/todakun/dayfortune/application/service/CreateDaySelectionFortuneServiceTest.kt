@@ -6,6 +6,7 @@ import com.yapp.todakun.dayfortune.fixture.DaySelectionFortuneFixture
 import com.yapp.todakun.dayfortune.port.inbound.DaySelectionFortuneResult
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
@@ -13,6 +14,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.measureTimeMillis
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -93,6 +95,31 @@ class CreateDaySelectionFortuneServiceTest :
                     shouldThrow<DaySelectionFortuneEmptyResponseException> {
                         service.create(purpose, listOf(failing, succeeding), memberId)
                     }
+                }
+
+                it("아직 끝나지 않은 형제 작업의 실행 스레드에 인터럽트를 전달한다") {
+                    val failing = LocalDate.now().plusDays(30)
+                    val running = LocalDate.now().plusDays(45)
+                    val interrupted = AtomicBoolean(false)
+                    every {
+                        createOneDaySelectionFortuneService.createOne(purpose, failing, memberId)
+                    } throws DaySelectionFortuneEmptyResponseException()
+                    every {
+                        createOneDaySelectionFortuneService.createOne(purpose, running, memberId)
+                    } answers {
+                        try {
+                            Thread.sleep(5_000)
+                        } catch (e: InterruptedException) {
+                            interrupted.set(true)
+                        }
+                        result(running)
+                    }
+
+                    shouldThrow<DaySelectionFortuneEmptyResponseException> {
+                        service.create(purpose, listOf(failing, running), memberId)
+                    }
+
+                    interrupted.get().shouldBeTrue()
                 }
             }
         }
