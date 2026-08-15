@@ -14,6 +14,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.time.LocalDate
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.measureTimeMillis
 import kotlin.uuid.ExperimentalUuidApi
@@ -65,6 +67,20 @@ class CreateDaySelectionFortuneServiceTest :
                     verify(exactly = 1) { createOneDaySelectionFortuneService.createOne(purpose, later, memberId) }
                 }
 
+                it("날짜별 위임을 동시에 진입시켜 병렬로 실행한다") {
+                    val dates = listOf(30L, 45L, 60L).map { LocalDate.now().plusDays(it) }
+                    val allEntered = CountDownLatch(dates.size)
+                    dates.forEach { date ->
+                        every { createOneDaySelectionFortuneService.createOne(purpose, date, memberId) } answers {
+                            allEntered.countDown()
+                            allEntered.await(1, TimeUnit.SECONDS).shouldBeTrue()
+                            result(date)
+                        }
+                    }
+
+                    service.create(purpose, dates, memberId)
+                }
+
                 it("날짜별 위임을 병렬로 실행해 순차 실행보다 짧은 시간에 끝낸다") {
                     val dates = listOf(30L, 45L, 60L).map { LocalDate.now().plusDays(it) }
                     val delayMillis = 300L
@@ -77,7 +93,9 @@ class CreateDaySelectionFortuneServiceTest :
 
                     val elapsedMillis = measureTimeMillis { service.create(purpose, dates, memberId) }
 
-                    elapsedMillis shouldBeLessThan dates.size * delayMillis
+                    // CI 스케줄링 지연을 감안한 완화된 상한: 완전 순차 실행(dates.size * delayMillis)보다는
+                    // 뚜렷하게 짧되, 이상적인 병렬 시간(delayMillis)에 딱 맞출 필요는 없다.
+                    elapsedMillis shouldBeLessThan (dates.size - 1) * delayMillis
                 }
             }
 
