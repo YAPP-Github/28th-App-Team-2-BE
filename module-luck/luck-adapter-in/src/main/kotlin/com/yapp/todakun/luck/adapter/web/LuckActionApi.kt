@@ -1,7 +1,7 @@
 package com.yapp.todakun.luck.adapter.web
 
+import com.yapp.todakun.luck.adapter.web.dto.response.LuckActionListResponse
 import com.yapp.todakun.luck.adapter.web.dto.response.LuckActionResponse
-import com.yapp.todakun.luck.adapter.web.dto.response.TodayLuckActionResponse
 import com.yapp.todakun.web.response.CommonResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestParam
+import java.time.LocalDate
 import java.util.UUID
 
 @Tag(name = "LuckAction", description = "행운 액션 API")
@@ -35,7 +37,19 @@ interface LuckActionApi {
     fun getToday(
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
-    ): ResponseEntity<CommonResponse<List<TodayLuckActionResponse>>>
+    ): ResponseEntity<CommonResponse<List<LuckActionListResponse>>>
+
+    @Operation(
+        summary = "날짜별 행운 액션 목록 조회",
+        description = "fortuneDate에 해당하는 행운 액션 목록을 조회한다.",
+    )
+    @GetMapping("api/v1/luck-actions")
+    fun getByDate(
+        @Parameter(description = "조회할 날짜", example = "2026-08-14")
+        @RequestParam fortuneDate: LocalDate,
+        @Parameter(hidden = true)
+        @AuthenticationPrincipal memberId: UUID,
+    ): ResponseEntity<CommonResponse<List<LuckActionListResponse>>>
 
     @Operation(
         summary = "행운 액션 달성 여부 토글",

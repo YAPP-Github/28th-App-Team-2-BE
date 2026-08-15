@@ -15,7 +15,7 @@ class GetLuckActionsService(
 ) : GetLuckActionsUseCase {
     // achieved 토글 시 ToggleLuckActionService에서 evict된다. 그 외에는 TTL 만료로만 무효화한다(이슈 #56).
     @Cacheable(cacheNames = [CacheNames.LUCK_ACTIONS], key = "#memberId + ':' + #fortuneDate")
-    override fun getTodayLuckActions(
+    override fun getLuckActions(
         memberId: UUID,
         fortuneDate: LocalDate,
     ): List<LuckAction> = luckActionRepository.findAllByMemberIdAndFortuneDate(memberId, fortuneDate)

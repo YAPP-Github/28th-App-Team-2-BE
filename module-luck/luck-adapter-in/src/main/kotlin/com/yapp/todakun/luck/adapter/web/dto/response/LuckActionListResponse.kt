@@ -4,7 +4,7 @@ import com.yapp.todakun.luck.LuckAction
 import com.yapp.todakun.shared.FortuneCategory
 import java.util.UUID
 
-data class TodayLuckActionResponse(
+data class LuckActionListResponse(
     val id: UUID,
     val fortuneCategory: FortuneCategory,
     val score: Int,
@@ -13,7 +13,7 @@ data class TodayLuckActionResponse(
 ) {
     companion object {
         fun from(luckAction: LuckAction) =
-            TodayLuckActionResponse(
+            LuckActionListResponse(
                 id = luckAction.id,
                 fortuneCategory = luckAction.fortuneCategory,
                 score = luckAction.score,

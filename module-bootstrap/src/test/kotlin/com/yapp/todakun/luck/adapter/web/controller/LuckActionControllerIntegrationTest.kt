@@ -90,13 +90,13 @@ class LuckActionControllerIntegrationTest(
                     mockMvc.get("/api/v1/luck-actions/today")
                         .andExpect { status { isUnauthorized() } }
 
-                    verify(exactly = 0) { getLuckActionsUseCase.getTodayLuckActions(any(), any()) }
+                    verify(exactly = 0) { getLuckActionsUseCase.getLuckActions(any(), any()) }
                 }
             }
 
             context("인증된 회원이 요청하면") {
                 it("200과 함께 오늘자 행운 액션 목록을 반환한다") {
-                    every { getLuckActionsUseCase.getTodayLuckActions(LUCK_ACTION.memberId, any<LocalDate>()) } returns listOf(LUCK_ACTION)
+                    every { getLuckActionsUseCase.getLuckActions(LUCK_ACTION.memberId, any<LocalDate>()) } returns listOf(LUCK_ACTION)
 
                     val data = successData(mockMvc.get("/api/v1/luck-actions/today") { with(authenticatedMember()) })
 
@@ -106,7 +106,41 @@ class LuckActionControllerIntegrationTest(
                     data[0]["title"].asString() shouldBe LUCK_ACTION.title
                     data[0]["achieved"].asBoolean() shouldBe LUCK_ACTION.achieved
                     data[0].has("content") shouldBe false
-                    verify(exactly = 1) { getLuckActionsUseCase.getTodayLuckActions(LUCK_ACTION.memberId, any<LocalDate>()) }
+                    verify(exactly = 1) { getLuckActionsUseCase.getLuckActions(LUCK_ACTION.memberId, any<LocalDate>()) }
+                }
+            }
+        }
+
+        describe("GET /api/v1/luck-actions") {
+            context("인증 헤더 없이 요청하면") {
+                it("401을 반환한다") {
+                    mockMvc.get("/api/v1/luck-actions") { param("fortuneDate", "2026-07-22") }
+                        .andExpect { status { isUnauthorized() } }
+
+                    verify(exactly = 0) { getLuckActionsUseCase.getLuckActions(any(), any()) }
+                }
+            }
+
+            context("인증된 회원이 fortuneDate로 요청하면") {
+                it("200과 함께 해당 날짜의 행운 액션 목록을 반환한다") {
+                    val fortuneDate = LocalDate.of(2026, 7, 22)
+                    every { getLuckActionsUseCase.getLuckActions(LUCK_ACTION.memberId, fortuneDate) } returns listOf(LUCK_ACTION)
+
+                    val data =
+                        successData(
+                            mockMvc.get("/api/v1/luck-actions") {
+                                param("fortuneDate", fortuneDate.toString())
+                                with(authenticatedMember())
+                            },
+                        )
+
+                    data[0]["id"].asString() shouldBe LUCK_ACTION.id.toString()
+                    data[0]["fortuneCategory"].asString() shouldBe LUCK_ACTION.fortuneCategory.name
+                    data[0]["score"].asInt() shouldBe LUCK_ACTION.score
+                    data[0]["title"].asString() shouldBe LUCK_ACTION.title
+                    data[0]["achieved"].asBoolean() shouldBe LUCK_ACTION.achieved
+                    data[0].has("content") shouldBe false
+                    verify(exactly = 1) { getLuckActionsUseCase.getLuckActions(LUCK_ACTION.memberId, fortuneDate) }
                 }
             }
         }

@@ -199,7 +199,7 @@ class RedisCacheIntegrationTest(
             }
         }
 
-        describe("GetLuckActionsService.getTodayLuckActions (TTL 기반 캐시)") {
+        describe("GetLuckActionsService.getLuckActions (TTL 기반 캐시)") {
             context("같은 회원·날짜를 반복 조회하면") {
                 it("두 번째 호출부터는 리포지토리를 다시 조회하지 않는다") {
                     val luckAction = LuckActionFixture.create()
@@ -207,8 +207,8 @@ class RedisCacheIntegrationTest(
                         luckActionRepository.findAllByMemberIdAndFortuneDate(luckAction.memberId, luckAction.fortuneDate)
                     } returns listOf(luckAction)
 
-                    getLuckActionsUseCase.getTodayLuckActions(luckAction.memberId, luckAction.fortuneDate)
-                    getLuckActionsUseCase.getTodayLuckActions(luckAction.memberId, luckAction.fortuneDate)
+                    getLuckActionsUseCase.getLuckActions(luckAction.memberId, luckAction.fortuneDate)
+                    getLuckActionsUseCase.getLuckActions(luckAction.memberId, luckAction.fortuneDate)
 
                     verify(exactly = 1) {
                         luckActionRepository.findAllByMemberIdAndFortuneDate(luckAction.memberId, luckAction.fortuneDate)

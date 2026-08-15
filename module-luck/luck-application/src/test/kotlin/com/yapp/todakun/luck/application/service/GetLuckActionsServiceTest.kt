@@ -25,7 +25,7 @@ class GetLuckActionsServiceTest :
             val memberId = Uuid.generateV7().toJavaUuid()
             val fortuneDate = LocalDate.of(2026, 7, 22)
 
-            describe("getTodayLuckActions") {
+            describe("getLuckActions") {
                 context("해당 날짜의 행운 액션이 있으면") {
                     it("해당 회원의 행운 액션 목록을 반환한다") {
                         val luckActions =
@@ -37,7 +37,7 @@ class GetLuckActionsServiceTest :
                             luckActionRepository.findAllByMemberIdAndFortuneDate(memberId, fortuneDate)
                         } returns luckActions
 
-                        val found = getLuckActionsService.getTodayLuckActions(memberId, fortuneDate)
+                        val found = getLuckActionsService.getLuckActions(memberId, fortuneDate)
 
                         found shouldBe luckActions
                     }
@@ -49,7 +49,7 @@ class GetLuckActionsServiceTest :
                             luckActionRepository.findAllByMemberIdAndFortuneDate(memberId, fortuneDate)
                         } returns emptyList()
 
-                        val found = getLuckActionsService.getTodayLuckActions(memberId, fortuneDate)
+                        val found = getLuckActionsService.getLuckActions(memberId, fortuneDate)
 
                         found shouldBe emptyList()
                     }

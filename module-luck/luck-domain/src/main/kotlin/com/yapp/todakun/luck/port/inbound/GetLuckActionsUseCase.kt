@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 interface GetLuckActionsUseCase {
-    fun getTodayLuckActions(
+    fun getLuckActions(
         memberId: UUID,
         fortuneDate: LocalDate,
     ): List<LuckAction>
