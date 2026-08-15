@@ -4,10 +4,6 @@ import com.yapp.todakun.chat.fixture.ChatFixture
 import com.yapp.todakun.chat.port.inbound.ChatStreamListener
 import com.yapp.todakun.chat.port.inbound.SendChatMessageCommand
 import com.yapp.todakun.chat.port.outbound.ChatAiPort
-import com.yapp.todakun.chat.port.outbound.ChatPillarContext
-import com.yapp.todakun.chat.port.outbound.ChatProfileContext
-import com.yapp.todakun.chat.port.outbound.ChatPromptContext
-import com.yapp.todakun.chat.port.outbound.ChatSajuContext
 import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
@@ -20,35 +16,11 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import java.time.LocalDate
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
-private val PILLAR = ChatPillarContext(stem = "갑", branch = "자", stemSipseong = "비견", branchSipseong = "정관", sibiunseong = "장생")
-private val PROMPT_CONTEXT =
-    ChatPromptContext(
-        saju =
-            ChatSajuContext(
-                dayMaster = "갑",
-                yearPillar = PILLAR,
-                monthPillar = PILLAR,
-                dayPillar = PILLAR,
-                hourPillar = null,
-                ohaeng = mapOf("목" to 3),
-                sipseong = mapOf("비견" to 2),
-            ),
-        profile =
-            ChatProfileContext(
-                name = "토닥이 사용자",
-                birthDate = LocalDate.of(1998, 3, 5),
-                gender = "MALE",
-                job = "WORKER",
-                relationshipStatus = "SOLO",
-            ),
-        history = emptyList(),
-        question = "오늘 하루 어때요?",
-    )
+private val PROMPT_CONTEXT = ChatFixture.promptContext()
 
 @ExperimentalUuidApi
 class StreamChatAnswerServiceTest : DescribeSpec({

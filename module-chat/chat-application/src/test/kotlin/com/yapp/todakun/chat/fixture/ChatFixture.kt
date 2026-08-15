@@ -6,7 +6,15 @@ import com.yapp.todakun.chat.ChatConversation
 import com.yapp.todakun.chat.ChatMessage
 import com.yapp.todakun.chat.ChatMessageRole
 import com.yapp.todakun.chat.ChatMessageStatus
+import com.yapp.todakun.chat.port.outbound.ChatHistoryTurn
+import com.yapp.todakun.chat.port.outbound.ChatPillarContext
+import com.yapp.todakun.chat.port.outbound.ChatProfileContext
+import com.yapp.todakun.chat.port.outbound.ChatPromptContext
 import com.yapp.todakun.chat.port.outbound.ChatQuotaStatus
+import com.yapp.todakun.chat.port.outbound.ChatSajuContext
+import com.yapp.todakun.shared.MemberFortuneProfile
+import com.yapp.todakun.shared.PillarSummary
+import com.yapp.todakun.shared.SajuChartSummary
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -67,4 +75,84 @@ object ChatFixture {
         used: Int = 1,
         limit: Int = DEFAULT_QUOTA_LIMIT,
     ): ChatQuotaStatus = ChatQuotaStatus(used = used, limit = limit)
+
+    /** [StreamChatAnswerService]가 AI 호출에 넘기는 프롬프트 컨텍스트(chat 도메인 타입) 기본값. */
+    fun promptContext(
+        history: List<ChatHistoryTurn> = emptyList(),
+        question: String = "오늘 하루 어때요?",
+    ): ChatPromptContext =
+        ChatPromptContext(
+            saju =
+                ChatSajuContext(
+                    dayMaster = "갑",
+                    yearPillar = pillarContext(),
+                    monthPillar = pillarContext(),
+                    dayPillar = pillarContext(),
+                    hourPillar = null,
+                    ohaeng = mapOf("목" to 3),
+                    sipseong = mapOf("비견" to 2),
+                ),
+            profile =
+                ChatProfileContext(
+                    name = "토닥이 사용자",
+                    birthDate = LocalDate.of(1998, 3, 5),
+                    gender = "MALE",
+                    job = "WORKER",
+                    relationshipStatus = "SOLO",
+                ),
+            history = history,
+            question = question,
+        )
+
+    fun pillarContext(
+        stem: String = "갑",
+        branch: String = "자",
+        stemSipseong: String? = "비견",
+        branchSipseong: String = "정관",
+        sibiunseong: String = "장생",
+    ): ChatPillarContext =
+        ChatPillarContext(
+            stem = stem,
+            branch = branch,
+            stemSipseong = stemSipseong,
+            branchSipseong = branchSipseong,
+            sibiunseong = sibiunseong,
+        )
+
+    /** [PrepareChatTurnService]가 의존하는 [com.yapp.todakun.shared.GetSajuChartPort] 스텁용 기본값. */
+    fun sajuChartSummary(): SajuChartSummary =
+        SajuChartSummary(
+            dayMaster = "갑",
+            yearPillar = pillarSummary(),
+            monthPillar = pillarSummary(),
+            dayPillar = pillarSummary(),
+            hourPillar = null,
+            ohaeng = mapOf("목" to 3),
+            sipseong = mapOf("비견" to 2),
+        )
+
+    fun pillarSummary(
+        stem: String = "갑",
+        branch: String = "자",
+        stemSipseong: String? = "비견",
+        branchSipseong: String = "정관",
+        sibiunseong: String = "장생",
+    ): PillarSummary =
+        PillarSummary(
+            stem = stem,
+            branch = branch,
+            stemSipseong = stemSipseong,
+            branchSipseong = branchSipseong,
+            sibiunseong = sibiunseong,
+        )
+
+    /** [PrepareChatTurnService]가 의존하는 [com.yapp.todakun.shared.GetMemberFortuneProfilePort] 스텁용 기본값. */
+    fun memberFortuneProfile(): MemberFortuneProfile =
+        MemberFortuneProfile(
+            name = "홍길동",
+            birthDate = LocalDate.of(1998, 3, 5),
+            gender = "MALE",
+            job = "WORKER",
+            relationshipStatus = "SOLO",
+        )
 }
