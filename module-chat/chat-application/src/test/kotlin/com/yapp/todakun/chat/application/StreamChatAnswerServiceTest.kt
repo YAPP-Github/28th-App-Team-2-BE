@@ -7,7 +7,6 @@ import com.yapp.todakun.chat.port.outbound.ChatAiPort
 import com.yapp.todakun.chat.port.outbound.ChatPillarContext
 import com.yapp.todakun.chat.port.outbound.ChatProfileContext
 import com.yapp.todakun.chat.port.outbound.ChatPromptContext
-import com.yapp.todakun.chat.port.outbound.ChatQuotaStatus
 import com.yapp.todakun.chat.port.outbound.ChatSajuContext
 import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
@@ -85,7 +84,7 @@ class StreamChatAnswerServiceTest : DescribeSpec({
             conversationTitle = "오늘 하루 어때요?",
             userMessageId = userMessageId,
             assistantMessageId = assistantMessageId,
-            quota = ChatQuotaStatus(used = 1, limit = 100000),
+            quota = ChatFixture.quotaStatus(used = 1),
             promptContext = PROMPT_CONTEXT,
         )
 

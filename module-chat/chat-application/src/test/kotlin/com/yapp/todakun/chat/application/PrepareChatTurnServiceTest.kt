@@ -9,7 +9,6 @@ import com.yapp.todakun.chat.port.inbound.SendChatMessageCommand
 import com.yapp.todakun.chat.port.outbound.ChatConversationRepository
 import com.yapp.todakun.chat.port.outbound.ChatMessageRepository
 import com.yapp.todakun.chat.port.outbound.ChatQuotaPort
-import com.yapp.todakun.chat.port.outbound.ChatQuotaStatus
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
 import com.yapp.todakun.shared.GetSajuChartPort
 import com.yapp.todakun.shared.MemberFortuneProfile
@@ -74,7 +73,7 @@ class PrepareChatTurnServiceTest : DescribeSpec({
             it("새 대화를 생성하고 사용자·어시스턴트 메시지를 저장한다") {
                 val memberId = Uuid.generateV7().toJavaUuid()
                 val command = SendChatMessageCommand(memberId, null, "오늘 하루 어때요?")
-                every { chatQuotaPort.reserve(memberId) } returns ChatQuotaStatus(used = 1, limit = 100000)
+                every { chatQuotaPort.reserve(memberId) } returns ChatFixture.quotaStatus(used = 1)
                 every { chatConversationRepository.save(any()) } answers { firstArg() }
                 every { chatMessageRepository.findRecentByConversationId(any(), any()) } returns emptyList()
                 every { chatMessageRepository.save(any()) } answers { firstArg() }
@@ -100,7 +99,7 @@ class PrepareChatTurnServiceTest : DescribeSpec({
                 val conversationId = Uuid.generateV7().toJavaUuid()
                 val conversation = ChatFixture.conversation(id = conversationId, memberId = memberId, title = "이전 대화")
                 val command = SendChatMessageCommand(memberId, conversationId, "다음 질문")
-                every { chatQuotaPort.reserve(memberId) } returns ChatQuotaStatus(used = 2, limit = 100000)
+                every { chatQuotaPort.reserve(memberId) } returns ChatFixture.quotaStatus(used = 2)
                 every { chatConversationRepository.findById(conversationId) } returns conversation
                 every { chatMessageRepository.findRecentByConversationId(conversationId, 20) } returns emptyList()
                 every { chatMessageRepository.save(any()) } answers { firstArg() }
@@ -119,7 +118,7 @@ class PrepareChatTurnServiceTest : DescribeSpec({
                 val memberId = Uuid.generateV7().toJavaUuid()
                 val conversationId = Uuid.generateV7().toJavaUuid()
                 val command = SendChatMessageCommand(memberId, conversationId, "질문")
-                every { chatQuotaPort.reserve(memberId) } returns ChatQuotaStatus(used = 1, limit = 100000)
+                every { chatQuotaPort.reserve(memberId) } returns ChatFixture.quotaStatus(used = 1)
                 every { chatConversationRepository.findById(conversationId) } returns null
                 every { chatQuotaPort.refund(memberId) } just Runs
 
@@ -135,7 +134,7 @@ class PrepareChatTurnServiceTest : DescribeSpec({
                 val requesterId = Uuid.generateV7().toJavaUuid()
                 val conversationId = Uuid.generateV7().toJavaUuid()
                 val command = SendChatMessageCommand(requesterId, conversationId, "질문")
-                every { chatQuotaPort.reserve(requesterId) } returns ChatQuotaStatus(used = 1, limit = 100000)
+                every { chatQuotaPort.reserve(requesterId) } returns ChatFixture.quotaStatus(used = 1)
                 every { chatConversationRepository.findById(conversationId) } returns
                     ChatFixture.conversation(id = conversationId, memberId = ownerId)
                 every { chatQuotaPort.refund(requesterId) } just Runs
@@ -172,7 +171,7 @@ class PrepareChatTurnServiceTest : DescribeSpec({
                         conversationId = conversationId,
                         status = ChatMessageStatus.GENERATING,
                     )
-                every { chatQuotaPort.reserve(memberId) } returns ChatQuotaStatus(used = 1, limit = 100000)
+                every { chatQuotaPort.reserve(memberId) } returns ChatFixture.quotaStatus(used = 1)
                 every { chatConversationRepository.findById(conversationId) } returns conversation
                 // findRecentByConversationId는 최신순으로 반환한다(호출부가 뒤집어 사용) — 진행 중 메시지가 더 최근이다.
                 every { chatMessageRepository.findRecentByConversationId(conversationId, 20) } returns listOf(generating, completed)
@@ -199,7 +198,7 @@ class PrepareChatTurnServiceTest : DescribeSpec({
                         content = "나".repeat(3500),
                         status = ChatMessageStatus.COMPLETED,
                     )
-                every { chatQuotaPort.reserve(memberId) } returns ChatQuotaStatus(used = 1, limit = 100000)
+                every { chatQuotaPort.reserve(memberId) } returns ChatFixture.quotaStatus(used = 1)
                 every { chatConversationRepository.findById(conversationId) } returns conversation
                 // 최신순 반환: newer가 older보다 먼저 온다.
                 every { chatMessageRepository.findRecentByConversationId(conversationId, 20) } returns listOf(newer, older)
@@ -219,7 +218,7 @@ class PrepareChatTurnServiceTest : DescribeSpec({
                 val conversation = ChatFixture.conversation(id = conversationId, memberId = memberId)
                 val command = SendChatMessageCommand(memberId, conversationId, "다음 질문")
                 val onlyTurn = ChatFixture.userMessage(conversationId = conversationId, content = "가".repeat(5000))
-                every { chatQuotaPort.reserve(memberId) } returns ChatQuotaStatus(used = 1, limit = 100000)
+                every { chatQuotaPort.reserve(memberId) } returns ChatFixture.quotaStatus(used = 1)
                 every { chatConversationRepository.findById(conversationId) } returns conversation
                 every { chatMessageRepository.findRecentByConversationId(conversationId, 20) } returns listOf(onlyTurn)
                 every { chatMessageRepository.save(any()) } answers { firstArg() }
