@@ -1,7 +1,9 @@
 package com.yapp.todakun.dailyfortune.application.batch
 
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneCircuitOpenException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneEmptyResponseException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneTimeoutException
 import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.GetMemberIdsPort
 import org.springframework.batch.core.configuration.annotation.StepScope
@@ -29,6 +31,9 @@ private const val AI_CALL_RETRY_LIMIT = 3L
  * 커밋하기 때문에, chunk size를 키우면 여러 회원의 커밋이 하나의 Step 트랜잭션에 묶여 회원별 독립 커밋 격리가 깨진다.
  * AI 호출 실패는 대부분 일시적이므로 회원당 최대 [AI_CALL_RETRY_LIMIT]회 재시도하고, 그래도 실패하면 해당 회원만
  * skip해 배치 전체가 중단되지 않게 한다. chunk size가 1이라 재시도 시 재실행 범위도 회원 1명으로 국한되어 안전하다.
+ * [DailyFortuneCircuitOpenException]/[DailyFortuneTimeoutException](CircuitBreaker open/TimeLimiter timeout)은
+ * 재시도 목록에 넣지 않고 곧장 skip한다 — 회로가 열린 동안 재시도해 봐야 성공할 수 없어 AI 호출만 낭비되므로,
+ * 순수 일시적 실패에만 재시도를 남긴다.
  */
 @Configuration
 class GenerateDailyFortunesJobConfig(
@@ -68,6 +73,8 @@ class GenerateDailyFortunesJobConfig(
             .skipLimit(Long.MAX_VALUE)
             .skip(DailyFortuneGenerationFailedException::class.java)
             .skip(DailyFortuneEmptyResponseException::class.java)
+            .skip(DailyFortuneCircuitOpenException::class.java)
+            .skip(DailyFortuneTimeoutException::class.java)
             .listener(dailyFortuneSkipListener)
             .transactionManager(transactionManager)
             .build()

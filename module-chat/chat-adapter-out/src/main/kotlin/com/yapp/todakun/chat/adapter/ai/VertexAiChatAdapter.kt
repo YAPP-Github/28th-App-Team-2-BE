@@ -4,12 +4,15 @@ import com.yapp.todakun.chat.ChatAction
 import com.yapp.todakun.chat.ChatMessageRole
 import com.yapp.todakun.chat.exception.ChatEmptyResponseException
 import com.yapp.todakun.chat.exception.ChatGenerationFailedException
+import com.yapp.todakun.chat.exception.ChatStreamUnavailableException
 import com.yapp.todakun.chat.port.outbound.ChatAiPort
 import com.yapp.todakun.chat.port.outbound.ChatHistoryTurn
 import com.yapp.todakun.chat.port.outbound.ChatPillarContext
 import com.yapp.todakun.chat.port.outbound.ChatProfileContext
 import com.yapp.todakun.chat.port.outbound.ChatPromptContext
 import com.yapp.todakun.chat.port.outbound.ChatSajuContext
+import com.yapp.todakun.common.resilience.AiResilienceSupport
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
@@ -18,6 +21,8 @@ import java.time.Duration
 
 private val STREAM_TIMEOUT = Duration.ofSeconds(60)
 private val ACTION_TIMEOUT = Duration.ofSeconds(20)
+
+private const val AI_RESILIENCE_INSTANCE_NAME = "chat-ai"
 
 private val ANSWER_SYSTEM_PROMPT =
     """
@@ -64,10 +69,14 @@ private val ACTION_SYSTEM_PROMPT =
  * 이 어댑터가 실행되는 스레드는 adapter-in의 전용 워커([com.yapp.todakun.chat.adapter.config.ChatStreamConfig])이므로,
  * [streamAnswer]가 스트림이 끝날 때까지 블로킹하는 것은 의도된 동작이다(요청(서블릿) 스레드가 아니다).
  * 다만 Vertex AI 호출이 멈춰도 워커 스레드를 영원히 붙잡지 않도록, 두 호출 모두 타임아웃을 둔다.
+ * AI 호출은 [AiResilienceSupport]로 CircuitBreaker를 적용한다.
+ * Retry는 스트리밍 중 일부 델타가 이미 전달된 뒤 재시도하면 클라이언트에 중복 응답이 흘러갈 위험이 있어 적용하지 않고,
+ * TimeLimiter도 이미 위 Duration 타임아웃이 같은 역할을 하므로 적용하지 않는다(둘 다 `ai-resilience.instances.chat-ai`에 설정을 두지 않아 자동으로 빠진다).
  */
 @Component
 class VertexAiChatAdapter(
     chatClientBuilder: ChatClient.Builder,
+    private val resilience: AiResilienceSupport,
 ) : ChatAiPort {
     private val chatClient = chatClientBuilder.build()
 
@@ -78,18 +87,21 @@ class VertexAiChatAdapter(
         val answer = StringBuilder()
 
         try {
-            chatClient
-                .prompt()
-                .system(ANSWER_SYSTEM_PROMPT)
-                .user(buildAnswerUserData(context))
-                .stream()
-                .content()
-                .doOnNext { chunk ->
-                    if (chunk.isNotEmpty()) {
+            resilience.execute(AI_RESILIENCE_INSTANCE_NAME) {
+                chatClient
+                    .prompt()
+                    .system(ANSWER_SYSTEM_PROMPT)
+                    .user(buildAnswerUserData(context))
+                    .stream()
+                    .content()
+                    .filter { it.isNotEmpty() }
+                    .doOnNext { chunk ->
                         answer.append(chunk)
                         onDelta(chunk)
-                    }
-                }.blockLast(STREAM_TIMEOUT)
+                    }.blockLast(STREAM_TIMEOUT)
+            }
+        } catch (e: CallNotPermittedException) {
+            throw ChatStreamUnavailableException(e)
         } catch (e: Exception) {
             throw ChatGenerationFailedException(e)
         }
@@ -108,12 +120,14 @@ class VertexAiChatAdapter(
         runCatching {
             Mono
                 .fromCallable {
-                    chatClient
-                        .prompt()
-                        .system(ACTION_SYSTEM_PROMPT)
-                        .user(buildActionUserData(context, answer))
-                        .call()
-                        .entity(RawChatAction::class.java)
+                    resilience.execute(AI_RESILIENCE_INSTANCE_NAME) {
+                        chatClient
+                            .prompt()
+                            .system(ACTION_SYSTEM_PROMPT)
+                            .user(buildActionUserData(context, answer))
+                            .call()
+                            .entity(RawChatAction::class.java)
+                    }
                 }.subscribeOn(Schedulers.boundedElastic())
                 .block(ACTION_TIMEOUT)
                 ?.toDomainOrNull()

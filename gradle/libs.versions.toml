@@ -24,6 +24,9 @@ firebaseAdmin = "9.10.0"
 nimbusJoseJwt = "10.9.1"
 # Lombok (Java JPA 엔티티 보일러플레이트 생성). JDK 25 지원 버전.
 lombok = "1.18.46"
+# Resilience4j(CircuitBreaker/Retry/TimeLimiter). core 모듈은 Spring Boot 버전에 비의존적인 순수 Java 라이브러리라 사용
+# (resilience4j-spring-boot3 스타터는 Boot 4 호환이 아직 미확정 — https://github.com/resilience4j/resilience4j/issues/2351).
+resilience4j = "2.4.0"
 # KSP(Kotlin Symbol Processing): @Loggable 어노테이션 처리(로거 필드 자동 생성)용.
 # Kotlin(2.3.21)과 정확히 같은 패치 버전의 KSP 릴리즈가 아직 없어 최신 릴리즈(2.3.11)를 사용한다 —
 # Kotlin 패치 버전 간에는 컴파일러 플러그인 API가 깨지지 않는 게 일반적이라 위험이 낮다.
@@ -101,6 +104,12 @@ micrometer-core = { module = "io.micrometer:micrometer-core" }
 sentry-spring-boot4-starter = { module = "io.sentry:sentry-spring-boot-4-starter", version.ref = "sentry" }
 # Sentry logback appender. 스타터가 클래스패스에 있으면 런타임에 root 로거로 자동 부착 → log.error()가 Sentry 이슈로 적재된다.
 sentry-logback = { module = "io.sentry:sentry-logback", version.ref = "sentry" }
+
+# --- Resilience4j (common: AiResilienceSupport, 각 도메인 adapter-out: CallNotPermittedException catch용) ---
+resilience4j-circuitbreaker = { module = "io.github.resilience4j:resilience4j-circuitbreaker", version.ref = "resilience4j" }
+resilience4j-retry = { module = "io.github.resilience4j:resilience4j-retry", version.ref = "resilience4j" }
+resilience4j-timelimiter = { module = "io.github.resilience4j:resilience4j-timelimiter", version.ref = "resilience4j" }
+resilience4j-micrometer = { module = "io.github.resilience4j:resilience4j-micrometer", version.ref = "resilience4j" }
 
 # --- Cloud Storage (adapter-out: GCS raw 클라이언트) ---
 # Spring Cloud GCP 대신 raw 클라이언트 사용(Boot 4 호환 안전 + 헥사고날 어댑터로 격리).

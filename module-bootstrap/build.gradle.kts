@@ -52,6 +52,11 @@ dependencies {
     implementation(project(":chat:adapter-in"))
     implementation(project(":chat:adapter-out"))
 
+    // Vertex AI 전송 계층(gRPC) RPC deadline을 직접 구성하기 위해(VertexAiTransportConfig) VertexAI 빈을 오버라이드한다.
+    // 각 AI adapter-out 모듈도 별도로 이 스타터를 쓰지만(ChatClient 빌드용), 여기서는 그 기반이 되는 VertexAI 클라이언트 자체를 구성한다.
+    implementation(platform(libs.spring.ai.bom))
+    implementation(libs.spring.ai.starter.model.vertex.ai.gemini)
+
     implementation(libs.jackson.module.kotlin)
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.data.redis)
@@ -59,6 +64,11 @@ dependencies {
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.micrometer.registry.prometheus)
+    // AiResilienceConfig — 도메인별 CircuitBreaker/Retry/TimeLimiter 레지스트리 구성 + 메트릭 바인딩(이슈 #54).
+    implementation(libs.resilience4j.circuitbreaker)
+    implementation(libs.resilience4j.retry)
+    implementation(libs.resilience4j.timelimiter)
+    implementation(libs.resilience4j.micrometer)
     implementation(libs.spring.boot.starter.security)
     implementation(libs.sentry.spring.boot4.starter)
     implementation(libs.sentry.logback)

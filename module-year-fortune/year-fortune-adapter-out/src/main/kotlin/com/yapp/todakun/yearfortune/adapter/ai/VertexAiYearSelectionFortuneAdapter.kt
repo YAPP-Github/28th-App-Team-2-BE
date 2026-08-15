@@ -1,21 +1,30 @@
 package com.yapp.todakun.yearfortune.adapter.ai
 
+import com.yapp.todakun.common.resilience.AiResilienceSupport
+import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCircuitOpenException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneEmptyResponseException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneGenerationFailedException
+import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneTimeoutException
 import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
 import com.yapp.todakun.yearfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.stereotype.Component
+import java.util.concurrent.TimeoutException
+
+private const val AI_RESILIENCE_INSTANCE_NAME = "year-fortune-ai"
 
 /**
  * Vertex AI(Gemini)로 연도별 운세를 생성하는 [YearSelectionFortuneAiPort] 구현체.
  * 프롬프트 구성과 구조화 출력(JSON → [GeneratedYearSelectionFortune]) 매핑을 전담한다.
+ * AI 호출은 [AiResilienceSupport]로 CircuitBreaker+Retry+TimeLimiter를 적용한다.
  */
 @Component
 class VertexAiYearSelectionFortuneAdapter(
     chatClientBuilder: ChatClient.Builder,
+    private val resilience: AiResilienceSupport,
 ) : YearSelectionFortuneAiPort {
     private val chatClient = chatClientBuilder.build()
 
@@ -26,7 +35,11 @@ class VertexAiYearSelectionFortuneAdapter(
     ): GeneratedYearSelectionFortune {
         val generated =
             try {
-                callAi(profile, year, yearPillar)
+                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, year, yearPillar) }
+            } catch (e: CallNotPermittedException) {
+                throw YearSelectionFortuneCircuitOpenException(e)
+            } catch (e: TimeoutException) {
+                throw YearSelectionFortuneTimeoutException(e)
             } catch (e: Exception) {
                 throw YearSelectionFortuneGenerationFailedException(e)
             }

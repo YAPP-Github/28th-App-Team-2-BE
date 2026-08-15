@@ -12,4 +12,11 @@ dependencies {
 
     // spring-ai BeanOutputConverter가 내부적으로 생성하는 Jackson 2 ObjectMapper에 Kotlin data class 지원을 등록하기 위함.
     runtimeOnly(libs.jackson.module.kotlin.jackson2)
+
+    // AiResilienceSupport(:common)가 던지는 CallNotPermittedException catch용(이슈 #54).
+    implementation(libs.resilience4j.circuitbreaker)
+
+    // 테스트에서 AiResilienceSupport용 레지스트리를 직접 구성하기 위함(회로 open/TimeLimiter 타임아웃 시나리오 검증).
+    testImplementation(libs.resilience4j.retry)
+    testImplementation(libs.resilience4j.timelimiter)
 }
