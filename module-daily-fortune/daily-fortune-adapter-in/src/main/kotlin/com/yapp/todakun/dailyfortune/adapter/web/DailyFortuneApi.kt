@@ -3,7 +3,6 @@ package com.yapp.todakun.dailyfortune.adapter.web
 import com.yapp.todakun.dailyfortune.adapter.web.dto.response.DailyFortuneHistoryResponse
 import com.yapp.todakun.dailyfortune.adapter.web.dto.response.DailyFortuneResponse
 import com.yapp.todakun.dailyfortune.adapter.web.dto.response.TodayFortuneResponse
-import com.yapp.todakun.web.openapi.annotation.DisableSwaggerSecurity
 import com.yapp.todakun.web.response.CommonResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -66,14 +65,13 @@ interface DailyFortuneApi {
         summary = "오늘의 운세 배치 재실행",
         description =
             """
-                fortuneDate 기준 오늘의 운세 생성 배치를 다시 실행한다. 인증이 필요 없다.
+                fortuneDate 기준 오늘의 운세 생성 배치를 다시 실행한다. ROLE_ADMIN 권한이 있어야 호출할 수 있다.
                 매 호출마다 새 배치 실행으로 전체 회원을 다시 훑으므로 이전 실행의 완료 여부와 무관하게 항상 실행 가능하다.
                 이미 생성된 회원은 멱등성으로 다시 생성하지 않고, 누락된 회원만 실제로 생성된다.
                 같은 날짜로 이미 실행 중인 배치가 있으면 409를 반환한다.
                 배치가 끝날 때까지 응답이 지연될 수 있다(동기 실행).
             """,
     )
-    @DisableSwaggerSecurity
     @PostMapping("api/v1/daily-fortunes/regenerate")
     fun regenerate(
         @Parameter(description = "재실행 대상 배치의 기준 날짜(KST)", example = "2026-08-14")
