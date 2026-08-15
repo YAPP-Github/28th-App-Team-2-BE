@@ -17,6 +17,9 @@ import java.util.function.Supplier
  * `retryRegistry`/`timeLimiterRegistry`에 등록되지 않은 이름은 [Registry.find]가 빈 값을 반환해 해당 단계를 건너뛴다.
  * 예를 들어 chat은 이미 리액티브 스트림 자체의 Duration 타임아웃이 있어 TimeLimiter를 또 씌우면 스레드만 한 번 더 홉하므로 CircuitBreaker만 적용하고,
  * daily-fortune은 배치 Step이 이미 3회 재시도하므로 Retry를 또 씌우면 실패 시 최대 3x3회까지 AI 호출이 낭비되어 Retry를 뺀다(둘 다 `ai-resilience.instances.*` 설정에 해당 항목을 안 둬서 제어).
+ *
+ * 데코레이터 순서는 Retry(CircuitBreaker(TimeLimiter(call)))다. TimeLimiter를 가장 안쪽에 둬야 타임아웃이 CircuitBreaker의
+ * 실패 집계에 반영되어, 회로가 OPEN된 뒤에는 executor에 작업을 제출하지 않는 fail-fast가 보장된다.
  */
 class AiResilienceSupport(
     private val circuitBreakerRegistry: CircuitBreakerRegistry,
@@ -29,16 +32,19 @@ class AiResilienceSupport(
         supplier: () -> T,
     ): T {
         val circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceName)
-        val baseSupplier = Supplier { supplier() }
-        var decorated: Supplier<T> = CircuitBreaker.decorateSupplier(circuitBreaker, baseSupplier)
+        var decorated: Supplier<T> = Supplier { supplier() }
+
+        timeLimiterRegistry.find(instanceName).orElse(null)?.let { timeLimiter ->
+            val inner = decorated
+            decorated = Supplier { timeLimiter.executeFutureSupplier { CompletableFuture.supplyAsync(inner, executor) } }
+        }
+
+        decorated = CircuitBreaker.decorateSupplier(circuitBreaker, decorated)
 
         retryRegistry.find(instanceName).orElse(null)?.let { retry ->
             decorated = Retry.decorateSupplier(retry, decorated)
         }
 
-        val timeLimiter = timeLimiterRegistry.find(instanceName).orElse(null) ?: return decorated.get()
-        val future = CompletableFuture.supplyAsync(decorated, executor)
-
-        return timeLimiter.executeFutureSupplier { future }
+        return decorated.get()
     }
 }

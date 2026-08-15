@@ -1,5 +1,6 @@
 package com.yapp.todakun.config
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig
 import io.github.resilience4j.retry.RetryConfig
 import io.github.resilience4j.timelimiter.TimeLimiterConfig
@@ -46,6 +47,8 @@ data class AiResilienceProperties(
                 .custom<Any>()
                 .maxAttempts(maxAttempts)
                 .waitDuration(Duration.ofMillis(waitDurationMillis))
+                // 회로 OPEN 차단은 즉시 실패시킨다(재시도 대기로 fail-fast가 무의미해지는 것을 방지).
+                .ignoreExceptions(CallNotPermittedException::class.java)
                 .build()
     }
 
