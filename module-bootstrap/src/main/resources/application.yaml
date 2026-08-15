@@ -27,12 +27,12 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-# 헬스 체크(Blue/Green) + Prometheus 메트릭 노출(/actuator/prometheus) + CircuitBreaker 상태 조회(운영 가시성).
+# 헬스 체크(Blue/Green) + Prometheus 메트릭 노출(/actuator/prometheus, CircuitBreaker 상태는 TaggedCircuitBreakerMetrics로 포함).
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,circuitbreakers
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
