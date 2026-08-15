@@ -1,16 +1,19 @@
 package com.yapp.todakun.dayfortune.application.service
 
 import com.yapp.todakun.dayfortune.DaySelectionPurpose
+import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneEmptyResponseException
 import com.yapp.todakun.dayfortune.fixture.DaySelectionFortuneFixture
 import com.yapp.todakun.dayfortune.port.inbound.DaySelectionFortuneResult
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import io.mockk.verifyOrder
 import java.time.LocalDate
+import kotlin.system.measureTimeMillis
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -45,7 +48,7 @@ class CreateDaySelectionFortuneServiceTest :
             }
 
             context("후보 날짜가 여러 건이면") {
-                it("정렬된 순서대로 날짜별로 위임하고 반환된 순서대로 결과를 모은다") {
+                it("날짜별로 한 번씩 위임하고 정렬된 날짜 순서대로 결과를 모은다") {
                     val earlier = LocalDate.now().plusDays(30)
                     val later = LocalDate.now().plusDays(45)
                     val earlierResult = result(earlier)
@@ -56,9 +59,39 @@ class CreateDaySelectionFortuneServiceTest :
                     val results = service.create(purpose, listOf(later, earlier), memberId)
 
                     results shouldBe listOf(earlierResult, laterResult)
-                    verifyOrder {
-                        createOneDaySelectionFortuneService.createOne(purpose, earlier, memberId)
-                        createOneDaySelectionFortuneService.createOne(purpose, later, memberId)
+                    verify(exactly = 1) { createOneDaySelectionFortuneService.createOne(purpose, earlier, memberId) }
+                    verify(exactly = 1) { createOneDaySelectionFortuneService.createOne(purpose, later, memberId) }
+                }
+
+                it("날짜별 위임을 병렬로 실행해 순차 실행보다 짧은 시간에 끝낸다") {
+                    val dates = listOf(30L, 45L, 60L).map { LocalDate.now().plusDays(it) }
+                    val delayMillis = 300L
+                    dates.forEach { date ->
+                        every { createOneDaySelectionFortuneService.createOne(purpose, date, memberId) } answers {
+                            Thread.sleep(delayMillis)
+                            result(date)
+                        }
+                    }
+
+                    val elapsedMillis = measureTimeMillis { service.create(purpose, dates, memberId) }
+
+                    elapsedMillis shouldBeLessThan dates.size * delayMillis
+                }
+            }
+
+            context("날짜 중 하나에서 AI 호출이 실패하면") {
+                it("발생한 예외를 그대로 전파한다") {
+                    val failing = LocalDate.now().plusDays(30)
+                    val succeeding = LocalDate.now().plusDays(45)
+                    every {
+                        createOneDaySelectionFortuneService.createOne(purpose, failing, memberId)
+                    } throws DaySelectionFortuneEmptyResponseException()
+                    every {
+                        createOneDaySelectionFortuneService.createOne(purpose, succeeding, memberId)
+                    } returns result(succeeding)
+
+                    shouldThrow<DaySelectionFortuneEmptyResponseException> {
+                        service.create(purpose, listOf(failing, succeeding), memberId)
                     }
                 }
             }
