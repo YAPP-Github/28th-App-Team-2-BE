@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 private const val QUOTA_KEY_PREFIX = "chat:quota:"
-private const val DAILY_FREE_CHAT_LIMIT = 3
+private const val DAILY_FREE_CHAT_LIMIT = 100000 // TODO: 테스트 끝나면 3으로 원복
 private val ZONE = ZoneId.of("Asia/Seoul")
 private val DATE_KEY_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE
 

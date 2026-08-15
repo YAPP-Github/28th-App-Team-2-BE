@@ -8,11 +8,11 @@ object ChatSuggestionCatalog {
 
     val suggestions: List<ChatSuggestion> =
         listOf(
-            ChatSuggestion("🤝", "관계운에 관하여 궁금해", "요즘 관계운이 궁금해.", FortuneCategory.RELATIONSHIP),
-            ChatSuggestion("💌", "연애운에 관하여 궁금해", "요즘 연애운이 궁금해.", FortuneCategory.LOVE),
-            ChatSuggestion("💼", "성취운에 관하여 궁금해", "요즘 성취운이 궁금해.", FortuneCategory.ACHIEVEMENT),
-            ChatSuggestion("🧧", "금전운에 관하여 궁금해", "요즘 금전운이 궁금해.", FortuneCategory.MONEY),
-            ChatSuggestion("💪", "건강운에 관하여 궁금해", "요즘 건강운이 궁금해.", FortuneCategory.HEALTH),
-            ChatSuggestion("💬", "그 외에 다른 운이 궁금해", "요즘 궁금한 게 있어.", null),
+            ChatSuggestion("🤝", "관계운", "요즘 인간관계에서 궁금한게 있어", FortuneCategory.RELATIONSHIP),
+            ChatSuggestion("💌", "연애운", "요즘 그 사람과의 연애 흐름이 궁금해", FortuneCategory.LOVE),
+            ChatSuggestion("💼", "성취운", "커리어 흐름이나, 목표에 대한 성과가 궁금해", FortuneCategory.ACHIEVEMENT),
+            ChatSuggestion("💵", "금전운", "요즘 돈 관리, 소비 흐름을 알고 싶어", FortuneCategory.MONEY),
+            ChatSuggestion("💪", "건강운", "건강 유지를 위해서 하면 좋을 것들이 뭐가 있을까?", FortuneCategory.HEALTH),
+            ChatSuggestion("💬", "기타", "그외에 다른 것들이 궁금해", null),
         )
 }
