@@ -47,8 +47,7 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
             CircuitBreakerRegistry.ofDefaults(),
             RetryRegistry.ofDefaults(),
             TimeLimiterRegistry.ofDefaults(),
-            executorService,
-        )
+        ) { executorService }
     val adapter = VertexAiCompatibilityAdapter(chatClientBuilder, resilience)
     val input = compatibilityAiInput()
 
@@ -115,8 +114,7 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                             circuitBreakerRegistry,
                             RetryRegistry.ofDefaults(),
                             TimeLimiterRegistry.ofDefaults(),
-                            openCircuitExecutorService,
-                        ),
+                        ) { openCircuitExecutorService },
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 val cause = NonTransientAiException("model call failed")
@@ -153,8 +151,7 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                             CircuitBreakerRegistry.ofDefaults(),
                             RetryRegistry.ofDefaults(),
                             timeLimiterRegistry,
-                            timeoutExecutorService,
-                        ),
+                        ) { timeoutExecutorService },
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 every { callResponseSpec.entity(GeneratedCompatibility::class.java) } answers {

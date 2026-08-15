@@ -47,8 +47,7 @@ class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
             CircuitBreakerRegistry.ofDefaults(),
             RetryRegistry.ofDefaults(),
             TimeLimiterRegistry.ofDefaults(),
-            Executors.newFixedThreadPool(2),
-        )
+        ) { Executors.newFixedThreadPool(2) }
     val adapter = VertexAiYearSelectionFortuneAdapter(chatClientBuilder, resilience)
 
     val year = 2026
@@ -119,8 +118,7 @@ class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
                             circuitBreakerRegistry,
                             RetryRegistry.ofDefaults(),
                             TimeLimiterRegistry.ofDefaults(),
-                            Executors.newFixedThreadPool(2),
-                        ),
+                        ) { Executors.newFixedThreadPool(2) },
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 val cause = NonTransientAiException("model call failed")
@@ -152,8 +150,7 @@ class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
                             CircuitBreakerRegistry.ofDefaults(),
                             RetryRegistry.ofDefaults(),
                             timeLimiterRegistry,
-                            Executors.newFixedThreadPool(2),
-                        ),
+                        ) { Executors.newFixedThreadPool(2) },
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 every { callResponseSpec.entity(GeneratedYearSelectionFortune::class.java) } answers {

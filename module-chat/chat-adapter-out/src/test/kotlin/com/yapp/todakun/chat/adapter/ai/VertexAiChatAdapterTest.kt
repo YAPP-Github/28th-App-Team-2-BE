@@ -40,8 +40,7 @@ class VertexAiChatAdapterTest : DescribeSpec({
             CircuitBreakerRegistry.ofDefaults(),
             RetryRegistry.ofDefaults(),
             TimeLimiterRegistry.ofDefaults(),
-            Executors.newFixedThreadPool(2),
-        )
+        ) { Executors.newFixedThreadPool(2) }
     val adapter = VertexAiChatAdapter(chatClientBuilder, resilience)
     val context = chatPromptContext()
 
@@ -90,8 +89,7 @@ class VertexAiChatAdapterTest : DescribeSpec({
                             circuitBreakerRegistry,
                             RetryRegistry.ofDefaults(),
                             TimeLimiterRegistry.ofDefaults(),
-                            Executors.newFixedThreadPool(2),
-                        ),
+                        ) { Executors.newFixedThreadPool(2) },
                     )
                 stubStreamingChatClient(chatClient, requestSpec, streamResponseSpec, Flux.error(RuntimeException("model call failed")))
 
@@ -129,8 +127,7 @@ class VertexAiChatAdapterTest : DescribeSpec({
                             circuitBreakerRegistry,
                             RetryRegistry.ofDefaults(),
                             TimeLimiterRegistry.ofDefaults(),
-                            Executors.newFixedThreadPool(2),
-                        ),
+                        ) { Executors.newFixedThreadPool(2) },
                     )
                 val callResponseSpec = mockk<ChatClient.CallResponseSpec>()
                 every { chatClient.prompt() } returns requestSpec

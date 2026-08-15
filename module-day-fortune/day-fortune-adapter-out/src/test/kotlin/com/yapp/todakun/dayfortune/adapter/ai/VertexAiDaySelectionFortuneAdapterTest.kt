@@ -48,8 +48,7 @@ class VertexAiDaySelectionFortuneAdapterTest : DescribeSpec({
             CircuitBreakerRegistry.ofDefaults(),
             RetryRegistry.ofDefaults(),
             TimeLimiterRegistry.ofDefaults(),
-            Executors.newFixedThreadPool(2),
-        )
+        ) { Executors.newFixedThreadPool(2) }
     val adapter = VertexAiDaySelectionFortuneAdapter(chatClientBuilder, resilience)
 
     val purpose = DaySelectionPurpose.TRAVEL
@@ -122,8 +121,7 @@ class VertexAiDaySelectionFortuneAdapterTest : DescribeSpec({
                             circuitBreakerRegistry,
                             RetryRegistry.ofDefaults(),
                             TimeLimiterRegistry.ofDefaults(),
-                            Executors.newFixedThreadPool(2),
-                        ),
+                        ) { Executors.newFixedThreadPool(2) },
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 val cause = NonTransientAiException("model call failed")
@@ -155,8 +153,7 @@ class VertexAiDaySelectionFortuneAdapterTest : DescribeSpec({
                             CircuitBreakerRegistry.ofDefaults(),
                             RetryRegistry.ofDefaults(),
                             timeLimiterRegistry,
-                            Executors.newFixedThreadPool(2),
-                        ),
+                        ) { Executors.newFixedThreadPool(2) },
                     )
                 stubChatClient(chatClient, requestSpec, callResponseSpec)
                 every { callResponseSpec.entity(GeneratedDaySelectionFortune::class.java) } answers {

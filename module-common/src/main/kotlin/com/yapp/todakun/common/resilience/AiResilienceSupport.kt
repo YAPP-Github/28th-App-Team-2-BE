@@ -5,7 +5,9 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryRegistry
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry
+import org.springframework.beans.factory.DisposableBean
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.function.Supplier
 
@@ -20,13 +22,20 @@ import java.util.function.Supplier
  *
  * 데코레이터 순서는 Retry(CircuitBreaker(TimeLimiter(call)))다. TimeLimiter를 가장 안쪽에 둬야 타임아웃이 CircuitBreaker의
  * 실패 집계에 반영되어, 회로가 OPEN된 뒤에는 executor에 작업을 제출하지 않는 fail-fast가 보장된다.
+ *
+ * TimeLimiter가 timeout으로 future를 취소해도 이미 실행 중인 동기 [supplier]의 스레드 인터럽트는 보장되지 않는다.
+ * (Vertex AI 호출이 인터럽트에 응답하지 않으면 스레드는 실제 응답이 올 때까지 점유된 채로 남는다).
+ * 그래서 모든 도메인이 스레드풀을 공유하면 한 도메인의 반복 timeout이 다른 도메인 요청까지 지연시킬 수 있어,
+ * [executorFactory]로 인스턴스별 전용 executor를 지연 생성해 격리한다(부트스트랩의 `AiResilienceConfig`가 유한 큐 + 거절 정책을 가진 executor를 만들어 전달).
  */
 class AiResilienceSupport(
     private val circuitBreakerRegistry: CircuitBreakerRegistry,
     private val retryRegistry: RetryRegistry,
     private val timeLimiterRegistry: TimeLimiterRegistry,
-    private val executor: ExecutorService,
-) {
+    private val executorFactory: () -> ExecutorService,
+) : DisposableBean {
+    private val executors = ConcurrentHashMap<String, ExecutorService>()
+
     fun <T> execute(
         instanceName: String,
         supplier: () -> T,
@@ -36,6 +45,7 @@ class AiResilienceSupport(
 
         timeLimiterRegistry.find(instanceName).orElse(null)?.let { timeLimiter ->
             val inner = decorated
+            val executor = executors.computeIfAbsent(instanceName) { executorFactory() }
             decorated = Supplier { timeLimiter.executeFutureSupplier { CompletableFuture.supplyAsync(inner, executor) } }
         }
 
@@ -46,5 +56,9 @@ class AiResilienceSupport(
         }
 
         return decorated.get()
+    }
+
+    override fun destroy() {
+        executors.values.forEach { it.shutdown() }
     }
 }

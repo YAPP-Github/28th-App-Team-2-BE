@@ -17,6 +17,7 @@ import java.time.Duration
 @ConfigurationProperties(prefix = "ai-resilience")
 data class AiResilienceProperties(
     val circuitBreaker: CircuitBreakerSettings = CircuitBreakerSettings(),
+    val executor: ExecutorSettings = ExecutorSettings(),
     val retries: Map<String, RetrySettings> = emptyMap(),
     val timeLimiters: Map<String, TimeLimiterSettings> = emptyMap(),
 ) {
@@ -57,4 +58,15 @@ data class AiResilienceProperties(
     ) {
         fun toConfig(): TimeLimiterConfig = TimeLimiterConfig.custom().timeoutDuration(Duration.ofSeconds(timeoutDurationSeconds)).build()
     }
+
+    /**
+     * TimeLimiter를 쓰는 각 인스턴스([com.yapp.todakun.common.resilience.AiResilienceSupport]가 인스턴스별로 지연 생성하는 전용 executor)에 공통으로 적용하는 크기값.
+     * 도메인마다 다른 값을 쓸 실사용 요구가 없어 [circuitBreaker]와 같은 방식으로 레지스트리 공통 기본값 하나만 둔다.
+     * 격리는 인스턴스별로 별개의 풀 "객체"를 만드는 데서 오지, 크기를 다르게 주는 데서 오지 않는다.
+     * 큐가 가득 차면 [java.util.concurrent.ThreadPoolExecutor.AbortPolicy]로 즉시 거절해 fail-fast한다(무제한 큐에 쌓여 지연이 계속 늘어나는 것을 방지).
+     */
+    data class ExecutorSettings(
+        val poolSize: Int = 4,
+        val queueCapacity: Int = 10,
+    )
 }

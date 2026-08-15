@@ -11,10 +11,10 @@ import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-
-private const val AI_CALL_EXECUTOR_POOL_SIZE = 20
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * [AiResilienceProperties]를 읽어 CircuitBreaker/Retry/TimeLimiter 레지스트리를 구성하고,
@@ -23,12 +23,25 @@ private const val AI_CALL_EXECUTOR_POOL_SIZE = 20
  * [AiResilienceSupport]가 처음 그 이름을 쓸 때 레지스트리가 자동으로 만들어 준다.
  * `retries`/`timeLimiters`에 이름이 없는 인스턴스는 해당 레지스트리에 그 이름을 등록하지 않는다.
  * [AiResilienceSupport]가 이를 "해당 단계 비적용"으로 해석한다.
+ *
+ * executor는 모든 도메인이 공유하는 풀 하나 대신,
+ * [AiResilienceSupport]가 인스턴스 이름별로 이 팩토리를 호출해 전용 [ThreadPoolExecutor]를 지연 생성하게 한다.
+ * Vertex AI 호출이 timeout에도 스레드를 계속 점유하는 도메인이 있어도 그 도메인의 풀만 포화되고 다른 도메인 요청은 영향받지 않는다.
+ * 큐까지 가득 차면 [ThreadPoolExecutor.AbortPolicy]로 즉시 거절해(무제한 큐 적체 방지) `RejectedExecutionException`을 던지며,
+ * 각 어댑터의 기존 `catch (e: Exception)` → `*GenerationFailedException` 경로로 그대로 흡수된다.
  */
 @Configuration
 @EnableConfigurationProperties(AiResilienceProperties::class)
 class AiResilienceConfig {
-    @Bean(destroyMethod = "shutdown")
-    fun aiCallExecutor(): ExecutorService = Executors.newFixedThreadPool(AI_CALL_EXECUTOR_POOL_SIZE)
+    private fun isolatedExecutor(settings: AiResilienceProperties.ExecutorSettings): ExecutorService =
+        ThreadPoolExecutor(
+            settings.poolSize,
+            settings.poolSize,
+            0L,
+            TimeUnit.MILLISECONDS,
+            ArrayBlockingQueue(settings.queueCapacity),
+            ThreadPoolExecutor.AbortPolicy(),
+        )
 
     @Bean
     fun aiCircuitBreakerRegistry(
@@ -70,6 +83,7 @@ class AiResilienceConfig {
         circuitBreakerRegistry: CircuitBreakerRegistry,
         retryRegistry: RetryRegistry,
         timeLimiterRegistry: TimeLimiterRegistry,
-        aiCallExecutor: ExecutorService,
-    ): AiResilienceSupport = AiResilienceSupport(circuitBreakerRegistry, retryRegistry, timeLimiterRegistry, aiCallExecutor)
+        properties: AiResilienceProperties,
+    ): AiResilienceSupport =
+        AiResilienceSupport(circuitBreakerRegistry, retryRegistry, timeLimiterRegistry) { isolatedExecutor(properties.executor) }
 }
