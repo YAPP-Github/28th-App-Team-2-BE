@@ -60,7 +60,8 @@ class VertexAiTransportConfig {
             }
         settingsBuilder.setEndpoint("$apiEndpoint:443")
         settingsBuilder.setCredentialsProvider(PredictionServiceSettings.defaultCredentialsProviderBuilder().build())
-        settingsBuilder.setHeaderProvider(PredictionServiceSettings.defaultApiClientHeaderProviderBuilder().build())
+        // x-goog-api-client 헤더는 gax가 내부적으로 이미 설정하므로 여기서 다시 지정하면
+        // ClientContext.getHeaders()에서 "Header provider can't override the header" 예외가 발생한다.
         // 스트리밍이 아닌 단건 호출(generate) — TimeLimiter가 적용된 도메인들이 여기 해당한다.
         settingsBuilder
             .generateContentSettings()
