@@ -106,10 +106,11 @@ class AiResilienceSupportTest : DescribeSpec({
                     }
                 }
 
-                var elapsedMillis = 0L
+                val startNanos = System.nanoTime()
                 shouldThrow<CallNotPermittedException> {
-                    elapsedMillis = measureTimeMillis { support.execute(CIRCUIT_OPEN_TARGET) { "unreachable" } }
+                    support.execute(CIRCUIT_OPEN_TARGET) { "unreachable" }
                 }
+                val elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000
                 elapsedMillis shouldBeLessThan 500L
             }
         }
@@ -129,18 +130,16 @@ class AiResilienceSupportTest : DescribeSpec({
 
         context("설정된 시간 안에 응답이 없으면") {
             it("TimeoutException으로 끊기고, 전체 소요 시간이 실제 지연시간보다 훨씬 짧게 상한된다") {
-                var elapsedMillis = 0L
+                val startNanos = System.nanoTime()
 
                 shouldThrow<TimeoutException> {
-                    elapsedMillis =
-                        measureTimeMillis {
-                            support.execute(TIME_LIMITER_TARGET) {
-                                Thread.sleep(5000)
-                                "unreachable"
-                            }
-                        }
+                    support.execute(TIME_LIMITER_TARGET) {
+                        Thread.sleep(5000)
+                        "unreachable"
+                    }
                 }
 
+                val elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000
                 elapsedMillis shouldBeLessThan 1000L
             }
         }
