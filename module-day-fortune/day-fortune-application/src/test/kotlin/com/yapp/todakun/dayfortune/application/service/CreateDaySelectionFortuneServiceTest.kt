@@ -115,16 +115,23 @@ class CreateDaySelectionFortuneServiceTest :
                     }
                 }
 
-                it("아직 끝나지 않은 형제 작업의 실행 스레드에 인터럽트를 전달한다") {
+                it("이미 진입해 실행 중인 형제 작업의 실행 스레드에 인터럽트를 전달한다") {
                     val failing = LocalDate.now().plusDays(30)
                     val running = LocalDate.now().plusDays(45)
+                    // failing이 running보다 먼저 예외를 던지면 running이 createOne에 진입하기 전에 취소될 수 있어 "실행 중인 형제 작업의 취소" 자체를 검증하지 못하게 된다.
+                    // barrier로 running의 진입을 보장한 뒤에만 failing이 예외를 던지도록 순서를 고정한다.
+                    val runningEntered = CountDownLatch(1)
                     val interrupted = AtomicBoolean(false)
                     every {
                         createOneDaySelectionFortuneService.createOne(purpose, failing, memberId)
-                    } throws DaySelectionFortuneEmptyResponseException()
+                    } answers {
+                        runningEntered.await(1, TimeUnit.SECONDS).shouldBeTrue()
+                        throw DaySelectionFortuneEmptyResponseException()
+                    }
                     every {
                         createOneDaySelectionFortuneService.createOne(purpose, running, memberId)
                     } answers {
+                        runningEntered.countDown()
                         try {
                             Thread.sleep(5_000)
                         } catch (e: InterruptedException) {
@@ -138,6 +145,7 @@ class CreateDaySelectionFortuneServiceTest :
                     }
 
                     interrupted.get().shouldBeTrue()
+                    verify(exactly = 1) { createOneDaySelectionFortuneService.createOne(purpose, running, memberId) }
                 }
             }
         }
