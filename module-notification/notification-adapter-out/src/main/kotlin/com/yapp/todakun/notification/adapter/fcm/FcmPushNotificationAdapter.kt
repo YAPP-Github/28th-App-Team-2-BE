@@ -70,6 +70,10 @@ class FcmPushNotificationAdapter(
 
     private fun FirebaseMessagingException.isTokenExpired(): Boolean = messagingErrorCode == MessagingErrorCode.UNREGISTERED
 
+    // setToken()은 FCM이 등록 토큰 대신 Firebase Installation ID(FID)로 전환하며 deprecated됐지만(setFid()),
+    // FID는 등록 토큰과 다른 식별자라 client가 FID 발급·전송 로직을 갖추기 전엔 그냥 바꿔 끼울 수 없다.
+    // 두 경로가 전환 기간 동안 병행 지원되므로 지금은 억제만 하고, 마이그레이션은 클라이언트 협의가 필요한 별도 작업으로 남긴다.
+    @Suppress("DEPRECATION")
     private fun PushNotification.toMessage(): Message =
         Message
             .builder()
