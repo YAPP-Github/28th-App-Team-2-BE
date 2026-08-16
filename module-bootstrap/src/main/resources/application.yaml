@@ -59,6 +59,8 @@ vertex-ai:
 #   - chat-ai: 이미 리액티브 스트림 자체 Duration 타임아웃이 있어 TimeLimiter 생략, 스트리밍 중 재전송 위험 때문에 retry도 생략.
 #   - daily-fortune-ai: 배치 Step이 이미 3회 재시도하므로 retry를 또 두면 최대 3x3회까지 AI 호출이 낭비돼 생략.
 ai-resilience:
+  executor:
+    pool-size: 5
   retries:
     day-fortune-ai:
       max-attempts: 2
@@ -73,11 +75,11 @@ ai-resilience:
     daily-fortune-ai:
       timeout-duration-seconds: 40
     day-fortune-ai:
-      timeout-duration-seconds: 15
+      timeout-duration-seconds: 38
     year-fortune-ai:
-      timeout-duration-seconds: 15
+      timeout-duration-seconds: 38
     compatibility-ai:
-      timeout-duration-seconds: 15
+      timeout-duration-seconds: 38
 
 # 카카오/구글이 정한 고정 API 규격 — 환경(local/dev/prod) 무관하게 동일한 값.
 oauth:
