@@ -81,11 +81,24 @@ class NotificationDispatchService(
     @ExperimentalUuidApi
     override fun publish(command: PublishNoticeCommand) {
         val idempotencyKey =
-            NoticeDispatchHistory.deriveIdempotencyKey(command.title, command.content, command.deepLink, command.idempotencyKey)
+            NoticeDispatchHistory.deriveIdempotencyKey(
+                command.title,
+                command.content,
+                command.deepLink,
+                command.type,
+                command.idempotencyKey,
+            )
         dispatchLockPort.tryRun(NOTICE_LOCK_KEY) {
             val claimed =
                 noticeDispatchHistoryRepository.saveIfAbsent(
-                    NoticeDispatchHistory.create(idempotencyKey, command.title, command.content, command.deepLink, Instant.now()),
+                    NoticeDispatchHistory.create(
+                        idempotencyKey,
+                        command.title,
+                        command.content,
+                        command.type,
+                        command.deepLink,
+                        Instant.now(),
+                    ),
                 )
             if (!claimed) {
                 log.info("이미 발송 처리된 공지라 스킵합니다: idempotencyKey=$idempotencyKey")

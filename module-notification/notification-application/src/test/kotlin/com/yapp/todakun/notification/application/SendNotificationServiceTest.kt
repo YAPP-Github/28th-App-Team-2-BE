@@ -58,7 +58,7 @@ class SendNotificationServiceTest :
                 every { notificationTransactionalStore.saveNotification(any()) } answers { firstArg<Notification>() }
                 // 수신 동의 구현 빈이 없으면(null) 야간 여부와 무관하게 허용.
                 every { pushConsentPort.getIfAvailable() } returns null
-                every { notificationMetrics.record(any(), any()) } returns Unit
+                every { notificationMetrics.record(any(), any(), any()) } returns Unit
             }
             afterTest {
                 clearMocks(
@@ -121,7 +121,13 @@ class SendNotificationServiceTest :
 
                         verify(exactly = 1) { pushNotificationPort.sendAll(any()) }
                         verify(exactly = 1) { notificationTransactionalStore.cleanupExpiredTokens(results) }
-                        verify(exactly = 1) { notificationMetrics.record(NotificationType.FORTUNE, NotificationDispatchResult.SUCCESS) }
+                        verify(exactly = 1) {
+                            notificationMetrics.record(
+                                NotificationType.FORTUNE,
+                                NotificationDispatchResult.SUCCESS,
+                                NotificationMetrics.ERROR_CODE_NONE,
+                            )
+                        }
                         verify(exactly = 0) { notificationTransactionalStore.saveDeliveryFailure(any()) }
                     }
                 }
@@ -186,7 +192,8 @@ class SendNotificationServiceTest :
                         every { notificationSettingRepository.findByMemberId(memberId) } returns setting
                         every { notificationTransactionalStore.getDeviceTokens(memberId) } returns
                             listOf(DeviceToken.reconstitute(settingId, memberId, "flaky", Platform.IOS))
-                        val results = listOf(PushResult(token = "flaky", success = false, tokenExpired = false))
+                        val results =
+                            listOf(PushResult(token = "flaky", success = false, tokenExpired = false, errorCode = "UNAVAILABLE"))
                         every { pushNotificationPort.sendAll(any()) } returns results
                         every { notificationTransactionalStore.cleanupExpiredTokens(results) } returns Unit
                         val captured = slot<NotificationDeliveryFailure>()
@@ -194,7 +201,11 @@ class SendNotificationServiceTest :
 
                         service.send(command())
 
-                        verify(exactly = 1) { notificationMetrics.record(NotificationType.FORTUNE, NotificationDispatchResult.FAILURE) }
+                        verify(
+                            exactly = 1,
+                        ) {
+                            notificationMetrics.record(NotificationType.FORTUNE, NotificationDispatchResult.FAILURE, "UNAVAILABLE")
+                        }
                         captured.captured.memberId shouldBe memberId
                         captured.captured.attemptCount shouldBe 0
                         captured.captured.failedTokens shouldBe listOf("flaky")

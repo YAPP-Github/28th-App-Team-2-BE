@@ -27,6 +27,7 @@ data class NoticeDispatchHistory(
     val idempotencyKey: String,
     val title: String,
     val content: String,
+    val type: NoticeType,
     val deepLink: String?,
     val dispatchedAt: Instant,
 ) {
@@ -36,6 +37,7 @@ data class NoticeDispatchHistory(
             idempotencyKey: String,
             title: String,
             content: String,
+            type: NoticeType,
             deepLink: String?,
             dispatchedAt: Instant,
         ): NoticeDispatchHistory =
@@ -44,6 +46,7 @@ data class NoticeDispatchHistory(
                 idempotencyKey = idempotencyKey,
                 title = title,
                 content = content,
+                type = type,
                 deepLink = deepLink,
                 dispatchedAt = dispatchedAt,
             )
@@ -54,14 +57,15 @@ data class NoticeDispatchHistory(
             idempotencyKey: String,
             title: String,
             content: String,
+            type: NoticeType,
             deepLink: String?,
             dispatchedAt: Instant,
-        ): NoticeDispatchHistory = NoticeDispatchHistory(id, idempotencyKey, title, content, deepLink, dispatchedAt)
+        ): NoticeDispatchHistory = NoticeDispatchHistory(id, idempotencyKey, title, content, type, deepLink, dispatchedAt)
 
         /**
          * 공지 처리 이력의 멱등키를 파생한다. 같은 인자로 재기동해도 같은 키가 나와야 하므로
          * 시각·랜덤 값을 섞지 않는다(순수 함수) — 그래야 저장소의 유니크 제약이 재기동 중복을 걸러낼 수 있다.
-         * [explicitKey]가 공백이 아니면 그 값을 우선 사용하고, 없으면 제목·본문·딥링크에서 파생한다.
+         * [explicitKey]가 공백이 아니면 그 값을 우선 사용하고, 없으면 제목·본문·딥링크·타입에서 파생한다.
          * 두 경로 모두 SHA-256으로 해싱해 64자 고정 길이 컬럼을 유지하면서, 서로 다른 접두사로 원본 문자열을
          * 구분해 명시적 키와 내용 파생 키가 같은 네임스페이스에 있으면서도 절대 충돌하지 않게 한다.
          * 필드는 [encodeUnambiguously]로 경계를 못 박아 이어 붙인다 — 그래야 필드 경계만 다른 서로 다른 공지가
@@ -71,13 +75,14 @@ data class NoticeDispatchHistory(
             title: String,
             content: String,
             deepLink: String?,
+            type: NoticeType,
             explicitKey: String?,
         ): String {
             val keyMaterial =
                 if (!explicitKey.isNullOrBlank()) {
                     listOf(EXPLICIT_KEY_PREFIX, explicitKey.trim())
                 } else {
-                    listOf(CONTENT_KEY_PREFIX, title, content, deepLink.orEmpty())
+                    listOf(CONTENT_KEY_PREFIX, title, content, deepLink.orEmpty(), type.name)
                 }
             return sha256Hex(encodeUnambiguously(keyMaterial))
         }

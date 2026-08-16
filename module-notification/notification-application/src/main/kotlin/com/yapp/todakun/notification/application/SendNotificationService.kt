@@ -1,5 +1,6 @@
 package com.yapp.todakun.notification.application
 
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.notification.Notification
 import com.yapp.todakun.notification.NotificationDeliveryFailure
 import com.yapp.todakun.notification.PushNotification
@@ -28,6 +29,7 @@ import kotlin.uuid.ExperimentalUuidApi
  * DB 저장/조회는 [NotificationTransactionalStore]의 독립 트랜잭션으로 위임한다.
  */
 @Service
+@Loggable
 class SendNotificationService(
     private val notificationTransactionalStore: NotificationTransactionalStore,
     private val notificationSettingRepository: NotificationSettingRepository,
@@ -66,9 +68,11 @@ class SendNotificationService(
             )
         notificationTransactionalStore.cleanupExpiredTokens(results)
 
-        val failedTokens = results.filter { !it.success && !it.tokenExpired }.map { it.token }
-        if (failedTokens.isNotEmpty()) {
-            notificationMetrics.record(command.type, NotificationDispatchResult.FAILURE)
+        val failedResults = results.filter { !it.success && !it.tokenExpired }
+        if (failedResults.isNotEmpty()) {
+            val errorCode = failedResults.first().errorCode ?: NotificationMetrics.ERROR_CODE_UNKNOWN
+            log.warn("알림 발송 실패: memberId=${command.memberId}, type=${command.type}, errorCode=$errorCode")
+            notificationMetrics.record(command.type, NotificationDispatchResult.FAILURE, errorCode)
             notificationTransactionalStore.saveDeliveryFailure(
                 NotificationDeliveryFailure.create(
                     memberId = command.memberId,
@@ -77,12 +81,12 @@ class SendNotificationService(
                     title = command.title,
                     content = command.content,
                     deepLink = command.deepLink,
-                    failedTokens = failedTokens,
+                    failedTokens = failedResults.map { it.token },
                     nextRetryAt = Instant.now().plus(NotificationRetryPolicy.backoffFor(0)),
                 ),
             )
         } else {
-            notificationMetrics.record(command.type, NotificationDispatchResult.SUCCESS)
+            notificationMetrics.record(command.type, NotificationDispatchResult.SUCCESS, NotificationMetrics.ERROR_CODE_NONE)
         }
     }
 

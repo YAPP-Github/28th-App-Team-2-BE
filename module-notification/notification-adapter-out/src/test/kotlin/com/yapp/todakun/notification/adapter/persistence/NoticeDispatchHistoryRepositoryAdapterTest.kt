@@ -1,6 +1,7 @@
 package com.yapp.todakun.notification.adapter.persistence
 
 import com.yapp.todakun.notification.NoticeDispatchHistory
+import com.yapp.todakun.notification.NoticeType
 import com.yapp.todakun.notification.config.TestContainersConfig
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -31,6 +32,7 @@ class NoticeDispatchHistoryRepositoryAdapterTest(
                 idempotencyKey = idempotencyKey,
                 title = title,
                 content = "본문",
+                type = NoticeType.GENERAL,
                 deepLink = "notice/1",
                 dispatchedAt = Instant.now(),
             )
