@@ -19,4 +19,7 @@ dependencies {
     // 테스트에서 AiResilienceSupport용 레지스트리를 직접 구성하기 위함(회로 open 시나리오 검증).
     testImplementation(libs.resilience4j.retry)
     testImplementation(libs.resilience4j.timelimiter)
+
+    // RedisChatQuotaAdapter 통합 테스트(@DataRedisTest)용 — postgres용 testcontainers는 todakun.adapter-persistence가 이미 제공.
+    testImplementation(libs.bundles.testcontainers.redis)
 }
