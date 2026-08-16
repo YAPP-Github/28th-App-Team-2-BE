@@ -64,7 +64,7 @@ class FcmPushNotificationAdapter(
 
     private fun logFailures(results: List<PushResult>) {
         results.filter { !it.success && !it.tokenExpired }.forEach {
-            log.warn("FCM 배치 발송 실패: token=${it.token}, errorCode=${it.errorCode}")
+            log.warn("FCM 배치 발송 실패: errorCode=${it.errorCode}")
         }
     }
 
