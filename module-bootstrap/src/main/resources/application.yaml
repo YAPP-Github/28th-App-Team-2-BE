@@ -48,7 +48,7 @@ management:
 # stream-timeout-seconds는 chat의 스트리밍 호출에만 쓰인다.
 vertex-ai:
   transport:
-    unary-timeout-seconds: 40
+    unary-timeout-seconds: 65
     stream-timeout-seconds: 70
 
 # Resilience4j — 도메인별 Vertex AI 호출 CircuitBreaker/Retry/TimeLimiter 설정(이슈 #54, AiResilienceConfig).
@@ -73,7 +73,7 @@ ai-resilience:
       wait-duration-millis: 500
   time-limiters:
     daily-fortune-ai:
-      timeout-duration-seconds: 40
+      timeout-duration-seconds: 60
     day-fortune-ai:
       timeout-duration-seconds: 38
     year-fortune-ai:
