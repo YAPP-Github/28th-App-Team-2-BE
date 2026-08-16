@@ -70,7 +70,13 @@ class RetryFailedNotificationsService(
                 // 배치 호출 자체가 실패하면 결과를 알 수 없으니 이번에 시도한 토큰 전부를 여전히 실패로 간주한다.
                 log.warn("알림 재시도 중 FCM 배치 호출이 실패했습니다: memberId=${failure.memberId}, type=${failure.type}", e)
                 val stillFailing =
-                    tokens.map { PushResult(token = it.token, success = false, errorCode = e.javaClass.simpleName) }
+                    tokens.map {
+                        PushResult(
+                            token = it.token,
+                            success = false,
+                            errorCode = NotificationMetrics.ERROR_CODE_UNKNOWN,
+                        )
+                    }
                 rescheduleOrGiveUp(failure, stillFailing)
                 return
             }
