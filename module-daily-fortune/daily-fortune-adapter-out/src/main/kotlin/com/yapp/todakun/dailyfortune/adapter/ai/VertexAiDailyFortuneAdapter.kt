@@ -92,7 +92,8 @@ class VertexAiDailyFortuneAdapter(
         2. content: Overall interpretation of today's fortune. 800 characters or fewer. Base it on the relationship between the member's Saju chart and today's pillar.
         3. categoryFortunes: RELATIONSHIP, LOVE, ACHIEVEMENT, MONEY, HEALTH — include exactly one of each of the 5 categories.
            - score: integer between 0 and 100.
-           - title: one-line action copy for today. 30 characters or fewer.
+           - title: a single concrete action the member can actually do today — not an abstract wish, mood, or outcome statement (avoid phrasing like "안정적인 수입으로 재물 운 상승"). One specific, doable behavior phrased with a Korean "~하기" noun ending. 30 characters or fewer.
+             Example style per category: RELATIONSHIP "오랜만에 생각난 사람에게 메시지 보내기", LOVE "평소보다 밝은 컬러의 옷 착용하기", ACHIEVEMENT "미뤄둔 작은 업무 하나 먼저 끝내기", HEALTH "10분 정도 가볍게 산책하거나 스트레칭하기", MONEY "사용하지 않는 구독 서비스나 자동결제 내역 확인하기".
            - content: detailed interpretation. 200 characters or fewer.
         4. luckyItems: exactly 5 items. Each a concrete noun (color, object, etc.) of 8 characters or fewer.
            Choose items that compensate for the element(s) that are lacking in the member's Ohaeng distribution relative to today's pillar.
