@@ -58,7 +58,9 @@ class FcmPushNotificationAdapter(
                 PushResult(
                     token = notification.token,
                     success = false,
-                    errorCode = response.exception?.messagingErrorCode?.name,
+                    // FCM 고유 코드(messagingErrorCode)는 서버가 구조화된 FCM 에러를 반환했을 때만 채워진다.
+                    // 5xx/타임아웃처럼 일반 HTTP 레벨 오류면 null이라, 그 경우 일반 오류 코드(errorCode)로 대체해 로그에서 원인이 완전히 사라지지 않게 한다.
+                    errorCode = response.exception?.messagingErrorCode?.name ?: response.exception?.errorCode?.name,
                 )
         }
 

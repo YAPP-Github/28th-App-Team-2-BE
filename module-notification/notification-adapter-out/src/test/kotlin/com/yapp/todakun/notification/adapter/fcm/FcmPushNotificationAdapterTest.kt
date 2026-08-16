@@ -1,5 +1,6 @@
 package com.yapp.todakun.notification.adapter.fcm
 
+import com.google.firebase.ErrorCode
 import com.google.firebase.messaging.BatchResponse
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingException
@@ -104,6 +105,24 @@ class FcmPushNotificationAdapterTest :
 
                         results[0].success shouldBe true
                         results[0].errorCode shouldBe null
+                    }
+                }
+
+                context("FCM 고유 에러코드가 없는 일반 오류(5xx 등)로 실패하면") {
+                    it("일반 오류 코드(ErrorCode)를 errorCode에 담는다") {
+                        val response = mockk<SendResponse>()
+                        val exception = mockk<FirebaseMessagingException>()
+                        every { exception.messagingErrorCode } returns null
+                        every { exception.errorCode } returns ErrorCode.INTERNAL
+                        every { response.isSuccessful } returns false
+                        every { response.exception } returns exception
+                        every { firebaseMessaging.sendEach(any()) } returns mockBatchResponse(listOf(response))
+
+                        val results = adapter.sendAll(listOf(PushNotification("flaky", "제목", "본문")))
+
+                        results[0].success shouldBe false
+                        results[0].tokenExpired shouldBe false
+                        results[0].errorCode shouldBe "INTERNAL"
                     }
                 }
             }
