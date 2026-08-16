@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import tools.jackson.module.kotlin.KotlinInvalidNullException
@@ -69,6 +70,13 @@ class GlobalExceptionHandler {
     fun handleUnexpected(e: Exception): ResponseEntity<CommonResponse<Unit>> {
         log.error("Unexpected error 발생: {}", e.message, e)
         return CommonResponse.error(CommonErrorCode.INTERNAL_ERROR)
+    }
+
+    // 클라이언트가 응답 수신 중 연결을 끊어(broken pipe) 발생하는 정상적인 상황이므로,
+    // 이미 끊긴 커넥션에 재차 쓰기를 시도하지 않도록 응답 바디 없이 로그만 남긴다.
+    @ExceptionHandler(AsyncRequestNotUsableException::class)
+    fun handleAsyncRequestNotUsable(e: AsyncRequestNotUsableException) {
+        log.warn("클라이언트 연결 종료로 응답 전송 실패: {}", e.message)
     }
 
     private fun toReason(e: MethodArgumentNotValidException): Map<String, String> =
