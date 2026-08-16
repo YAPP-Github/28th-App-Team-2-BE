@@ -58,7 +58,7 @@ class RetryFailedNotificationsServiceTest :
 
             beforeTest {
                 every { dispatchLockPort.tryRun<Unit>(any(), any()) } answers { secondArg<() -> Unit>().invoke() }
-                every { notificationMetrics.record(any(), any()) } returns Unit
+                every { notificationMetrics.record(any(), any(), any()) } returns Unit
             }
             afterTest {
                 clearMocks(notificationTransactionalStore, pushNotificationPort, dispatchLockPort, notificationMetrics)
@@ -110,7 +110,7 @@ class RetryFailedNotificationsServiceTest :
 
                         captured.captured.attemptCount shouldBe 1
                         verify(exactly = 0) { notificationTransactionalStore.deleteDeliveryFailure(any()) }
-                        verify(exactly = 0) { notificationMetrics.record(any(), NotificationDispatchResult.RETRY_EXHAUSTED) }
+                        verify(exactly = 0) { notificationMetrics.record(any(), NotificationDispatchResult.RETRY_EXHAUSTED, any()) }
                     }
                 }
 
@@ -182,7 +182,7 @@ class RetryFailedNotificationsServiceTest :
                         every { notificationTransactionalStore.getDeviceTokens(memberId) } returns
                             listOf(DeviceToken.reconstitute(memberId, memberId, "token", Platform.IOS))
                         every { pushNotificationPort.sendAll(any()) } returns
-                            listOf(PushResult(token = "token", success = false, tokenExpired = false))
+                            listOf(PushResult(token = "token", success = false, tokenExpired = false, errorCode = "UNAVAILABLE"))
                         every { notificationTransactionalStore.cleanupExpiredTokens(any()) } returns Unit
                         every { notificationTransactionalStore.deleteDeliveryFailure(any()) } returns Unit
 
@@ -190,7 +190,9 @@ class RetryFailedNotificationsServiceTest :
 
                         verify(
                             exactly = 1,
-                        ) { notificationMetrics.record(NotificationType.FORTUNE, NotificationDispatchResult.RETRY_EXHAUSTED) }
+                        ) {
+                            notificationMetrics.record(NotificationType.FORTUNE, NotificationDispatchResult.RETRY_EXHAUSTED, "UNAVAILABLE")
+                        }
                         verify(exactly = 1) { notificationTransactionalStore.deleteDeliveryFailure(any()) }
                         verify(exactly = 0) { notificationTransactionalStore.saveDeliveryFailure(any()) }
                     }

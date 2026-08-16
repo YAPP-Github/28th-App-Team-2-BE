@@ -4,6 +4,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.Message
 import com.google.firebase.messaging.MessagingErrorCode
+import com.google.firebase.messaging.SendResponse
+import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.notification.PushNotification
 import com.yapp.todakun.notification.PushResult
 import com.yapp.todakun.notification.exception.PushSendFailedException
@@ -17,10 +19,12 @@ import com.google.firebase.messaging.Notification as FcmNotification
  * 등록 해제된 토큰(UNREGISTERED)만 실패가 아니라 "정리 대상"으로 보고한다(tokenExpired).
  * INVALID_ARGUMENT는 잘못된 토큰뿐 아니라 payload 오류로도 발생할 수 있어 만료로 단정하지 않는다(정상 토큰 오삭제 방지).
  * 단건([send])은 그 외 오류를 예외로 승격하지만, 배치([sendAll])는 부분 실패가 성공 건의 후속 처리(이력 저장·토큰 정리)를
- * 롤백시키지 않도록 실패를 예외 대신 결괏값(success=false)으로 반환한다.
+ * 롤백시키지 않도록 실패를 예외 대신 결괏값(success=false)으로 반환한다. 이때 원인([MessagingErrorCode])을 결과에
+ * 담고 warn 로그로도 남긴다 — 그렇지 않으면 재시도가 모두 소진된 뒤 원인을 알 방법이 완전히 사라진다.
  */
 @Component
 @ConditionalOnProperty(prefix = "fcm", name = ["enabled"], havingValue = "true")
+@Loggable
 class FcmPushNotificationAdapter(
     private val firebaseMessaging: FirebaseMessaging,
 ) : PushNotificationPort {
@@ -39,14 +43,28 @@ class FcmPushNotificationAdapter(
     override fun sendAll(notifications: List<PushNotification>): List<PushResult> {
         if (notifications.isEmpty()) return emptyList()
         val batch = firebaseMessaging.sendEach(notifications.map { it.toMessage() })
-        return notifications.mapIndexed { i, notification ->
-            val response = batch.responses[i]
-            when {
-                response.isSuccessful -> PushResult(token = notification.token, success = true)
-                response.exception?.isTokenExpired() == true ->
-                    PushResult(token = notification.token, success = false, tokenExpired = true)
-                else -> PushResult(token = notification.token, success = false, tokenExpired = false)
-            }
+        return notifications.zip(batch.responses, ::toPushResult).also(::logFailures)
+    }
+
+    private fun toPushResult(
+        notification: PushNotification,
+        response: SendResponse,
+    ): PushResult =
+        when {
+            response.isSuccessful -> PushResult(token = notification.token, success = true)
+            response.exception?.isTokenExpired() == true ->
+                PushResult(token = notification.token, success = false, tokenExpired = true)
+            else ->
+                PushResult(
+                    token = notification.token,
+                    success = false,
+                    errorCode = response.exception?.messagingErrorCode?.name,
+                )
+        }
+
+    private fun logFailures(results: List<PushResult>) {
+        results.filter { !it.success && !it.tokenExpired }.forEach {
+            log.warn("FCM 배치 발송 실패: token=${it.token}, errorCode=${it.errorCode}")
         }
     }
 

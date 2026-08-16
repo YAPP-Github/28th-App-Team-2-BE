@@ -3,6 +3,7 @@ package com.yapp.todakun.notification.application
 import com.yapp.todakun.common.logging.Loggable
 import com.yapp.todakun.notification.NotificationDeliveryFailure
 import com.yapp.todakun.notification.PushNotification
+import com.yapp.todakun.notification.PushResult
 import com.yapp.todakun.notification.policy.NotificationRetryPolicy
 import com.yapp.todakun.notification.port.inbound.RetryFailedNotificationsUseCase
 import com.yapp.todakun.notification.port.outbound.DispatchLockPort
@@ -68,29 +69,32 @@ class RetryFailedNotificationsService(
             } catch (e: Exception) {
                 // 배치 호출 자체가 실패하면 결과를 알 수 없으니 이번에 시도한 토큰 전부를 여전히 실패로 간주한다.
                 log.warn("알림 재시도 중 FCM 배치 호출이 실패했습니다: memberId=${failure.memberId}, type=${failure.type}", e)
-                rescheduleOrGiveUp(failure, tokens.map { it.token })
+                val stillFailing =
+                    tokens.map { PushResult(token = it.token, success = false, errorCode = e.javaClass.simpleName) }
+                rescheduleOrGiveUp(failure, stillFailing)
                 return
             }
         notificationTransactionalStore.cleanupExpiredTokens(results)
 
-        val stillFailingTokens = results.filter { !it.success && !it.tokenExpired }.map { it.token }
-        if (stillFailingTokens.isEmpty()) {
+        val stillFailing = results.filter { !it.success && !it.tokenExpired }
+        if (stillFailing.isEmpty()) {
             notificationTransactionalStore.deleteDeliveryFailure(failure.id)
             return
         }
 
-        rescheduleOrGiveUp(failure, stillFailingTokens)
+        rescheduleOrGiveUp(failure, stillFailing)
     }
 
     private fun rescheduleOrGiveUp(
         failure: NotificationDeliveryFailure,
-        stillFailingTokens: List<String>,
+        stillFailing: List<PushResult>,
     ) {
         // 방금 실행한 이 시도까지 포함한 횟수 — attemptCount는 "이전에 이미 마친 재시도 횟수"라 +1을 더해야 한다.
         val attemptsMadeIncludingThis = failure.attemptCount + 1
         if (NotificationRetryPolicy.shouldGiveUp(attemptsMadeIncludingThis)) {
-            log.error("알림 발송 최종 실패(재시도 소진): memberId=${failure.memberId}, type=${failure.type}")
-            notificationMetrics.record(failure.type, NotificationDispatchResult.RETRY_EXHAUSTED)
+            val errorCode = stillFailing.firstOrNull()?.errorCode ?: NotificationMetrics.ERROR_CODE_UNKNOWN
+            log.error("알림 발송 최종 실패(재시도 소진): memberId=${failure.memberId}, type=${failure.type}, errorCode=$errorCode")
+            notificationMetrics.record(failure.type, NotificationDispatchResult.RETRY_EXHAUSTED, errorCode)
             notificationTransactionalStore.deleteDeliveryFailure(failure.id)
             return
         }
@@ -98,7 +102,7 @@ class RetryFailedNotificationsService(
         notificationTransactionalStore.saveDeliveryFailure(
             failure.scheduleNextRetry(
                 nextRetryAt = Instant.now().plus(NotificationRetryPolicy.backoffFor(attemptsMadeIncludingThis)),
-                failedTokens = stillFailingTokens,
+                failedTokens = stillFailing.map { it.token },
             ),
         )
     }
