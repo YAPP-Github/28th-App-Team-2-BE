@@ -1,5 +1,6 @@
 package com.yapp.todakun.notification.adapter.runner
 
+import com.yapp.todakun.notification.NoticeType
 import com.yapp.todakun.notification.port.inbound.PublishNoticeCommand
 import com.yapp.todakun.notification.port.inbound.PublishNoticeUseCase
 import io.kotest.core.spec.style.DescribeSpec
@@ -34,8 +35,33 @@ class NoticePublishRunnerTest :
                         runner.run(args)
 
                         verify(exactly = 1) {
-                            publishNoticeUseCase.publish(PublishNoticeCommand("제목", "내용", "notice/1", null))
+                            publishNoticeUseCase.publish(PublishNoticeCommand("제목", "내용", "notice/1", NoticeType.GENERAL, null))
                         }
+                    }
+                }
+
+                context("notice.type 인자가 없으면") {
+                    it("타입은 GENERAL로 기본 처리된다") {
+                        val captured = slot<PublishNoticeCommand>()
+                        every { publishNoticeUseCase.publish(capture(captured)) } returns Unit
+                        val args = DefaultApplicationArguments("--notice.title=제목", "--notice.content=내용")
+
+                        runner.run(args)
+
+                        captured.captured.type shouldBe NoticeType.GENERAL
+                    }
+                }
+
+                context("notice.type 인자가 있으면") {
+                    it("해당 타입이 커맨드에 그대로 전달된다") {
+                        val captured = slot<PublishNoticeCommand>()
+                        every { publishNoticeUseCase.publish(capture(captured)) } returns Unit
+                        val args =
+                            DefaultApplicationArguments("--notice.title=제목", "--notice.content=내용", "--notice.type=EVENT")
+
+                        runner.run(args)
+
+                        captured.captured.type shouldBe NoticeType.EVENT
                     }
                 }
 

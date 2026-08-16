@@ -1,9 +1,12 @@
 package com.yapp.todakun.notification.adapter.persistence;
 
 import com.yapp.todakun.notification.NoticeDispatchHistory;
+import com.yapp.todakun.notification.NoticeType;
 import com.yapp.todakun.persistence.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
@@ -35,6 +38,10 @@ public class NoticeDispatchHistoryJpaEntity extends BaseEntity {
     @Column(nullable = false, updatable = false, columnDefinition = "text")
     private String content;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false)
+    private NoticeType type;
+
     @Column(name = "deep_link", updatable = false)
     private String deepLink;
 
@@ -47,12 +54,13 @@ public class NoticeDispatchHistoryJpaEntity extends BaseEntity {
                 .idempotencyKey(history.getIdempotencyKey())
                 .title(history.getTitle())
                 .content(history.getContent())
+                .type(history.getType())
                 .deepLink(history.getDeepLink())
                 .dispatchedAt(history.getDispatchedAt())
                 .build();
     }
 
     public NoticeDispatchHistory toDomain() {
-        return NoticeDispatchHistory.reconstitute(getId(), idempotencyKey, title, content, deepLink, dispatchedAt);
+        return NoticeDispatchHistory.reconstitute(getId(), idempotencyKey, title, content, type, deepLink, dispatchedAt);
     }
 }

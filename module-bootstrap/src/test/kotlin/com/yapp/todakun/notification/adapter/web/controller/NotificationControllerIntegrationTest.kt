@@ -153,7 +153,7 @@ class NotificationControllerIntegrationTest(
             }
 
             describe("POST /api/v1/admin/notifications/notice") {
-                val request = mapOf("title" to "공지 제목", "content" to "공지 내용")
+                val request = mapOf("title" to "공지 제목", "content" to "공지 내용", "type" to "EVENT")
 
                 context("인증 없이 요청하면") {
                     it("401을 반환한다") {

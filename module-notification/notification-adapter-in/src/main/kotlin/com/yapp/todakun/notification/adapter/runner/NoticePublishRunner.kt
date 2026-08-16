@@ -1,5 +1,6 @@
 package com.yapp.todakun.notification.adapter.runner
 
+import com.yapp.todakun.notification.NoticeType
 import com.yapp.todakun.notification.port.inbound.PublishNoticeCommand
 import com.yapp.todakun.notification.port.inbound.PublishNoticeUseCase
 import org.springframework.boot.ApplicationArguments
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component
 private const val NOTICE_TITLE_ARG = "notice.title"
 private const val NOTICE_CONTENT_ARG = "notice.content"
 private const val NOTICE_DEEP_LINK_ARG = "notice.deep-link"
+private const val NOTICE_TYPE_ARG = "notice.type"
 private const val NOTICE_IDEMPOTENCY_KEY_ARG = "notice.idempotency-key"
 
 /**
@@ -20,6 +22,7 @@ private const val NOTICE_IDEMPOTENCY_KEY_ARG = "notice.idempotency-key"
  * 재기동해도 같은 인자면 처리 이력 유니크 제약(영속 멱등성) 덕분에 중복 발송되지 않으며,
  * 정기 재배포 파이프라인에 인자가 그대로 남아 있어도 중복 발송되지 않는다(다만 1회성 기동 운영 방식은 그대로 권장).
  * 같은 내용을 의도적으로 재발송하려면 `--notice.idempotency-key`에 새 값을 준다.
+ * `--notice.type`이 없으면 기존 재배포 파이프라인 인자를 깨지 않기 위해 [NoticeType.GENERAL]로 기본 처리한다.
  */
 @Component
 class NoticePublishRunner(
@@ -29,8 +32,9 @@ class NoticePublishRunner(
         val title = args.getOptionValues(NOTICE_TITLE_ARG)?.firstOrNull() ?: return
         val content = args.getOptionValues(NOTICE_CONTENT_ARG)?.firstOrNull() ?: return
         val deepLink = args.getOptionValues(NOTICE_DEEP_LINK_ARG)?.firstOrNull()
+        val type = args.getOptionValues(NOTICE_TYPE_ARG)?.firstOrNull()?.let(NoticeType::valueOf) ?: NoticeType.GENERAL
         val idempotencyKey = args.getOptionValues(NOTICE_IDEMPOTENCY_KEY_ARG)?.firstOrNull()
 
-        publishNoticeUseCase.publish(PublishNoticeCommand(title, content, deepLink, idempotencyKey))
+        publishNoticeUseCase.publish(PublishNoticeCommand(title, content, deepLink, type, idempotencyKey))
     }
 }

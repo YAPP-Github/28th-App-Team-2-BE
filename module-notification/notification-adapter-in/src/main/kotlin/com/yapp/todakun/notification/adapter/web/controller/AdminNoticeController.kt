@@ -18,6 +18,7 @@ class AdminNoticeController(
                 title = request.title,
                 content = request.content,
                 deepLink = request.deepLink,
+                type = request.type,
                 idempotencyKey = request.idempotencyKey,
             ),
         )
