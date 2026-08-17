@@ -32,6 +32,7 @@ android_sha256_fingerprint: ENC[AES256_GCM,data:9zDtl60HH+6Ddvt1Kgq7tNwHPzbnGxmh
 android_debug_package_name: ENC[AES256_GCM,data:+RraXwSnwjL83gTEfjmrab8UqPm+rxVLWg==,iv:6hXGnoElGowfJkI+zHAaNDRRAxkukSGdzLagMIaKq0E=,tag:bajPqLvzLihspqGHUMBktw==,type:str]
 android_debug_sha256_fingerprint: ENC[AES256_GCM,data:xR0sf3exrFrCD1rdji1HMq0oh9oloXEJTVClPx6a8fhqkIphUYv5gxtVCGGq7WdG5tSem2eYNgra6ZO+F4KNV/mogvWjqyczgr1QHhMxggoGkUlamEjSWr6e8JY2QVo=,iv:x5attp0kneWhXHbI0CH3oJXTMjSXslbU7EMd61y7rmg=,tag:LNSGb16MshuTNYs/SySdqA==,type:str]
 apple_bundle_id: ENC[AES256_GCM,data:i43BDPJOBsYYDe2xAWYWn1GbRQ==,iv:scOLxw6aK3eSwFjtBgiHwpR6mMwTkKac3FkJZSHIL94=,tag:q/5dHTq1o8L1E0Oqb6SjmQ==,type:str]
+domain_alias: ENC[AES256_GCM,data:NSRHYVg21iBr7iNePl4c,iv:yfcEdGPOEfKrWEaYxbHqpMM3VH9zoeu6xmBOrYIDfVc=,tag:HhkjiHJbw9vRUe8y2zA11A==,type:str]
 sops:
     age:
         - enc: |
@@ -52,7 +53,7 @@ sops:
             xEm9+9jdiaHeuHjTiXe0RTbDRHbr9BckfxshQrKsz7vwp/3Y4hqucA==
             -----END AGE ENCRYPTED FILE-----
           recipient: age1kkdg6kehtjn9dryapgj2hywgg0xlflv8dvdsxed4m5a8az82kdustamkv0
-    lastmodified: "2026-08-14T12:40:01Z"
-    mac: ENC[AES256_GCM,data:U1wx04veuOgbNiYijBzAXcudAYAdcaj8k8rrwh/Hk0wTvaDvboN3XQ6Y8B7aiucwMO0zBhRyhn+4COJPGLssijMclCLecz8dlOt1gCdeeqNzGnSDjDdArBW12SyPS/AcVl2OgOjkCEXUtz46xaBsFr4wkaNUBK22gmv5GDX2GYU=,iv:uln5veB3DV6ukU/bbmLRUnBLFmLgm0C+nhnGokzMqOw=,tag:JElNkb2+zwftavf8HQlWrw==,type:str]
+    lastmodified: "2026-08-17T23:49:37Z"
+    mac: ENC[AES256_GCM,data:xaVvmg0s+5Hrf1UriCARKmH1XzSIL6rsmsubs6FpAfd18N4mHr0ZlekzyW7BcVQ4lJ8zkTog6tlzXxlF7qLaPWeTgUNPvd1AZHPxt9BGZtOZJ1JjWzx7uMJP+PLYlpsf+tirwldaX3vIHq5asvcPRx8QA3LKjccNRQopAOAxpXA=,iv:PBMylVXqzXV9lckpJZiLU9kXPVelhFiyaiChbJJNmQc=,tag:hIoOJGNPVMLoU2PncCIcXw==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.13.3
