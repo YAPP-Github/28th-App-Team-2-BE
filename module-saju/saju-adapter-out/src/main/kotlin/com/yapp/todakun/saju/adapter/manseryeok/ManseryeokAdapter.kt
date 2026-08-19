@@ -18,7 +18,8 @@ import java.time.LocalDate
  * - **일주**: 율리우스 적일수(JDN) 기반 60갑자 순환. 앵커는 manseryeok-js(KASI)와 전 범위 55,151일 일치 검증.
  * - **년주**: 서기 4년=갑자년 공식 + [SolarTermTable]의 실제 입춘 경계.
  * - **월주**: [SolarTermTable]의 실제 24절기 경계로 절월 지지를 정하고 오호둔(五虎遁)으로 월간 산출.
- * - **시주**: 일간 + 십이시진(오서둔)으로 계산.
+ * - **시주**: 일간 + 십이시진(오서둔)으로 계산. 시간 모름은 00:00(자시)로 간주해 시주까지 계산한다
+ *   ([BirthTime.calculationBranch]). 저장되는 출생시간 값은 `UNKNOWN` 그대로다.
  * - **음력 입력**: [LunarSolarConverter]로 양력 변환 후 동일 계산.
  *
  * 년/월/일주는 라이브러리 `getGapja`와 전 범위 대조 검증됨(라이브러리가 12/31 12일에서 자체 버그를 갖는
@@ -57,7 +58,7 @@ class ManseryeokAdapter : ManseryeokPort {
         val yearPillar = yearPillar(solarDate)
         val (monthPillar, solarTermName) = monthPillar(solarDate, yearPillar.stem)
         val dayPillar = dayPillar(solarDate)
-        val hourPillar = birthTime.branch?.let { hourPillar(dayPillar.stem, it) }
+        val hourPillar = hourPillar(dayPillar.stem, birthTime.calculationBranch)
 
         return FourPillars(
             year = yearPillar,
@@ -91,7 +92,7 @@ class ManseryeokAdapter : ManseryeokPort {
         )
     }
 
-    /** 시주: 오서둔(五鼠遁). 일간으로 자시 천간을 정하고 시진 지지만큼 진행한다. */
+    /** 시주: 오서둔(五鼠遁). 일간으로 자시 천간을 정하고 시진 지지만큼 진행한다(시간 모름이면 자시). */
     private fun hourPillar(
         dayStem: HeavenlyStem,
         hourBranch: EarthlyBranch,

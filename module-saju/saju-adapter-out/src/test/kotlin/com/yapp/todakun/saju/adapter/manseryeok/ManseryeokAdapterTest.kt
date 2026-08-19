@@ -8,7 +8,6 @@ import com.yapp.todakun.saju.exception.SajuInputInvalidException
 import com.yapp.todakun.saju.exception.SajuYearOutOfRangeException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 
@@ -35,16 +34,30 @@ class ManseryeokAdapterTest : DescribeSpec({
             result.day.branch shouldBe EarthlyBranch.SA
         }
         it("시주는 己未(癸일간 미시, 오서둔)") {
-            result.hour?.stem shouldBe HeavenlyStem.GI
-            result.hour?.branch shouldBe EarthlyBranch.MI
+            result.hour.stem shouldBe HeavenlyStem.GI
+            result.hour.branch shouldBe EarthlyBranch.MI
         }
     }
 
     describe("calculate - 시간 모름") {
-        it("시주를 계산하지 않는다") {
-            val result =
-                adapter.calculate(LocalDate.of(2001, 5, 30), BirthTime.UNKNOWN, CalendarType.SOLAR, false)
-            result.hour.shouldBeNull()
+        val result =
+            adapter.calculate(LocalDate.of(2001, 5, 30), BirthTime.UNKNOWN, CalendarType.SOLAR, false)
+
+        it("00시(자시) 기준으로 시주를 계산한다 — 癸일간 자시 = 壬子(오서둔: 무계일 임자시)") {
+            result.hour.stem shouldBe HeavenlyStem.IM
+            result.hour.branch shouldBe EarthlyBranch.JA
+        }
+        it("년·월·일주는 시간을 입력했을 때와 같다") {
+            result.year.stem shouldBe HeavenlyStem.SIN
+            result.year.branch shouldBe EarthlyBranch.SA
+            result.month.stem shouldBe HeavenlyStem.GYE
+            result.month.branch shouldBe EarthlyBranch.SA
+            result.day.stem shouldBe HeavenlyStem.GYE
+            result.day.branch shouldBe EarthlyBranch.SA
+        }
+        it("자시(JASI) 입력과 같은 시주가 나온다") {
+            val jasi = adapter.calculate(LocalDate.of(2001, 5, 30), BirthTime.JASI, CalendarType.SOLAR, false)
+            result.hour shouldBe jasi.hour
         }
     }
 
@@ -55,7 +68,7 @@ class ManseryeokAdapterTest : DescribeSpec({
                 adapter.calculate(LocalDate.of(2001, 4, 8), BirthTime.MISI, CalendarType.LUNAR, true)
             result.day.stem shouldBe HeavenlyStem.GYE
             result.day.branch shouldBe EarthlyBranch.SA
-            result.hour?.stem shouldBe HeavenlyStem.GI
+            result.hour.stem shouldBe HeavenlyStem.GI
         }
 
         it("평달과 윤달은 다른 양력으로 변환된다 (음력 2001 평4월 8일 = 양력 2001-05-01)") {

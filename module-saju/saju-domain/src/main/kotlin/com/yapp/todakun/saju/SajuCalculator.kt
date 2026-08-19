@@ -10,17 +10,20 @@ import java.math.RoundingMode
  * 프레임워크 비의존. 십성/십이운성 판정은 라이브러리 범위 밖이라 자체 구현한다(지침 2.2절).
  */
 object SajuCalculator {
-    /** 4주 각 기둥에 십성·십이운성을 부여한다. 일주 천간은 일원이라 천간 십성을 두지 않는다. */
+    /**
+     * 4주 각 기둥에 십성·십이운성을 부여한다. 일주 천간은 일원이라 천간 십성을 두지 않는다.
+     * 반환 순서는 항상 [PillarType] 선언 순(년→월→일→시)이며, 이 순서가 명식 표기 순서 계약이다.
+     */
     fun pillars(
         fourPillars: FourPillars,
         dayMaster: HeavenlyStem,
     ): List<SajuPillar> =
-        buildList {
-            add(pillar(PillarType.YEAR, fourPillars.year, dayMaster, isDayPillar = false))
-            add(pillar(PillarType.MONTH, fourPillars.month, dayMaster, isDayPillar = false))
-            add(pillar(PillarType.DAY, fourPillars.day, dayMaster, isDayPillar = true))
-            fourPillars.hour?.let { add(pillar(PillarType.HOUR, it, dayMaster, isDayPillar = false)) }
-        }
+        listOf(
+            pillar(PillarType.YEAR, fourPillars.year, dayMaster, isDayPillar = false),
+            pillar(PillarType.MONTH, fourPillars.month, dayMaster, isDayPillar = false),
+            pillar(PillarType.DAY, fourPillars.day, dayMaster, isDayPillar = true),
+            pillar(PillarType.HOUR, fourPillars.hour, dayMaster, isDayPillar = false),
+        )
 
     private fun pillar(
         type: PillarType,
@@ -37,7 +40,7 @@ object SajuCalculator {
             sibiunseong = Sibiunseong.of(dayMaster, ganji.branch),
         )
 
-    /** 8글자(시간 모름 시 6글자)의 천간·지지 오행을 집계한다. 항상 5행을 0건 포함해 반환. */
+    /** 8글자의 천간·지지 오행을 집계한다(시주 없이 저장된 과거 명식은 6글자). 항상 5행을 0건 포함해 반환. */
     fun ohaengDistribution(pillars: List<SajuPillar>): List<OhaengCount> {
         val elements = pillars.flatMap { listOf(it.stem.element, it.branch.element) }
         return Element.entries.map { element ->

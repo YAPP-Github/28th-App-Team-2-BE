@@ -10,6 +10,8 @@ import kotlin.uuid.toJavaUuid
 /**
  * 사주 명식 애그리거트. 순수 계산 결과(헤더 입력값·일간 + 4주 + 오행/십성 분포)만 보유한다.
  * 소유권(회원 본인/상대 구분)은 [MemberSajuLink]가 별도로 관리한다(명식과 소유권 분리).
+ * 출생시간 모름이면 입력값([birthTime]=UNKNOWN, [isTimeUnknown]=true)은 그대로 보존하되,
+ * [pillars]에는 00:00(자시)로 계산한 시주가 포함된다(정책: [BirthTime.calculationBranch]).
  */
 data class SajuChart(
     val id: UUID,
@@ -57,7 +59,11 @@ data class SajuChart(
             )
         }
 
-        /** 영속 계층에서 저장된 값으로 명식을 복원한다(재계산 없음). */
+        /**
+         * 영속 계층에서 저장된 값으로 명식을 복원한다(재계산 없음).
+         * [pillars]는 어댑터가 넘긴 순서와 무관하게 년→월→일→시로 정규화한다.
+         * 조회 쿼리에 정렬이 없어도 응답의 기둥 순서가 흔들리지 않게 하는 애그리거트 불변식이다.
+         */
         @Suppress("LongParameterList")
         @JvmStatic
         fun reconstitute(
@@ -86,7 +92,7 @@ data class SajuChart(
                 isTimeUnknown = isTimeUnknown,
                 solarTermName = solarTermName,
                 dayMaster = dayMaster,
-                pillars = pillars,
+                pillars = pillars.sortedBy { it.pillarType.ordinal },
                 ohaeng = ohaeng,
                 sipseong = sipseong,
             )

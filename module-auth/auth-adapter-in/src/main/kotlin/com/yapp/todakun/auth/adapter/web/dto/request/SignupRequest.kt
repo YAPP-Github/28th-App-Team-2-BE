@@ -22,7 +22,10 @@ data class SignupRequest(
     @field:NotNull(message = "생년월일을 입력해 주세요.")
     @field:PastOrPresent(message = "올바른 생년월일을 입력해 주세요.")
     val birthDate: LocalDate,
-    @field:Schema(description = "태어난 시간", example = "JASI")
+    @field:Schema(
+        description = "태어난 시간(십이시진). 모르면 UNKNOWN을 보낸다 — 명식은 00:00(자시) 기준으로 계산되고 조회 응답에는 isTimeUnknown=true로 내려간다.",
+        example = "JASI",
+    )
     @field:NotBlank(message = "태어난 시간을 입력해 주세요.")
     @field:Pattern(
         regexp = "^(JASI|CHUKSI|INSI|MYOSI|JINSI|SASI|OSI|MISI|SINSI|YUSI|SULSI|HAESI|UNKNOWN)$",

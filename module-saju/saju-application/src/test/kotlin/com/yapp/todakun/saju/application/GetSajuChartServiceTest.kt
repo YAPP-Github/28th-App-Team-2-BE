@@ -45,9 +45,22 @@ class GetSajuChartServiceTest : DescribeSpec({
             }
         }
 
-        context("시주(출생 시간)가 없는 명식이면") {
-            it("hourPillar를 null로 반환한다") {
+        context("출생 시간을 모르는 명식이면") {
+            it("00시(자시) 기준으로 계산된 시주를 반환한다") {
                 val chart = SajuFixture.chart(birthTime = BirthTime.UNKNOWN)
+                val link = SajuFixture.selfLink(chartId = chart.id)
+                every { memberSajuLinkRepository.findSelfByMemberId(SajuFixture.MEMBER_ID) } returns link
+                every { sajuChartRepository.findById(chart.id) } returns chart
+
+                val result = service.getChart(SajuFixture.MEMBER_ID)
+
+                result.hourPillar shouldBe chart.pillars.first { it.pillarType == PillarType.HOUR }.toExpectedSummary()
+            }
+        }
+
+        context("시주 없이 저장된 과거 명식이면") {
+            it("hourPillar를 null로 반환한다") {
+                val chart = SajuFixture.chartWithoutHourPillar()
                 val link = SajuFixture.selfLink(chartId = chart.id)
                 every { memberSajuLinkRepository.findSelfByMemberId(SajuFixture.MEMBER_ID) } returns link
                 every { sajuChartRepository.findById(chart.id) } returns chart
