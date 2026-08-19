@@ -19,6 +19,7 @@ import com.yapp.todakun.shared.GetSajuChartPort
 import com.yapp.todakun.shared.MemberFortuneProfile
 import com.yapp.todakun.shared.PillarSummary
 import com.yapp.todakun.shared.SajuChartSummary
+import com.yapp.todakun.shared.currentDate
 import java.time.Instant
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
@@ -112,6 +113,8 @@ class PrepareChatTurnService(
         question: String,
     ): ChatPromptContext =
         ChatPromptContext(
+            // LLM은 현재 시각을 모르므로 KST 기준일을 명시적으로 넘긴다(미주입 시 학습 데이터에 이끌려 과거 연도를 "올해"로 답한다).
+            today = currentDate(),
             saju = getSajuChartPort.getChart(memberId).toSajuContext(),
             profile = getMemberFortuneProfilePort.getProfile(memberId).toProfileContext(),
             history = history,

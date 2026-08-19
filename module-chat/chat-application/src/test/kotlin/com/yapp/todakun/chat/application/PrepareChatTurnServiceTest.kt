@@ -11,6 +11,7 @@ import com.yapp.todakun.chat.port.outbound.ChatMessageRepository
 import com.yapp.todakun.chat.port.outbound.ChatQuotaPort
 import com.yapp.todakun.shared.GetMemberFortuneProfilePort
 import com.yapp.todakun.shared.GetSajuChartPort
+import com.yapp.todakun.shared.currentDate
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -72,6 +73,8 @@ class PrepareChatTurnServiceTest : DescribeSpec({
                 result.promptContext.history.shouldBeEmpty()
                 result.promptContext.saju.dayMaster shouldBe SAJU_CHART.dayMaster
                 result.promptContext.profile.name shouldBe PROFILE.name
+                // AI가 현재 연도를 학습 데이터에서 추정하지 않도록, KST 기준 오늘을 프롬프트 컨텍스트에 담아 넘긴다.
+                result.promptContext.today shouldBe currentDate()
                 verify(exactly = 1) { chatConversationRepository.save(any()) }
                 verify(exactly = 0) { chatConversationRepository.findById(any()) }
                 verify(exactly = 0) { chatQuotaPort.refund(any()) }

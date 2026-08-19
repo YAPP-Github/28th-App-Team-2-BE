@@ -24,6 +24,7 @@ private val CONVERSATION_ID = UUID.fromString("018f0000-0000-7000-8000-000000000
 private val USER_MESSAGE_ID = UUID.fromString("018f0000-0000-7000-8000-000000000003")
 private val ASSISTANT_MESSAGE_ID = UUID.fromString("018f0000-0000-7000-8000-000000000004")
 private val DEFAULT_INSTANT = Instant.parse("2026-08-16T00:00:00Z")
+private val DEFAULT_TODAY = LocalDate.of(2026, 8, 16)
 
 // RedisChatQuotaAdapter의 DAILY_FREE_CHAT_LIMIT(테스트 편의를 위한 임시 핫픽스 상수)와 별개로,
 // application 계층 테스트에서 쓰는 기본 한도값이다.
@@ -80,8 +81,10 @@ object ChatFixture {
     fun promptContext(
         history: List<ChatHistoryTurn> = emptyList(),
         question: String = "오늘 하루 어때요?",
+        today: LocalDate = DEFAULT_TODAY,
     ): ChatPromptContext =
         ChatPromptContext(
+            today = today,
             saju =
                 ChatSajuContext(
                     dayMaster = "갑",

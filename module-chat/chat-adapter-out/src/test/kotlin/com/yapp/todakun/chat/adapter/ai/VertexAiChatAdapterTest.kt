@@ -25,6 +25,7 @@ import java.time.LocalDate
 import java.util.concurrent.Executors
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "chat-ai"
+private val TODAY: LocalDate = LocalDate.of(2026, 8, 19)
 
 class VertexAiChatAdapterTest : DescribeSpec({
     val chatClientBuilder = mockk<ChatClient.Builder>()
@@ -174,6 +175,7 @@ private fun pillar(
 
 private fun chatPromptContext(): ChatPromptContext =
     ChatPromptContext(
+        today = TODAY,
         saju =
             ChatSajuContext(
                 dayMaster = "갑",

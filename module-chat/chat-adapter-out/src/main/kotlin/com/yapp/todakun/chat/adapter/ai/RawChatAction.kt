@@ -16,13 +16,18 @@ data class RawChatAction(
     val category: String?,
     val date: String?,
 ) {
-    fun toDomainOrNull(): ChatAction? {
+    /**
+     * @param today KST 기준 오늘. 프롬프트로 기준일을 못 박아도 모델이 학습 데이터에 이끌려 과거 날짜를 낼 수 있으므로,
+     *   캘린더에 담을 수 없는 지난 날짜는 여기서 한 번 더 걸러 액션 카드 없음으로 처리한다.
+     */
+    fun toDomainOrNull(today: LocalDate): ChatAction? {
         if (!hasAction) return null
         val validType = type ?: return null
         val validLabel = label?.takeIf { it.isNotBlank() } ?: return null
         val validCategory = category?.takeIf { it.isNotBlank() } ?: return null
         val validDate = date ?: return null
         val parsedDate = runCatching { LocalDate.parse(validDate) }.getOrNull() ?: return null
+        if (parsedDate.isBefore(today)) return null
 
         return ChatAction(type = validType, label = validLabel, category = validCategory, date = parsedDate)
     }
