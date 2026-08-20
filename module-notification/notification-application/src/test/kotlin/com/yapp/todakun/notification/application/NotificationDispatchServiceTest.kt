@@ -205,6 +205,23 @@ class NotificationDispatchServiceTest :
                     }
                 }
 
+                context("일부 회원 발송이 실패해도(#81 병렬 처리)") {
+                    it("나머지 회원 발송은 계속 진행한다") {
+                        val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000008")
+                        val m2 = UUID.fromString("018f0000-0000-7000-8000-000000000009")
+                        val m3 = UUID.fromString("018f0000-0000-7000-8000-00000000000a")
+                        every { getMemberIdsPort.getMemberIds(null, 100) } returns listOf(m1, m2, m3)
+                        every { getMemberIdsPort.getMemberIds(m3, 100) } returns emptyList()
+                        every { sendNotificationPort.send(match { it.memberId == m2 }) } throws RuntimeException("FCM 오류")
+                        every { sendNotificationPort.send(match { it.memberId != m2 }) } just Runs
+
+                        service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1", NoticeType.GENERAL))
+
+                        verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m1 }) }
+                        verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m3 }) }
+                    }
+                }
+
                 context("명시적 idempotency key를 주면") {
                     it("내용이 같아도 다른 키로 저장한다") {
                         every { getMemberIdsPort.getMemberIds(any(), any()) } returns emptyList()

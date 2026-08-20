@@ -198,6 +198,53 @@ class RetryFailedNotificationsServiceTest :
                     }
                 }
 
+                context("여러 건 중 일부가 예외를 던져도(#81 병렬 처리)") {
+                    it("나머지 건의 재시도는 계속 진행한다") {
+                        val memberA = UUID.fromString("018f0000-0000-7000-8000-000000000002")
+                        val memberB = UUID.fromString("018f0000-0000-7000-8000-000000000003")
+                        val failureA =
+                            NotificationDeliveryFailure.reconstitute(
+                                id = UUID.fromString("018f0000-0000-7000-8000-00000000000b"),
+                                memberId = memberA,
+                                notificationId = UUID.fromString("018f0000-0000-7000-8000-00000000000d"),
+                                type = NotificationType.FORTUNE,
+                                title = "오늘의 운",
+                                content = "확인해 보세요",
+                                deepLink = "fortune/today",
+                                failedTokens = listOf("token-a"),
+                                attemptCount = 0,
+                                nextRetryAt = Instant.now(),
+                            )
+                        val failureB =
+                            NotificationDeliveryFailure.reconstitute(
+                                id = UUID.fromString("018f0000-0000-7000-8000-00000000000c"),
+                                memberId = memberB,
+                                notificationId = UUID.fromString("018f0000-0000-7000-8000-00000000000e"),
+                                type = NotificationType.FORTUNE,
+                                title = "오늘의 운",
+                                content = "확인해 보세요",
+                                deepLink = "fortune/today",
+                                failedTokens = listOf("token-b"),
+                                attemptCount = 0,
+                                nextRetryAt = Instant.now(),
+                            )
+                        every { notificationTransactionalStore.findDueDeliveryFailures(any(), any()) } returns listOf(failureA, failureB)
+                        every { notificationTransactionalStore.getDeviceTokens(memberA) } throws RuntimeException("DB 오류")
+                        every { notificationTransactionalStore.getDeviceTokens(memberB) } returns
+                            listOf(DeviceToken.reconstitute(memberB, memberB, "token-b", Platform.IOS))
+                        every { pushNotificationPort.sendAll(any()) } returns listOf(PushResult(token = "token-b", success = true))
+                        every { notificationTransactionalStore.cleanupExpiredTokens(any()) } returns Unit
+                        every { notificationTransactionalStore.deleteDeliveryFailure(failureB.id) } returns Unit
+
+                        service.retryDue()
+
+                        verify(exactly = 1) { pushNotificationPort.sendAll(any()) }
+                        verify(exactly = 1) { notificationTransactionalStore.deleteDeliveryFailure(failureB.id) }
+                        verify(exactly = 0) { notificationTransactionalStore.deleteDeliveryFailure(failureA.id) }
+                        verify(exactly = 0) { notificationTransactionalStore.saveDeliveryFailure(any()) }
+                    }
+                }
+
                 context("다른 인스턴스가 이미 락을 보유 중이면") {
                     it("대기열 조회조차 하지 않고 스킵한다") {
                         every { dispatchLockPort.tryRun<Unit>(any(), any()) } returns null
