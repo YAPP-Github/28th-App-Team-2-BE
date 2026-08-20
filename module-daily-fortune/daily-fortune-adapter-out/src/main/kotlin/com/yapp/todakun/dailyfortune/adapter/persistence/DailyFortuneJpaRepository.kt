@@ -7,9 +7,15 @@ import java.time.LocalDate
 import java.util.UUID
 
 interface DailyFortuneJpaRepository : JpaRepository<DailyFortuneJpaEntity, UUID> {
+    @Query(
+        "select d from DailyFortuneJpaEntity d " +
+            "left join fetch d.luckyItems " +
+            "left join fetch d.cautionaryItems " +
+            "where d.memberId = :memberId and d.fortuneDate = :fortuneDate",
+    )
     fun findByMemberIdAndFortuneDate(
-        memberId: UUID,
-        fortuneDate: LocalDate,
+        @Param("memberId") memberId: UUID,
+        @Param("fortuneDate") fortuneDate: LocalDate,
     ): DailyFortuneJpaEntity?
 
     fun findAllByMemberIdAndFortuneDateBetweenOrderByFortuneDateAsc(
