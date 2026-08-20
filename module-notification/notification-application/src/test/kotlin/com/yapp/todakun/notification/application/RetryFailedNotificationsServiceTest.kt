@@ -11,6 +11,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -20,6 +21,7 @@ import io.mockk.verify
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -207,7 +209,7 @@ class RetryFailedNotificationsServiceTest :
                 }
 
                 context("여러 건 중 일부가 예외를 던져도(#81 병렬 처리)") {
-                    it("나머지 건의 재시도는 계속 진행한다") {
+                    it("나머지 건의 재시도는 계속 진행하고, 재시도는 실제로 동시에 진행된다") {
                         val memberA = Uuid.generateV7().toJavaUuid()
                         val memberB = Uuid.generateV7().toJavaUuid()
                         val failureA =
@@ -215,9 +217,24 @@ class RetryFailedNotificationsServiceTest :
                         val failureB =
                             failure(id = Uuid.generateV7().toJavaUuid(), memberId = memberB, failedTokens = listOf("token-b"))
                         every { notificationTransactionalStore.findDueDeliveryFailures(any(), any()) } returns listOf(failureA, failureB)
-                        every { notificationTransactionalStore.getDeviceTokens(memberA) } throws RuntimeException("DB 오류")
-                        every { notificationTransactionalStore.getDeviceTokens(memberB) } returns
+                        // 두 건 다 100ms 동안 "진행 중" 상태를 유지해, 순차 실행이면 겹칠 수 없는 구간을 만든다.
+                        val inFlight = AtomicInteger(0)
+                        val maxInFlight = AtomicInteger(0)
+
+                        fun trackInFlight() {
+                            val current = inFlight.incrementAndGet()
+                            maxInFlight.updateAndGet { prev -> maxOf(prev, current) }
+                            Thread.sleep(100)
+                            inFlight.decrementAndGet()
+                        }
+                        every { notificationTransactionalStore.getDeviceTokens(memberA) } answers {
+                            trackInFlight()
+                            throw RuntimeException("DB 오류")
+                        }
+                        every { notificationTransactionalStore.getDeviceTokens(memberB) } answers {
+                            trackInFlight()
                             listOf(DeviceToken.reconstitute(memberB, memberB, "token-b", Platform.IOS))
+                        }
                         every { pushNotificationPort.sendAll(any()) } returns listOf(PushResult(token = "token-b", success = true))
                         every { notificationTransactionalStore.cleanupExpiredTokens(any()) } returns Unit
                         every { notificationTransactionalStore.deleteDeliveryFailure(failureB.id) } returns Unit
@@ -228,6 +245,8 @@ class RetryFailedNotificationsServiceTest :
                         verify(exactly = 1) { notificationTransactionalStore.deleteDeliveryFailure(failureB.id) }
                         verify(exactly = 0) { notificationTransactionalStore.deleteDeliveryFailure(failureA.id) }
                         verify(exactly = 0) { notificationTransactionalStore.saveDeliveryFailure(any()) }
+                        // 순차 forEach로 회귀하면 A가 끝나야 B가 시작돼 maxInFlight가 1을 넘지 못한다.
+                        maxInFlight.get() shouldBeGreaterThanOrEqual 2
                     }
                 }
 

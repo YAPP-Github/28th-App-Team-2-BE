@@ -16,6 +16,7 @@ import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.Runs
@@ -27,6 +28,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.springframework.beans.factory.ObjectProvider
 import java.time.LocalTime
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -194,19 +196,29 @@ class NotificationDispatchServiceTest :
                 }
 
                 context("일부 회원 발송이 실패해도(#81 병렬 처리)") {
-                    it("나머지 회원 발송은 계속 진행한다") {
+                    it("나머지 회원 발송은 계속 진행하고, 발송은 실제로 동시에 진행된다") {
                         val m1 = Uuid.generateV7().toJavaUuid()
                         val m2 = Uuid.generateV7().toJavaUuid()
                         val m3 = Uuid.generateV7().toJavaUuid()
                         every { getMemberIdsPort.getMemberIds(null, 100) } returns listOf(m1, m2, m3)
                         every { getMemberIdsPort.getMemberIds(m3, 100) } returns emptyList()
+                        // m1/m3는 100ms 동안 "진행 중" 상태를 유지해, 순차 실행이면 겹칠 수 없는 구간을 만든다.
+                        val inFlight = AtomicInteger(0)
+                        val maxInFlight = AtomicInteger(0)
                         every { sendNotificationPort.send(match { it.memberId == m2 }) } throws RuntimeException("FCM 오류")
-                        every { sendNotificationPort.send(match { it.memberId != m2 }) } just Runs
+                        every { sendNotificationPort.send(match { it.memberId != m2 }) } answers {
+                            val current = inFlight.incrementAndGet()
+                            maxInFlight.updateAndGet { prev -> maxOf(prev, current) }
+                            Thread.sleep(100)
+                            inFlight.decrementAndGet()
+                        }
 
                         service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1", NoticeType.GENERAL))
 
                         verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m1 }) }
                         verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m3 }) }
+                        // 순차 forEach로 회귀하면 m1이 끝나야 m3가 시작돼 maxInFlight가 1을 넘지 못한다.
+                        maxInFlight.get() shouldBeGreaterThanOrEqual 2
                     }
                 }
 
