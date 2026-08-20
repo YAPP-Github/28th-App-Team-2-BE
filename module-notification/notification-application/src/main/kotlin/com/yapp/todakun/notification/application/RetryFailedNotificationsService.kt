@@ -8,6 +8,10 @@ import com.yapp.todakun.notification.policy.NotificationRetryPolicy
 import com.yapp.todakun.notification.port.inbound.RetryFailedNotificationsUseCase
 import com.yapp.todakun.notification.port.outbound.DispatchLockPort
 import com.yapp.todakun.notification.port.outbound.PushNotificationPort
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runInterruptible
 import org.springframework.stereotype.Service
 import java.time.Instant
 
@@ -21,7 +25,8 @@ private const val RETRY_LOCK_KEY = 8_412_037_603L
  * 트랜잭션을 걸지 않는다 — 회원별 FCM 재호출(외부 I/O)을 DB 트랜잭션 밖에서 수행하기 위함이다(#41과 동일 원칙).
  * 재시도 대상은 [NotificationDeliveryFailure.failedTokens](일시 실패한 토큰만)와 재시도 시점의 최신
  * 디바이스 토큰의 교집합이다 — 이미 성공한 토큰을 다시 발송하지 않고, 로그아웃 등으로 사라진 토큰도 걸러낸다.
- * 대상 건별 처리는 예외를 격리해 한 건의 실패가 나머지 건의 재시도를 중단시키지 않는다.
+ * 대상 건별 처리는 코루틴(`async`/`awaitAll`)으로 병렬 실행하고([notificationDispatchDispatcher] 상한 4, [NotificationDispatchService]와 동일 인스턴스 공유),
+ * `try`/`catch`로 예외를 먼저 격리한 뒤 `async`에 넘기므로(#81) 한 건의 실패가 `awaitAll()`을 통해 나머지 형제 코루틴을 취소시키거나 다른 건의 재시도를 중단시키지 않는다.
  * Blue/Green 배포 전환 구간의 중복 실행은 [dispatchLockPort]로 인스턴스 간 직렬화한다.
  */
 @Service
@@ -34,14 +39,25 @@ class RetryFailedNotificationsService(
 ) : RetryFailedNotificationsUseCase {
     override fun retryDue() {
         dispatchLockPort.tryRun(RETRY_LOCK_KEY) {
-            notificationTransactionalStore.findDueDeliveryFailures(Instant.now(), PAGE_SIZE).forEach { failure ->
-                try {
-                    retry(failure)
-                } catch (e: Exception) {
-                    log.error("알림 재시도 처리 실패: memberId=${failure.memberId}, type=${failure.type}", e)
-                }
-            }
+            retryAllDue()
         } ?: log.info("다른 인스턴스가 이미 알림 재시도를 처리 중이라 스킵합니다.")
+    }
+
+    private fun retryAllDue() {
+        val failures = notificationTransactionalStore.findDueDeliveryFailures(Instant.now(), PAGE_SIZE)
+        runBlocking(notificationDispatchDispatcher) {
+            failures.map { failure ->
+                async {
+                    runInterruptible {
+                        try {
+                            retry(failure)
+                        } catch (e: Exception) {
+                            log.error("알림 재시도 처리 실패: memberId=${failure.memberId}, type=${failure.type}", e)
+                        }
+                    }
+                }
+            }.awaitAll()
+        }
     }
 
     private fun retry(failure: NotificationDeliveryFailure) {
