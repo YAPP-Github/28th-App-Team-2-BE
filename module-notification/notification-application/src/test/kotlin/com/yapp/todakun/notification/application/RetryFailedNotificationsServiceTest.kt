@@ -21,6 +21,8 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 @ExperimentalUuidApi
 class RetryFailedNotificationsServiceTest :
@@ -38,15 +40,21 @@ class RetryFailedNotificationsServiceTest :
                     notificationMetrics,
                 )
 
-            val memberId = UUID.fromString("018f0000-0000-7000-8000-000000000001")
+            val memberId = Uuid.generateV7().toJavaUuid()
+            val defaultFailureId = Uuid.generateV7().toJavaUuid()
+            val defaultNotificationId = Uuid.generateV7().toJavaUuid()
+            val defaultMemberId = memberId
 
             fun failure(
+                id: UUID = defaultFailureId,
+                memberId: UUID = defaultMemberId,
+                notificationId: UUID = defaultNotificationId,
                 attemptCount: Int = 0,
                 failedTokens: List<String> = listOf("token"),
             ) = NotificationDeliveryFailure.reconstitute(
-                id = UUID.fromString("018f0000-0000-7000-8000-000000000009"),
+                id = id,
                 memberId = memberId,
-                notificationId = UUID.fromString("018f0000-0000-7000-8000-00000000000a"),
+                notificationId = notificationId,
                 type = NotificationType.FORTUNE,
                 title = "오늘의 운",
                 content = "확인해 보세요",
@@ -200,34 +208,12 @@ class RetryFailedNotificationsServiceTest :
 
                 context("여러 건 중 일부가 예외를 던져도(#81 병렬 처리)") {
                     it("나머지 건의 재시도는 계속 진행한다") {
-                        val memberA = UUID.fromString("018f0000-0000-7000-8000-000000000002")
-                        val memberB = UUID.fromString("018f0000-0000-7000-8000-000000000003")
+                        val memberA = Uuid.generateV7().toJavaUuid()
+                        val memberB = Uuid.generateV7().toJavaUuid()
                         val failureA =
-                            NotificationDeliveryFailure.reconstitute(
-                                id = UUID.fromString("018f0000-0000-7000-8000-00000000000b"),
-                                memberId = memberA,
-                                notificationId = UUID.fromString("018f0000-0000-7000-8000-00000000000d"),
-                                type = NotificationType.FORTUNE,
-                                title = "오늘의 운",
-                                content = "확인해 보세요",
-                                deepLink = "fortune/today",
-                                failedTokens = listOf("token-a"),
-                                attemptCount = 0,
-                                nextRetryAt = Instant.now(),
-                            )
+                            failure(id = Uuid.generateV7().toJavaUuid(), memberId = memberA, failedTokens = listOf("token-a"))
                         val failureB =
-                            NotificationDeliveryFailure.reconstitute(
-                                id = UUID.fromString("018f0000-0000-7000-8000-00000000000c"),
-                                memberId = memberB,
-                                notificationId = UUID.fromString("018f0000-0000-7000-8000-00000000000e"),
-                                type = NotificationType.FORTUNE,
-                                title = "오늘의 운",
-                                content = "확인해 보세요",
-                                deepLink = "fortune/today",
-                                failedTokens = listOf("token-b"),
-                                attemptCount = 0,
-                                nextRetryAt = Instant.now(),
-                            )
+                            failure(id = Uuid.generateV7().toJavaUuid(), memberId = memberB, failedTokens = listOf("token-b"))
                         every { notificationTransactionalStore.findDueDeliveryFailures(any(), any()) } returns listOf(failureA, failureB)
                         every { notificationTransactionalStore.getDeviceTokens(memberA) } throws RuntimeException("DB 오류")
                         every { notificationTransactionalStore.getDeviceTokens(memberB) } returns

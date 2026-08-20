@@ -3,9 +3,9 @@ package com.yapp.todakun.notification.application
 import com.yapp.todakun.notification.DeviceToken
 import com.yapp.todakun.notification.Notification
 import com.yapp.todakun.notification.NotificationDeliveryFailure
-import com.yapp.todakun.notification.NotificationSetting
 import com.yapp.todakun.notification.Platform
 import com.yapp.todakun.notification.PushResult
+import com.yapp.todakun.notification.fixture.NotificationSettingFixture
 import com.yapp.todakun.notification.port.outbound.NotificationSettingRepository
 import com.yapp.todakun.notification.port.outbound.PushNotificationPort
 import com.yapp.todakun.shared.GetPushConsentPort
@@ -19,7 +19,6 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.springframework.beans.factory.ObjectProvider
-import java.time.LocalTime
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -94,12 +93,9 @@ class SendNotificationServiceTest :
                 context("해당 알림 토글이 켜져 있고 유효 토큰이 있으면") {
                     it("FCM으로 발송하고 만료 토큰만 정리한다") {
                         val setting =
-                            NotificationSetting.reconstitute(
-                                settingId,
-                                memberId,
-                                morningReportEnabled = true,
-                                morningReportTime = LocalTime.of(8, 0),
-                                todakiEnabled = false,
+                            NotificationSettingFixture.create(
+                                id = settingId,
+                                memberId = memberId,
                                 luckyActionReminderEnabled = false,
                                 osPushPermission = null,
                             )
@@ -135,12 +131,9 @@ class SendNotificationServiceTest :
                 context("OS 알림 권한이 꺼짐으로 동기화돼 있으면") {
                     it("토큰 조회조차 하지 않고 스킵한다") {
                         val setting =
-                            NotificationSetting.reconstitute(
-                                settingId,
-                                memberId,
-                                morningReportEnabled = true,
-                                morningReportTime = LocalTime.of(8, 0),
-                                todakiEnabled = false,
+                            NotificationSettingFixture.create(
+                                id = settingId,
+                                memberId = memberId,
                                 luckyActionReminderEnabled = false,
                                 osPushPermission = false,
                             )
@@ -155,12 +148,9 @@ class SendNotificationServiceTest :
                 context("SERVICE 분류 알림(FORTUNE 등)이면") {
                     it("야간 수신 동의를 조회하지 않고 무조건 발송한다") {
                         val setting =
-                            NotificationSetting.reconstitute(
-                                settingId,
-                                memberId,
-                                morningReportEnabled = true,
-                                morningReportTime = LocalTime.of(8, 0),
-                                todakiEnabled = false,
+                            NotificationSettingFixture.create(
+                                id = settingId,
+                                memberId = memberId,
                                 luckyActionReminderEnabled = false,
                                 osPushPermission = null,
                             )
@@ -180,12 +170,9 @@ class SendNotificationServiceTest :
                 context("FCM 발송이 무효 토큰이 아닌 이유로 실패하면") {
                     it("실패 지표를 기록하고 재시도 대기열에 등록한다") {
                         val setting =
-                            NotificationSetting.reconstitute(
-                                settingId,
-                                memberId,
-                                morningReportEnabled = true,
-                                morningReportTime = LocalTime.of(8, 0),
-                                todakiEnabled = false,
+                            NotificationSettingFixture.create(
+                                id = settingId,
+                                memberId = memberId,
                                 luckyActionReminderEnabled = false,
                                 osPushPermission = null,
                             )

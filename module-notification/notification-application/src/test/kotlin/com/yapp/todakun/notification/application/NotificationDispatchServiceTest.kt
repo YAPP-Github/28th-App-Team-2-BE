@@ -2,7 +2,7 @@ package com.yapp.todakun.notification.application
 
 import com.yapp.todakun.notification.NoticeDispatchHistory
 import com.yapp.todakun.notification.NoticeType
-import com.yapp.todakun.notification.NotificationSetting
+import com.yapp.todakun.notification.fixture.NotificationSettingFixture
 import com.yapp.todakun.notification.port.inbound.PublishNoticeCommand
 import com.yapp.todakun.notification.port.outbound.DispatchLockPort
 import com.yapp.todakun.notification.port.outbound.NoticeDispatchHistoryRepository
@@ -27,7 +27,6 @@ import io.mockk.slot
 import io.mockk.verify
 import org.springframework.beans.factory.ObjectProvider
 import java.time.LocalTime
-import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -72,22 +71,11 @@ class NotificationDispatchServiceTest :
                 )
             }
 
-            fun setting(memberId: UUID) =
-                NotificationSetting.reconstitute(
-                    Uuid.generateV7().toJavaUuid(),
-                    memberId,
-                    morningReportEnabled = true,
-                    morningReportTime = LocalTime.of(8, 0),
-                    todakiEnabled = false,
-                    luckyActionReminderEnabled = true,
-                    osPushPermission = null,
-                )
-
             describe("dispatchMorningReport") {
                 context("콘텐츠 포트가 실제 콘텐츠를 반환하면") {
                     it("그 콘텐츠로 FORTUNE 알림을 발송한다") {
-                        val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000001")
-                        val settingForM1 = setting(m1)
+                        val m1 = Uuid.generateV7().toJavaUuid()
+                        val settingForM1 = NotificationSettingFixture.create(memberId = m1)
                         every { notificationSettingRepository.findMorningReportTargets(LocalTime.of(8, 0), null, 100) } returns
                             listOf(settingForM1)
                         every { notificationSettingRepository.findMorningReportTargets(LocalTime.of(8, 0), settingForM1.id, 100) } returns
@@ -107,8 +95,8 @@ class NotificationDispatchServiceTest :
 
                 context("콘텐츠 포트가 null을 반환하면(운세 미생성 등)") {
                     it("해당 회원 발송을 스킵한다") {
-                        val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000002")
-                        val settingForM1 = setting(m1)
+                        val m1 = Uuid.generateV7().toJavaUuid()
+                        val settingForM1 = NotificationSettingFixture.create(memberId = m1)
                         every { notificationSettingRepository.findMorningReportTargets(LocalTime.of(8, 0), null, 100) } returns
                             listOf(settingForM1)
                         every { notificationSettingRepository.findMorningReportTargets(LocalTime.of(8, 0), settingForM1.id, 100) } returns
@@ -134,8 +122,8 @@ class NotificationDispatchServiceTest :
 
             describe("dispatchLuckyActionReminder") {
                 it("행운 액션 대상에게 LUCKY_ACTION 타입으로 발송한다") {
-                    val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000003")
-                    val settingForM1 = setting(m1)
+                    val m1 = Uuid.generateV7().toJavaUuid()
+                    val settingForM1 = NotificationSettingFixture.create(memberId = m1)
                     every { notificationSettingRepository.findLuckyActionReminderTargets(null, 100) } returns listOf(settingForM1)
                     every { notificationSettingRepository.findLuckyActionReminderTargets(settingForM1.id, 100) } returns emptyList()
                     every { luckyActionPort.getIfAvailable() } returns
@@ -152,8 +140,8 @@ class NotificationDispatchServiceTest :
 
             describe("publish") {
                 it("전체 회원에게 NOTICE 타입으로 발송한다") {
-                    val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000004")
-                    val m2 = UUID.fromString("018f0000-0000-7000-8000-000000000005")
+                    val m1 = Uuid.generateV7().toJavaUuid()
+                    val m2 = Uuid.generateV7().toJavaUuid()
                     every { getMemberIdsPort.getMemberIds(null, 100) } returns listOf(m1, m2)
                     every { getMemberIdsPort.getMemberIds(m2, 100) } returns emptyList()
                     val commands = mutableListOf<SendNotificationCommand>()
@@ -189,8 +177,8 @@ class NotificationDispatchServiceTest :
 
                 context("같은 인자로 두 번 호출하면") {
                     it("발송은 한 번뿐이다") {
-                        val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000006")
-                        val m2 = UUID.fromString("018f0000-0000-7000-8000-000000000007")
+                        val m1 = Uuid.generateV7().toJavaUuid()
+                        val m2 = Uuid.generateV7().toJavaUuid()
                         every { getMemberIdsPort.getMemberIds(null, 100) } returns listOf(m1, m2)
                         every { getMemberIdsPort.getMemberIds(m2, 100) } returns emptyList()
                         every { sendNotificationPort.send(any()) } just Runs
@@ -207,9 +195,9 @@ class NotificationDispatchServiceTest :
 
                 context("일부 회원 발송이 실패해도(#81 병렬 처리)") {
                     it("나머지 회원 발송은 계속 진행한다") {
-                        val m1 = UUID.fromString("018f0000-0000-7000-8000-000000000008")
-                        val m2 = UUID.fromString("018f0000-0000-7000-8000-000000000009")
-                        val m3 = UUID.fromString("018f0000-0000-7000-8000-00000000000a")
+                        val m1 = Uuid.generateV7().toJavaUuid()
+                        val m2 = Uuid.generateV7().toJavaUuid()
+                        val m3 = Uuid.generateV7().toJavaUuid()
                         every { getMemberIdsPort.getMemberIds(null, 100) } returns listOf(m1, m2, m3)
                         every { getMemberIdsPort.getMemberIds(m3, 100) } returns emptyList()
                         every { sendNotificationPort.send(match { it.memberId == m2 }) } throws RuntimeException("FCM 오류")
