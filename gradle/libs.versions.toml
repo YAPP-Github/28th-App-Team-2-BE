@@ -31,7 +31,7 @@ resilience4j = "2.4.0"
 # Kotlin(2.3.21)과 정확히 같은 패치 버전의 KSP 릴리즈가 아직 없어 최신 릴리즈(2.3.11)를 사용한다 —
 # Kotlin 패치 버전 간에는 컴파일러 플러그인 API가 깨지지 않는 게 일반적이라 위험이 낮다.
 ksp = "2.3.11"
-# kotlinx.coroutines: 날짜별 AI 호출 병렬 처리(async/awaitAll)용(day-fortune-application).
+# kotlinx.coroutines: 회원별 병렬 처리(async/awaitAll)용(day-fortune-application 날짜별 AI 호출, notification-application 알림 발송/재시도).
 kotlinxCoroutines = "1.11.0"
 
 [libraries]
@@ -82,7 +82,7 @@ jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" 
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 
-# --- 코루틴 (day-fortune-application: 날짜별 AI 호출 병렬 처리) ---
+# --- 코루틴 (day-fortune-application: 날짜별 AI 호출 병렬 처리 / notification-application: 알림 발송·재시도 병렬 처리) ---
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 
 # --- Jackson 2용 코틀린 모듈 (spring-ai BeanOutputConverter 전용, jackson-bom 관리) ---
