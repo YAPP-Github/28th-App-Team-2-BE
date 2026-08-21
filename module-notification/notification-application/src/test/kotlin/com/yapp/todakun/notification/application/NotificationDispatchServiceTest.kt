@@ -216,6 +216,7 @@ class NotificationDispatchServiceTest :
                         service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1", NoticeType.GENERAL))
 
                         verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m1 }) }
+                        verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m2 }) }
                         verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m3 }) }
                         // 순차 forEach로 회귀하면 m1이 끝나야 m3가 시작돼 maxInFlight가 1을 넘지 못한다.
                         maxInFlight.get() shouldBeGreaterThanOrEqual 2

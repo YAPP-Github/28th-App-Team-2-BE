@@ -241,6 +241,7 @@ class RetryFailedNotificationsServiceTest :
 
                         service.retryDue()
 
+                        verify(exactly = 1) { notificationTransactionalStore.getDeviceTokens(memberA) }
                         verify(exactly = 1) { pushNotificationPort.sendAll(any()) }
                         verify(exactly = 1) { notificationTransactionalStore.deleteDeliveryFailure(failureB.id) }
                         verify(exactly = 0) { notificationTransactionalStore.deleteDeliveryFailure(failureA.id) }
