@@ -1,5 +1,6 @@
 package com.yapp.todakun.dailyfortune.application.service
 
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
 import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.CreateDailyFortunePort
@@ -64,6 +65,24 @@ class GetTodayFortuneServiceTest :
                         every { createDailyFortunePort.create(memberId, any()) } returns summary.id
 
                         shouldThrow<DailyFortuneNotFoundException> { getTodayFortuneService.getToday(memberId, fortuneDate) }
+                    }
+                }
+
+                context("생성은 실패했지만 경합 상대나 배치가 이미 저장해 뒀으면") {
+                    it("재조회한 결과를 반환한다") {
+                        every { todayFortuneReader.find(memberId, fortuneDate) } returnsMany listOf(null, summary)
+                        every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationFailedException()
+
+                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe summary
+                    }
+                }
+
+                context("생성이 실패하고 재조회에도 없으면") {
+                    it("404로 가리지 않고 생성 실패 원인을 그대로 전파한다") {
+                        every { todayFortuneReader.find(memberId, fortuneDate) } returns null
+                        every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationFailedException()
+
+                        shouldThrow<DailyFortuneGenerationFailedException> { getTodayFortuneService.getToday(memberId, fortuneDate) }
                     }
                 }
             }
