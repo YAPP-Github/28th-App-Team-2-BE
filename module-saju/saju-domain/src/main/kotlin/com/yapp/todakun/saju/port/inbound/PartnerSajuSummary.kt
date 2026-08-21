@@ -5,7 +5,7 @@ import com.yapp.todakun.saju.CalendarType
 import com.yapp.todakun.saju.Gender
 import com.yapp.todakun.saju.MemberSajuLink
 import com.yapp.todakun.saju.RelationshipType
-import com.yapp.todakun.saju.SajuChart
+import com.yapp.todakun.saju.SajuChartSummary
 import java.time.LocalDate
 import java.util.UUID
 
@@ -23,7 +23,7 @@ data class PartnerSajuSummary(
     companion object {
         fun from(
             link: MemberSajuLink,
-            chart: SajuChart,
+            chart: SajuChartSummary,
         ): PartnerSajuSummary =
             PartnerSajuSummary(
                 linkId = link.id,

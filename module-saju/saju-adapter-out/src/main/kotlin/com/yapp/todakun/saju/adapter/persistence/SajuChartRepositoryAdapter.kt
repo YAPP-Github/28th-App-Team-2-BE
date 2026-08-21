@@ -1,6 +1,7 @@
 package com.yapp.todakun.saju.adapter.persistence
 
 import com.yapp.todakun.saju.SajuChart
+import com.yapp.todakun.saju.SajuChartSummary
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
@@ -42,6 +43,9 @@ class SajuChartRepositoryAdapter(
             sipseongJpaRepository.findByChartId(id).map { it.toDomain() },
         )
     }
+
+    override fun findSummariesByIds(ids: Collection<UUID>): List<SajuChartSummary> =
+        chartJpaRepository.findAllById(ids).map { it.toSummary() }
 
     override fun deleteById(id: UUID) = deleteAllByIds(listOf(id))
 

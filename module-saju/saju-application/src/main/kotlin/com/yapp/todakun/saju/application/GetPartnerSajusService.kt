@@ -14,9 +14,12 @@ class GetPartnerSajusService(
     private val memberSajuLinkRepository: MemberSajuLinkRepository,
     private val sajuChartRepository: SajuChartRepository,
 ) : GetPartnerSajusUseCase {
-    override fun getPartners(memberId: UUID): List<PartnerSajuSummary> =
-        memberSajuLinkRepository.findPartnersByMemberId(memberId).map { link ->
-            val chart = sajuChartRepository.findById(link.chartId) ?: throw SajuChartNotFoundException()
-            PartnerSajuSummary.from(link, chart)
+    override fun getPartners(memberId: UUID): List<PartnerSajuSummary> {
+        val links = memberSajuLinkRepository.findPartnersByMemberId(memberId)
+        val summariesByChartId = sajuChartRepository.findSummariesByIds(links.map { it.chartId }).associateBy { it.id }
+        return links.map { link ->
+            val summary = summariesByChartId[link.chartId] ?: throw SajuChartNotFoundException()
+            PartnerSajuSummary.from(link, summary)
         }
+    }
 }
