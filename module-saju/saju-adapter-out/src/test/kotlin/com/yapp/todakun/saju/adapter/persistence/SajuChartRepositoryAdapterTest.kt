@@ -10,6 +10,7 @@ import com.yapp.todakun.saju.config.TestContainersConfig
 import com.yapp.todakun.saju.port.outbound.FourPillars
 import com.yapp.todakun.saju.port.outbound.GanjiPillar
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -18,6 +19,8 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import
 import java.time.LocalDate
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 @ExperimentalUuidApi
 @DataJpaTest
@@ -66,6 +69,39 @@ class SajuChartRepositoryAdapterTest(
                         found.pillars.size shouldBe 4
                         found.ohaeng.size shouldBe 5
                         found.sipseong.size shouldBe 10
+                    }
+                }
+            }
+
+            describe("findSummariesByIds") {
+                context("여러 명식을 저장한 뒤 id 목록으로 조회하면") {
+                    it("자식(4주·오행·십성) 조회 없이 헤더만 담긴 요약을 반환한다") {
+                        val chart1 = newChart()
+                        val chart2 = newChart()
+                        adapter.save(chart1)
+                        adapter.save(chart2)
+
+                        val summaries = adapter.findSummariesByIds(listOf(chart1.id, chart2.id))
+
+                        summaries.map { it.id } shouldContainExactlyInAnyOrder listOf(chart1.id, chart2.id)
+                        summaries.first { it.id == chart1.id }.name shouldBe chart1.name
+                    }
+                }
+
+                context("존재하지 않는 id가 섞여 있으면") {
+                    it("존재하는 명식의 요약만 반환한다") {
+                        val chart = newChart()
+                        adapter.save(chart)
+
+                        val summaries = adapter.findSummariesByIds(listOf(chart.id, Uuid.generateV7().toJavaUuid()))
+
+                        summaries.map { it.id } shouldBe listOf(chart.id)
+                    }
+                }
+
+                context("빈 id 목록으로 조회하면") {
+                    it("빈 리스트를 반환한다") {
+                        adapter.findSummariesByIds(emptyList()) shouldBe emptyList()
                     }
                 }
             }

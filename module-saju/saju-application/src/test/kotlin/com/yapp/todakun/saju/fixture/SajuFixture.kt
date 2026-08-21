@@ -10,6 +10,7 @@ import com.yapp.todakun.saju.PillarType
 import com.yapp.todakun.saju.RelationshipType
 import com.yapp.todakun.saju.SajuCalculator
 import com.yapp.todakun.saju.SajuChart
+import com.yapp.todakun.saju.SajuChartSummary
 import com.yapp.todakun.saju.SajuRole
 import com.yapp.todakun.saju.port.outbound.FourPillars
 import com.yapp.todakun.saju.port.outbound.GanjiPillar
@@ -62,6 +63,22 @@ object SajuFixture {
                 sipseong = SajuCalculator.sipseongDistribution(pillars),
             )
         }
+
+    fun chartSummary(
+        id: UUID = CHART_ID,
+        name: String = "토닥이",
+        gender: Gender = Gender.FEMALE,
+        birthTime: BirthTime = BirthTime.MISI,
+    ): SajuChartSummary =
+        SajuChartSummary(
+            id = id,
+            name = name,
+            gender = gender,
+            calendarType = CalendarType.SOLAR,
+            inputDate = LocalDate.of(2001, 5, 30),
+            birthTime = birthTime,
+            isTimeUnknown = birthTime == BirthTime.UNKNOWN,
+        )
 
     fun selfLink(
         id: UUID = LINK_ID,

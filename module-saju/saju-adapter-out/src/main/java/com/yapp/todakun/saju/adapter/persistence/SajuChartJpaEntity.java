@@ -7,6 +7,7 @@ import com.yapp.todakun.saju.Gender;
 import com.yapp.todakun.saju.HeavenlyStem;
 import com.yapp.todakun.saju.OhaengCount;
 import com.yapp.todakun.saju.SajuChart;
+import com.yapp.todakun.saju.SajuChartSummary;
 import com.yapp.todakun.saju.SajuPillar;
 import com.yapp.todakun.saju.SipseongCount;
 import jakarta.persistence.Column;
@@ -91,5 +92,9 @@ public class SajuChartJpaEntity extends BaseEntity {
                 ohaeng,
                 sipseong
         );
+    }
+
+    public SajuChartSummary toSummary() {
+        return new SajuChartSummary(getId(), name, gender, calendarType, inputDate, birthTime, isTimeUnknown);
     }
 }
