@@ -24,9 +24,12 @@ class TodayFortuneReader(
     ): TodayFortuneSummary? {
         // 온보딩 시 생성되는 신규 가입자의 첫 오늘의 운세는 서비스 데이 롤오버 없이 현재 날짜(currentDate())로 저장된다.
         // 그래서 자정~06:00 사이 가입 직후 조회하면 서비스 데이(fortuneDate, 전날)로는 못 찾을 수 있어 현재 날짜로 한 번 더 조회한다.
+        // 06:00 이후에는 두 날짜가 같아 같은 쿼리를 두 번 날리게 되므로, 다를 때만 재조회한다.
         val dailyFortune =
             dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, fortuneDate)
-                ?: dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, currentDate())
+                ?: currentDate()
+                    .takeIf { it != fortuneDate }
+                    ?.let { dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, it) }
                 ?: return null
 
         val luckActionScores = getLuckActionScoresPort.getScores(memberId, dailyFortune.fortuneDate)

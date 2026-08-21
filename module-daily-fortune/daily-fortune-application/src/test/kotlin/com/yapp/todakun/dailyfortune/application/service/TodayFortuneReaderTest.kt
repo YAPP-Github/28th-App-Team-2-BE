@@ -5,6 +5,7 @@ import com.yapp.todakun.dailyfortune.repository.DailyFortuneRepository
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetLuckActionScoresPort
 import com.yapp.todakun.shared.LuckActionScore
+import com.yapp.todakun.shared.currentDate
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -12,6 +13,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import java.time.LocalDate
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -66,25 +68,41 @@ class TodayFortuneReaderTest :
                 }
 
                 context("서비스 데이 기준으론 없지만 실제 캘린더 날짜로 생성된 오늘의 운세가 있으면") {
-                    it("실제 캘린더 날짜 기준으로 조회해 반환하고, 행운 액션 점수도 같은 날짜로 조회한다") {
+                    it("실제 캘린더 날짜(currentDate) 기준으로 조회해 반환하고, 행운 액션 점수도 같은 날짜로 조회한다") {
                         val serviceDate = LocalDate.of(2026, 6, 23)
-                        val dailyFortune = DailyFortuneFixture.create(fortuneDate = LocalDate.of(2026, 6, 24))
+                        val calendarDate = currentDate()
+                        val dailyFortune = DailyFortuneFixture.create(fortuneDate = calendarDate)
                         val luckActionScores = luckActionScores()
                         every {
-                            dailyFortuneRepository.findByMemberIdAndFortuneDate(dailyFortune.memberId, any())
+                            dailyFortuneRepository.findByMemberIdAndFortuneDate(dailyFortune.memberId, calendarDate)
                         } returns dailyFortune
                         every {
                             dailyFortuneRepository.findByMemberIdAndFortuneDate(dailyFortune.memberId, serviceDate)
                         } returns null
                         every {
-                            getLuckActionScoresPort.getScores(dailyFortune.memberId, dailyFortune.fortuneDate)
+                            getLuckActionScoresPort.getScores(dailyFortune.memberId, calendarDate)
                         } returns luckActionScores
 
                         val summary = todayFortuneReader.find(dailyFortune.memberId, serviceDate).shouldNotBeNull()
 
                         summary.id shouldBe dailyFortune.id
-                        summary.fortuneDate shouldBe dailyFortune.fortuneDate
+                        summary.fortuneDate shouldBe calendarDate
                         summary.luckActionScores shouldBe luckActionScores
+                        verify(exactly = 1) {
+                            dailyFortuneRepository.findByMemberIdAndFortuneDate(dailyFortune.memberId, calendarDate)
+                        }
+                    }
+                }
+
+                context("서비스 데이가 실제 캘린더 날짜와 같으면(06:00 이후)") {
+                    it("같은 조건으로 두 번 조회하지 않는다") {
+                        val memberId = Uuid.generateV7().toJavaUuid()
+                        val today = currentDate()
+                        every { dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, today) } returns null
+
+                        todayFortuneReader.find(memberId, today).shouldBeNull()
+
+                        verify(exactly = 1) { dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, today) }
                     }
                 }
             }
