@@ -16,6 +16,10 @@ import com.yapp.todakun.shared.NotificationPayload
 import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runInterruptible
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.stereotype.Service
 import java.time.Instant
@@ -36,7 +40,9 @@ private const val NOTICE_LOCK_KEY = 8_412_037_604L
  * 갖게 해, 회원 수에 비례해 트랜잭션이 길어지는 문제를 없앤다(#41과 동일 원칙).
  * 콘텐츠 확장 포트([dailyFortunePort]/[luckyActionPort])는 옵셔널 주입 — 구현 빈이 없거나 콘텐츠가 없으면(null)
  * 해당 회원 발송을 스킵한다.
- * 대상 회원별 발송은 예외를 격리해 한 명의 실패가 나머지 회원의 발송을 중단시키지 않는다.
+ * 대상 회원별 발송은 코루틴(`async`/`awaitAll`)으로 병렬 실행하고([notificationDispatchDispatcher] 상한 4),
+ * 각 회원의 발송은 `try`/`catch`로 예외를 먼저 격리한 뒤 `async`에 넘기므로(#81) 한 명의 실패가 `awaitAll()`을 통해 나머지 형제 코루틴을 취소시키지 않는다.
+ * day-fortune-application의 취소 전파 계약과 달리 별도 취소 처리가 불필요하다.
  * OutOfMemoryError 등 복구 불가능한 [Error]는 격리 대상이 아니므로 [Exception]만 명시적으로 잡아 전파시킨다.
  * 공지([publish])는 관리자 API로도 호출 가능해져(더 이상 운영 스크립트 단독 진입점이 아님) 이중 방어로 멱등성을 보장한다:
  * ① [dispatchLockPort] advisory lock은 Blue/Green 배포 전환 구간 등 동시 실행을 인스턴스 간 직렬화하고,
@@ -127,21 +133,27 @@ class NotificationDispatchService(
             val chunk = fetchChunk(afterId)
             if (chunk.isEmpty()) return
 
-            chunk.forEach { item ->
-                try {
-                    val payload = resolvePayload(item) ?: return@forEach
-                    sendNotificationPort.send(
-                        SendNotificationCommand(
-                            memberId = memberIdOf(item),
-                            type = type,
-                            title = payload.title,
-                            content = payload.content,
-                            deepLink = payload.deepLink,
-                        ),
-                    )
-                } catch (e: Exception) {
-                    log.error("알림 발송 실패: memberId=${memberIdOf(item)}, type=$type", e)
-                }
+            runBlocking(notificationDispatchDispatcher) {
+                chunk.map { item ->
+                    async {
+                        runInterruptible {
+                            try {
+                                val payload = resolvePayload(item) ?: return@runInterruptible
+                                sendNotificationPort.send(
+                                    SendNotificationCommand(
+                                        memberId = memberIdOf(item),
+                                        type = type,
+                                        title = payload.title,
+                                        content = payload.content,
+                                        deepLink = payload.deepLink,
+                                    ),
+                                )
+                            } catch (e: Exception) {
+                                log.error("알림 발송 실패: memberId=${memberIdOf(item)}, type=$type", e)
+                            }
+                        }
+                    }
+                }.awaitAll()
             }
             afterId = idOf(chunk.last())
         }

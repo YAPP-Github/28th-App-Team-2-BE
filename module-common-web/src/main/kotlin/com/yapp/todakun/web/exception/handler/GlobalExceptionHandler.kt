@@ -6,6 +6,7 @@ import com.yapp.todakun.web.code.CommonErrorCode
 import com.yapp.todakun.web.response.CommonResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -64,6 +65,12 @@ class GlobalExceptionHandler {
     fun handleNoResourceFound(e: NoResourceFoundException): ResponseEntity<CommonResponse<Unit>> {
         log.warn("리소스를 찾을 수 없음: {}", e.message)
         return CommonResponse.error(CommonErrorCode.NOT_FOUND)
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
+    fun handleMethodNotSupported(e: HttpRequestMethodNotSupportedException): ResponseEntity<CommonResponse<Unit>> {
+        log.warn("지원하지 않는 HTTP 메서드: {}", e.message)
+        return CommonResponse.error(CommonErrorCode.METHOD_NOT_ALLOWED, e.headers)
     }
 
     @ExceptionHandler(Exception::class)

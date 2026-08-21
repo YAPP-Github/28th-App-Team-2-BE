@@ -12,4 +12,6 @@ dependencies {
     implementation(libs.slf4j.api)
     // 발송 성공/실패/재시도 소진 카운터 등록(NotificationMetrics).
     implementation(libs.micrometer.core)
+    // 회원별 발송/재시도(forEach)를 병렬 처리(async/awaitAll)하기 위함(이슈 #81).
+    implementation(libs.kotlinx.coroutines.core)
 }
