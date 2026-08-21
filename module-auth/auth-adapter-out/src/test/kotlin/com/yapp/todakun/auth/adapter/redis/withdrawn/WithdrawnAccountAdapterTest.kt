@@ -41,6 +41,22 @@ class WithdrawnAccountAdapterTest(
                         adapter.isRestricted(OauthProvider.GOOGLE, "shared-id") shouldBe false
                     }
                 }
+
+                context("restrictionEnabled가 false이면") {
+                    it("탈퇴 기록은 남기되 제한 판별은 건너뛴다(다시 켜면 제한이 되살아난다)") {
+                        val disabledAdapter =
+                            WithdrawnAccountAdapter(
+                                withdrawnAccountRepository,
+                                properties.copy(restrictionEnabled = false),
+                            )
+                        val disabledProviderId = "kakao-restriction-disabled"
+
+                        disabledAdapter.register(provider, disabledProviderId)
+
+                        disabledAdapter.isRestricted(provider, disabledProviderId) shouldBe false
+                        adapter.isRestricted(provider, disabledProviderId) shouldBe true
+                    }
+                }
             }
         },
     )

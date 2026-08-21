@@ -66,6 +66,13 @@ oauth:
     key-id: ${APPLE_KEY_ID}
     private-key: ${APPLE_PRIVATE_KEY}
 
+# [임시] 탈퇴 후 재가입 90일 제한 해제 — 동일 SNS 계정으로 탈퇴·재가입 테스트를 반복하기 위함.
+# 탈퇴 기록(해시+TTL)은 계속 쌓이므로, 아래 줄을 지우거나 true로 되돌리면 남은 기간만큼 제한이 되살아난다.
+# prod는 application.yaml의 restriction-enabled: true(90일 제한)를 그대로 따른다.
+account:
+  withdrawal:
+    restriction-enabled: false
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS}  # 콤마 구분
 

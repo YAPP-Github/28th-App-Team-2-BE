@@ -100,3 +100,7 @@ oauth:
 account:
   withdrawal:
     restriction-seconds: 7776000  # 90일
+    # 제한 판별 on/off. 여기(=prod 포함 기본값)는 정책대로 켠 상태를 유지하고,
+    # 테스트 편의를 위해 dev/local 프로파일에서만 false로 임시 해제한다.
+    # false여도 탈퇴 기록(해시+TTL)은 계속 쌓이므로, true로 되돌리면 남은 기간만큼 제한이 되살아난다.
+    restriction-enabled: true
