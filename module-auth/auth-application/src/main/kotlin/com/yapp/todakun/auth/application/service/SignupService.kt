@@ -52,6 +52,10 @@ class SignupService(
                 // 아니라면 원래 예외를 그대로 던진다.
                 val winner = getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) ?: throw e
 
+                // 삼킨 예외는 응답에 드러나지 않으므로, 회원 유니크 제약이 아닌 다른 도메인 예외가 섞여 들어와도
+                // 운영에서 추적할 수 있도록 코드를 남긴다.
+                log.info("회원 생성 경합으로 기존 회원에 멱등 처리: memberId={}, errorCode={}", winner, e.errorCode.code)
+
                 return issueTokens(winner, command)
             }
 
