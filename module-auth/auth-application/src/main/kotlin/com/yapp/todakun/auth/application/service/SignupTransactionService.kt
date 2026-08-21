@@ -1,0 +1,53 @@
+package com.yapp.todakun.auth.application.service
+
+import com.yapp.todakun.auth.OauthMemberProfile
+import com.yapp.todakun.auth.port.inbound.SignupCommand
+import com.yapp.todakun.common.annotation.CommandService
+import com.yapp.todakun.shared.CreateMemberPort
+import com.yapp.todakun.shared.CreateSajuChartPort
+import java.util.UUID
+
+/**
+ * 회원가입의 DB 트랜잭션 경계를 소유하는 협력 빈.
+ * 회원 생성과 본인(SELF) 사주 명식 생성만 한 트랜잭션으로 묶어, 둘 중 하나만 남는 상태를 막는다.
+ * 외부 AI 호출(오늘의 운세)은 이 빈 밖([SignupService])에서 실행해, 수십 초 걸리는 네트워크 I/O 동안
+ * DB 커넥션과 회원 유니크 제약의 잠금 구간을 붙잡고 있지 않게 한다.
+ */
+@CommandService
+class SignupTransactionService(
+    private val createMemberPort: CreateMemberPort,
+    private val createSajuChartPort: CreateSajuChartPort,
+) {
+    fun register(
+        profile: OauthMemberProfile,
+        command: SignupCommand,
+    ): UUID {
+        val memberId =
+            createMemberPort.create(
+                provider = profile.provider,
+                providerId = profile.providerId,
+                name = command.name,
+                birthDate = command.birthDate,
+                birthTime = command.birthTime,
+                calendarType = command.calendarType,
+                gender = command.gender,
+                job = command.job,
+                relationshipStatus = command.relationshipStatus,
+            )
+
+        // 음력 입력은 평달로 간주해 isLeapMonth=false로 고정한다(윤달 미지원 — 대부분의 만세력 서비스와 동일 정책).
+        // 알려진 한계: 음력 윤달 생일자는 평달로 계산됨. 윤달 지원이 필요해지면 SignupCommand에 윤달 필드를 추가한다.
+        createSajuChartPort.create(
+            memberId = memberId,
+            isSelf = true,
+            name = command.name,
+            gender = command.gender,
+            calendarType = command.calendarType,
+            birthDate = command.birthDate,
+            birthTime = command.birthTime,
+            isLeapMonth = false,
+        )
+
+        return memberId
+    }
+}
