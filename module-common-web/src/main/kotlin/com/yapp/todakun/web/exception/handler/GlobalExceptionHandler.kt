@@ -70,7 +70,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     fun handleMethodNotSupported(e: HttpRequestMethodNotSupportedException): ResponseEntity<CommonResponse<Unit>> {
         log.warn("지원하지 않는 HTTP 메서드: {}", e.message)
-        return CommonResponse.error(CommonErrorCode.METHOD_NOT_ALLOWED)
+        return CommonResponse.error(CommonErrorCode.METHOD_NOT_ALLOWED, e.headers)
     }
 
     @ExceptionHandler(Exception::class)

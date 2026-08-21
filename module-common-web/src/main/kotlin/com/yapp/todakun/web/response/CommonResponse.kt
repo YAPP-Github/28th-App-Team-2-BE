@@ -3,6 +3,7 @@ package com.yapp.todakun.web.response
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.yapp.todakun.common.code.ResponseCode
 import com.yapp.todakun.web.code.CommonSuccessCode
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import java.time.LocalDateTime
 
@@ -40,6 +41,16 @@ data class CommonResponse<T>(
         fun error(errorCode: ResponseCode): ResponseEntity<CommonResponse<Unit>> =
             ResponseEntity
                 .status(errorCode.status)
+                .body(CommonResponse(success = false, code = errorCode.code, message = errorCode.message))
+
+        /** 헤더가 포함된 에러 응답(예: 405의 Allow). GlobalExceptionHandler가 사용한다. */
+        fun error(
+            errorCode: ResponseCode,
+            headers: HttpHeaders,
+        ): ResponseEntity<CommonResponse<Unit>> =
+            ResponseEntity
+                .status(errorCode.status)
+                .headers(headers)
                 .body(CommonResponse(success = false, code = errorCode.code, message = errorCode.message))
 
         /** 검증 실패 응답(필드별 사유 포함). GlobalExceptionHandler가 사용한다. */
