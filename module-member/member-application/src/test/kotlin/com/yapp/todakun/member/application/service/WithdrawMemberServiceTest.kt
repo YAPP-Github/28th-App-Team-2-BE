@@ -4,6 +4,7 @@ import com.yapp.todakun.member.WithdrawalReason
 import com.yapp.todakun.member.exception.MemberNotFoundException
 import com.yapp.todakun.member.fixture.MemberFixture
 import com.yapp.todakun.member.port.inbound.WithdrawMemberCommand
+import com.yapp.todakun.shared.OauthRevokeCredential
 import com.yapp.todakun.shared.RevokeOauthTokenPort
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -30,18 +31,28 @@ class WithdrawMemberServiceTest : DescribeSpec({
     val command = WithdrawMemberCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null, accessToken = accessToken)
 
     describe("withdraw") {
-        context("트랜잭션 처리가 성공하면") {
-            it("커밋 이후 반환된 회원 정보로 OAuth 토큰 철회를 호출한다") {
-                val member = MemberFixture.member()
-                every { withdrawMemberTransactionService.withdraw(command) } returns member
-                every { revokeOauthTokenPort.revokeIfApplicable(member.oauthProvider, member.providerId) } just Runs
+        context("트랜잭션 처리가 성공하고 revoke할 OAuth 자격증명이 있으면") {
+            it("커밋 이후 반환된 자격증명으로 OAuth 토큰 철회를 호출한다") {
+                val oauthRevokeCredential = OauthRevokeCredential(MemberFixture.member().providerId, "client-id", "refresh-token")
+                every { withdrawMemberTransactionService.withdraw(command) } returns oauthRevokeCredential
+                every { revokeOauthTokenPort.revoke(oauthRevokeCredential) } just Runs
 
                 service.withdraw(command)
 
                 verifyOrder {
                     withdrawMemberTransactionService.withdraw(command)
-                    revokeOauthTokenPort.revokeIfApplicable(member.oauthProvider, member.providerId)
+                    revokeOauthTokenPort.revoke(oauthRevokeCredential)
                 }
+            }
+        }
+
+        context("트랜잭션 처리가 성공했지만 revoke할 OAuth 자격증명이 없으면") {
+            it("OAuth 토큰 철회를 호출하지 않는다") {
+                every { withdrawMemberTransactionService.withdraw(command) } returns null
+
+                service.withdraw(command)
+
+                verify(exactly = 0) { revokeOauthTokenPort.revoke(any()) }
             }
         }
 
@@ -51,7 +62,7 @@ class WithdrawMemberServiceTest : DescribeSpec({
 
                 shouldThrow<MemberNotFoundException> { service.withdraw(command) }
 
-                verify(exactly = 0) { revokeOauthTokenPort.revokeIfApplicable(any(), any()) }
+                verify(exactly = 0) { revokeOauthTokenPort.revoke(any()) }
             }
         }
     }

@@ -18,7 +18,7 @@ class WithdrawMemberService(
 ) : WithdrawMemberUseCase {
     @ExperimentalUuidApi
     override fun withdraw(command: WithdrawMemberCommand) {
-        val member = withdrawMemberTransactionService.withdraw(command)
-        revokeOauthTokenPort.revokeIfApplicable(member.oauthProvider, member.providerId)
+        val oauthRevokeCredential = withdrawMemberTransactionService.withdraw(command)
+        oauthRevokeCredential?.let(revokeOauthTokenPort::revoke)
     }
 }

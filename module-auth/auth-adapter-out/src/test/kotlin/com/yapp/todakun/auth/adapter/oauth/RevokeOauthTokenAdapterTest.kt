@@ -5,7 +5,9 @@ import com.yapp.todakun.auth.adapter.oauth.apple.AppleOauthTokenClient
 import com.yapp.todakun.auth.exception.OauthProviderUnavailableException
 import com.yapp.todakun.auth.port.outbound.AppleOauthCredentialPort
 import com.yapp.todakun.shared.OauthProvider
+import com.yapp.todakun.shared.OauthRevokeCredential
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
@@ -27,52 +29,60 @@ class RevokeOauthTokenAdapterTest :
 
         afterTest { clearMocks(appleOauthCredentialPort, appleOauthTokenClient) }
 
-        describe("revokeIfApplicable") {
+        describe("prepareRevoke") {
             context("provider가 KAKAO/GOOGLE이면") {
-                it("아무 동작도 하지 않는다") {
-                    adapter.revokeIfApplicable(OauthProvider.KAKAO, PROVIDER_ID)
-                    adapter.revokeIfApplicable(OauthProvider.GOOGLE, PROVIDER_ID)
+                it("아무 동작도 하지 않고 null을 반환한다") {
+                    adapter.prepareRevoke(OauthProvider.KAKAO, PROVIDER_ID) shouldBe null
+                    adapter.prepareRevoke(OauthProvider.GOOGLE, PROVIDER_ID) shouldBe null
 
                     verify(exactly = 0) { appleOauthCredentialPort.find(any()) }
-                    verify(exactly = 0) { appleOauthTokenClient.revoke(any(), any()) }
                 }
             }
 
             context("provider가 APPLE이지만 저장된 credential이 없으면") {
-                it("revoke/delete를 호출하지 않는다") {
+                it("delete를 호출하지 않고 null을 반환한다") {
                     every { appleOauthCredentialPort.find(PROVIDER_ID) } returns null
 
-                    adapter.revokeIfApplicable(OauthProvider.APPLE, PROVIDER_ID)
+                    adapter.prepareRevoke(OauthProvider.APPLE, PROVIDER_ID) shouldBe null
 
-                    verify(exactly = 0) { appleOauthTokenClient.revoke(any(), any()) }
                     verify(exactly = 0) { appleOauthCredentialPort.delete(any()) }
                 }
             }
 
             context("provider가 APPLE이고 저장된 credential이 있으면") {
-                it("Apple 계정 연결을 해제하고 credential을 삭제한다") {
+                it("credential을 삭제하고 revoke에 필요한 정보를 반환한다") {
                     val credential = AppleOauthCredential.reconstitute(CREDENTIAL_ID, PROVIDER_ID, CLIENT_ID, REFRESH_TOKEN)
                     every { appleOauthCredentialPort.find(PROVIDER_ID) } returns credential
-                    every { appleOauthTokenClient.revoke(CLIENT_ID, REFRESH_TOKEN) } just Runs
                     every { appleOauthCredentialPort.delete(PROVIDER_ID) } just Runs
 
-                    adapter.revokeIfApplicable(OauthProvider.APPLE, PROVIDER_ID)
+                    val result = adapter.prepareRevoke(OauthProvider.APPLE, PROVIDER_ID)
+
+                    result shouldBe OauthRevokeCredential(PROVIDER_ID, CLIENT_ID, REFRESH_TOKEN)
+                    verify(exactly = 1) { appleOauthCredentialPort.delete(PROVIDER_ID) }
+                }
+            }
+        }
+
+        describe("revoke") {
+            val credential = OauthRevokeCredential(PROVIDER_ID, CLIENT_ID, REFRESH_TOKEN)
+
+            context("revoke 호출이 성공하면") {
+                it("Apple 계정 연결을 해제한다") {
+                    every { appleOauthTokenClient.revoke(CLIENT_ID, REFRESH_TOKEN) } just Runs
+
+                    adapter.revoke(credential)
 
                     verify(exactly = 1) { appleOauthTokenClient.revoke(CLIENT_ID, REFRESH_TOKEN) }
-                    verify(exactly = 1) { appleOauthCredentialPort.delete(PROVIDER_ID) }
                 }
             }
 
             context("revoke 호출이 실패하면") {
-                it("로그만 남기고 credential은 그대로 삭제한다") {
-                    val credential = AppleOauthCredential.reconstitute(CREDENTIAL_ID, PROVIDER_ID, CLIENT_ID, REFRESH_TOKEN)
-                    every { appleOauthCredentialPort.find(PROVIDER_ID) } returns credential
+                it("예외를 전파하지 않고 로그만 남긴다") {
                     every { appleOauthTokenClient.revoke(CLIENT_ID, REFRESH_TOKEN) } throws OauthProviderUnavailableException()
-                    every { appleOauthCredentialPort.delete(PROVIDER_ID) } just Runs
 
-                    adapter.revokeIfApplicable(OauthProvider.APPLE, PROVIDER_ID)
+                    adapter.revoke(credential)
 
-                    verify(exactly = 1) { appleOauthCredentialPort.delete(PROVIDER_ID) }
+                    verify(exactly = 1) { appleOauthTokenClient.revoke(CLIENT_ID, REFRESH_TOKEN) }
                 }
             }
         }
