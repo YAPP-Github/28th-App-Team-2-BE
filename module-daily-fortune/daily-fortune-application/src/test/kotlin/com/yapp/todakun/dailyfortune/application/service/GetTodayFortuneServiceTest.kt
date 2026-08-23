@@ -1,6 +1,7 @@
 package com.yapp.todakun.dailyfortune.application.service
 
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationInProgressException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
 import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.CreateDailyFortunePort
@@ -83,6 +84,26 @@ class GetTodayFortuneServiceTest :
                         every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationFailedException()
 
                         shouldThrow<DailyFortuneGenerationFailedException> { getTodayFortuneService.getToday(memberId, fortuneDate) }
+                    }
+                }
+
+                context("생성 락 선점에 실패했지만(이미 다른 호출자가 생성 중) 그 사이 저장이 끝나 있으면") {
+                    it("재조회한 결과를 반환한다") {
+                        every { todayFortuneReader.find(memberId, fortuneDate) } returnsMany listOf(null, summary)
+                        every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationInProgressException()
+
+                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe summary
+                    }
+                }
+
+                context("생성 락 선점에 실패했고 재조회에도 없으면") {
+                    it("404로 가리지 않고 생성 중임을 그대로 전파한다") {
+                        every { todayFortuneReader.find(memberId, fortuneDate) } returns null
+                        every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationInProgressException()
+
+                        shouldThrow<DailyFortuneGenerationInProgressException> {
+                            getTodayFortuneService.getToday(memberId, fortuneDate)
+                        }
                     }
                 }
             }
