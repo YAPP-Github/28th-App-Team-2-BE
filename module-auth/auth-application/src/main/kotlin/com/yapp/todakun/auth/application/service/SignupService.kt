@@ -9,18 +9,17 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.common.exception.BusinessException
 import com.yapp.todakun.common.logging.Loggable
-import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.GetMemberIdPort
-import com.yapp.todakun.shared.currentDate
 import org.springframework.stereotype.Service
 import java.util.UUID
 
 /**
- * 회원가입 유스케이스(오케스트레이터). 의도적으로 트랜잭션을 걸지 않는다 —
- * 당일 운세 생성이 수십 초 걸리는 외부 AI 호출이라, 그 구간 동안 DB 커넥션을 점유하면 안 되기 때문이다.
- * 회원·사주 명식 저장만 [SignupTransactionService]의 짧은 트랜잭션으로 위임한다.
+ * 회원가입 유스케이스(오케스트레이터). 의도적으로 트랜잭션을 걸지 않는다.
+ * 회원·사주 명식 저장만 [SignupTransactionService]의 짧은 트랜잭션으로 위임하고,
+ * 그 결과(성공/멱등 충돌)에 따라 토큰만 발급한다. 당일 운세 생성(외부 AI 호출)은 이 클래스가 직접 하지 않는다.
+ * [SignupTransactionService]가 트랜잭션 커밋 후 발행하는 이벤트를 받아 전용 리스너가 비동기로 처리하므로, 이 메서드는 AI 응답을 기다리지 않는다.
  *
- * 이 순서 덕분에 계정은 AI 호출이 시작되기 전에 이미 확정된다. 응답이 늦어 클라이언트가 타임아웃해도
+ * 계정은 회원가입 응답이 나가기 전에 이미 확정된다. 응답이 늦어 클라이언트가 타임아웃해도
  * 재로그인이 곧바로 기존 회원 로그인으로 처리되고, 중복으로 들어온 회원가입 요청도
  * "이미 가입된 회원"(409)이 아니라 멱등하게 성공한다.
  */
@@ -30,7 +29,6 @@ class SignupService(
     private val onboardingTokenPort: OnboardingTokenPort,
     private val signupTransactionService: SignupTransactionService,
     private val getMemberIdPort: GetMemberIdPort,
-    private val createDailyFortunePort: CreateDailyFortunePort,
     private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
 ) : SignupUseCase {
@@ -59,8 +57,6 @@ class SignupService(
                 return issueTokens(winner, command)
             }
 
-        generateFirstDailyFortune(memberId)
-
         return issueTokens(memberId, command)
     }
 
@@ -80,18 +76,5 @@ class SignupService(
         onboardingTokenPort.revoke(command.onboardingToken)
 
         return result
-    }
-
-    /**
-     * 가입 직후 당일 운세를 생성한다(트랜잭션 밖 — 외부 AI 호출).
-     * 신규 가입자는 이전 서비스 데이의 연속성을 지킬 필요가 없으므로 롤오버 규칙 대신 실제 캘린더 날짜를 쓴다.
-     * 실패해도 이미 확정된 가입을 되돌리지 않는다 — 최초 조회(GetTodayFortuneService)나 다음 배치가 채운다.
-     */
-    private fun generateFirstDailyFortune(memberId: UUID) {
-        try {
-            createDailyFortunePort.create(memberId, currentDate())
-        } catch (e: Exception) {
-            log.warn("가입 직후 오늘의 운세 생성 실패(가입은 유지, 최초 조회 시 재생성): memberId={}", memberId, e)
-        }
     }
 }
