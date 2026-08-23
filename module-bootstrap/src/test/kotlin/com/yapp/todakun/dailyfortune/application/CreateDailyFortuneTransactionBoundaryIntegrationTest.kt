@@ -6,6 +6,7 @@ import com.yapp.todakun.config.TestContainersConfig
 import com.yapp.todakun.config.TransactionBoundaryProbe
 import com.yapp.todakun.config.TransactionBoundarySnapshot
 import com.yapp.todakun.dailyfortune.DailyFortune
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationInProgressException
 import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedCategoryFortune
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
@@ -19,7 +20,9 @@ import com.yapp.todakun.shared.GetSajuChartPort
 import com.yapp.todakun.shared.MemberFortuneProfile
 import com.yapp.todakun.shared.PillarSummary
 import com.yapp.todakun.shared.SajuChartSummary
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -31,6 +34,9 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.LocalDate
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
 
 private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000101")
@@ -38,6 +44,9 @@ private val LUCK_ACTION_ID = UUID.fromString("018f0000-0000-7000-8000-0000000001
 
 // 시나리오 간 영속 데이터가 섞이지 않도록 멱등성 검증은 별도 회원으로 수행한다(선언 순서에 의존하지 않게).
 private val IDEMPOTENT_MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000103")
+
+// 동시 생성 경합 검증도 다른 시나리오와 겹치지 않도록 별도 회원으로 수행한다.
+private val CONCURRENT_MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000104")
 
 private val FORTUNE_DATE = LocalDate.of(2026, 8, 9)
 
@@ -149,6 +158,35 @@ class CreateDailyFortuneTransactionBoundaryIntegrationTest(
 
                     secondId shouldBe firstId
                     // 두 번째 호출에서 누적 호출 수가 늘지 않는다 = 선조회로 끝났다.
+                    verify(exactly = 1) { dailyFortuneAiPort.generate(any(), FORTUNE_DATE, any()) }
+                }
+            }
+
+            // 이슈 #90: 가입 직후 백그라운드 리스너와 홈 화면 자가 치유(GetTodayFortuneService)가 같은 (memberId, fortuneDate)로
+            // 동시에 들어와도, findExistingWithLock의 락은 AI 호출 전에 반납되므로 그 자체로는 중복 호출을 막지 못한다.
+            // DailyFortuneGenerationLockPort가 이 경합을 막는지 실제 동시 호출로 검증한다.
+            context("같은 (memberId, fortuneDate)로 두 호출이 동시에 들어오면") {
+                it("AI는 한 번만 호출되고, 나머지 호출은 DailyFortuneGenerationInProgressException을 받는다") {
+                    stubCollaborators(CONCURRENT_MEMBER_ID)
+                    val aiCallStarted = CountDownLatch(1)
+                    val releaseAiCall = CountDownLatch(1)
+                    every { dailyFortuneAiPort.generate(any(), FORTUNE_DATE, any()) } answers {
+                        aiCallStarted.countDown()
+                        releaseAiCall.await(5, TimeUnit.SECONDS)
+                        GENERATED_FORTUNE
+                    }
+
+                    val winnerResult = CompletableFuture.supplyAsync { createDailyFortunePort.create(CONCURRENT_MEMBER_ID, FORTUNE_DATE) }
+                    aiCallStarted.await(5, TimeUnit.SECONDS) shouldBe true
+
+                    val loserException =
+                        shouldThrow<DailyFortuneGenerationInProgressException> {
+                            createDailyFortunePort.create(CONCURRENT_MEMBER_ID, FORTUNE_DATE)
+                        }
+
+                    releaseAiCall.countDown()
+                    loserException.shouldNotBeNull()
+                    winnerResult.get(5, TimeUnit.SECONDS).shouldNotBeNull()
                     verify(exactly = 1) { dailyFortuneAiPort.generate(any(), FORTUNE_DATE, any()) }
                 }
             }
