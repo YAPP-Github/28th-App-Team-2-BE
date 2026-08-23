@@ -34,6 +34,9 @@ import org.springframework.transaction.support.TransactionTemplate
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 private val LUCK_ACTION_ID = UUID.fromString("018f0000-0000-7000-8000-000000000201")
 private val FORTUNE_DATE: LocalDate = currentDate()
@@ -87,6 +90,7 @@ private val SIGNUP_COMMAND =
  * 다른 도메인과의 크로스 도메인 확장점이라 목으로 대체하고([com.yapp.todakun.dailyfortune.application.CreateDailyFortuneTransactionBoundaryIntegrationTest]와 동일),
  * [SignupTransactionService]가 소유한 실제 회원가입 트랜잭션 경계와 이벤트 리스너 배선만 검증 대상으로 남긴다.
  */
+@ExperimentalUuidApi
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestContainersConfig::class, DailyFortuneAiMockConfig::class)
 class SignupTransactionBoundaryIntegrationTest(
@@ -116,7 +120,7 @@ class SignupTransactionBoundaryIntegrationTest(
         describe("회원가입 트랜잭션과 오늘의 운세 생성 이벤트") {
             context("register() 트랜잭션이 롤백되면") {
                 it("MemberSignedUpEvent 리스너가 실행되지 않아 AI를 호출하지 않는다") {
-                    val profile = newOauthProfile(providerId = "rollback-${UUID.randomUUID()}")
+                    val profile = newOauthProfile(providerId = "rollback-${Uuid.generateV7().toJavaUuid()}")
                     val command = SIGNUP_COMMAND
 
                     transactionTemplate.execute<Unit> { status ->
@@ -131,7 +135,7 @@ class SignupTransactionBoundaryIntegrationTest(
 
             context("register() 트랜잭션이 커밋되면") {
                 it("요청 스레드가 아닌 전용 워커 스레드에서 오늘의 운세를 생성한다") {
-                    val profile = newOauthProfile(providerId = "commit-${UUID.randomUUID()}")
+                    val profile = newOauthProfile(providerId = "commit-${Uuid.generateV7().toJavaUuid()}")
                     val command = SIGNUP_COMMAND
                     stubCollaborators()
                     var generationThreadName: String? = null

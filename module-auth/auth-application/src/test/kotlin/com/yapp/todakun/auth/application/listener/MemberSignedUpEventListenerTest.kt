@@ -14,9 +14,13 @@ import io.mockk.verify
 import org.springframework.core.task.AsyncTaskExecutor
 import org.springframework.core.task.TaskRejectedException
 import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 private val MEMBER_ID: UUID = UUID.fromString("018f0000-0000-7000-8000-000000000010")
 
+@ExperimentalUuidApi
 class MemberSignedUpEventListenerTest :
     DescribeSpec(
         {
@@ -39,7 +43,7 @@ class MemberSignedUpEventListenerTest :
                         // execute()에 등록만 됐을 뿐 아직 실행 전이라, 워커가 돌기 전에는 AI가 호출되지 않는다.
                         verify(exactly = 0) { createDailyFortunePort.create(any(), any()) }
 
-                        every { createDailyFortunePort.create(MEMBER_ID, any()) } returns UUID.randomUUID()
+                        every { createDailyFortunePort.create(MEMBER_ID, any()) } returns Uuid.generateV7().toJavaUuid()
                         taskSlot.captured.run()
 
                         verify(exactly = 1) { createDailyFortunePort.create(MEMBER_ID, any()) }
