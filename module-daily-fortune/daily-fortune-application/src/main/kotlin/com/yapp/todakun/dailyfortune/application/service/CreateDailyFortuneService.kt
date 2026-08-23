@@ -46,9 +46,9 @@ class CreateDailyFortuneService(
         dailyFortuneTransactionalStore.findExistingWithLock(memberId, fortuneDate)?.let { return it.id }
 
         // 이미 다른 호출자(배치/자가 치유/가입 직후 리스너 등)가 같은 조합을 생성 중이면 AI를 중복 호출하지 않는다.
-        if (!dailyFortuneGenerationLockPort.tryAcquire(memberId, fortuneDate)) {
-            throw DailyFortuneGenerationInProgressException()
-        }
+        val lockToken =
+            dailyFortuneGenerationLockPort.tryAcquire(memberId, fortuneDate)
+                ?: throw DailyFortuneGenerationInProgressException()
 
         try {
             val generated = requestGeneration(memberId, fortuneDate)
@@ -67,7 +67,7 @@ class CreateDailyFortuneService(
 
             return dailyFortuneTransactionalStore.saveIfAbsent(dailyFortune, generated.categoryFortunes)
         } finally {
-            dailyFortuneGenerationLockPort.release(memberId, fortuneDate)
+            dailyFortuneGenerationLockPort.release(memberId, fortuneDate, lockToken)
         }
     }
 

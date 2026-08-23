@@ -29,6 +29,7 @@ import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 private val MEMBER_ID = UUID.fromString("018f0000-0000-7000-8000-000000000002")
+private const val LOCK_TOKEN = "test-lock-token"
 
 @ExperimentalUuidApi
 class CreateDailyFortuneServiceTest :
@@ -64,8 +65,8 @@ class CreateDailyFortuneServiceTest :
 
         fun stubGeneration(generated: GeneratedDailyFortune) {
             every { dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate) } returns null
-            every { dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate) } returns true
-            every { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate) } just Runs
+            every { dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate) } returns LOCK_TOKEN
+            every { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate, LOCK_TOKEN) } just Runs
             every { getMemberFortuneProfilePort.getProfile(MEMBER_ID) } returns memberFortuneProfile()
             every { getSajuChartPort.getChart(MEMBER_ID) } returns sajuChartSummary()
             every { getDailyPillarPort.getPillar(fortuneDate) } returns pillarSummary()
@@ -97,7 +98,7 @@ class CreateDailyFortuneServiceTest :
 
                     result shouldBe saved.id
                     verify(exactly = 1) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
-                    verify(exactly = 1) { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate) }
+                    verify(exactly = 1) { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate, LOCK_TOKEN) }
                 }
 
                 it("선조회 트랜잭션 → 생성 락 선점 → (트랜잭션 밖) AI 호출 → 저장 트랜잭션 → 락 해제 순서로 처리한다") {
@@ -112,7 +113,7 @@ class CreateDailyFortuneServiceTest :
                         dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate)
                         dailyFortuneAiPort.generate(any(), fortuneDate, any())
                         dailyFortuneTransactionalStore.saveIfAbsent(any(), any())
-                        dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate)
+                        dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate, LOCK_TOKEN)
                     }
                 }
             }
@@ -120,12 +121,12 @@ class CreateDailyFortuneServiceTest :
             context("이미 다른 호출자가 같은 회원·날짜를 생성 중이라 생성 락 선점에 실패하면") {
                 it("DailyFortuneGenerationInProgressException을 던지고 AI를 호출하지 않는다") {
                     every { dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate) } returns null
-                    every { dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate) } returns false
+                    every { dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate) } returns null
 
                     shouldThrow<DailyFortuneGenerationInProgressException> { service.create(MEMBER_ID, fortuneDate) }
 
                     verify(exactly = 0) { dailyFortuneAiPort.generate(any(), any(), any()) }
-                    verify(exactly = 0) { dailyFortuneGenerationLockPort.release(any(), any()) }
+                    verify(exactly = 0) { dailyFortuneGenerationLockPort.release(any(), any(), any()) }
                 }
             }
 
@@ -144,7 +145,7 @@ class CreateDailyFortuneServiceTest :
                     shouldThrow<DailyFortuneGenerationFailedException> { service.create(MEMBER_ID, fortuneDate) }
 
                     verify(exactly = 0) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
-                    verify(exactly = 1) { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate) }
+                    verify(exactly = 1) { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate, LOCK_TOKEN) }
                 }
             }
         }

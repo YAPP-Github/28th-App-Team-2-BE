@@ -1,5 +1,6 @@
 plugins {
     id("todakun.adapter-persistence")
+    id("todakun.logging")
 }
 
 dependencies {
