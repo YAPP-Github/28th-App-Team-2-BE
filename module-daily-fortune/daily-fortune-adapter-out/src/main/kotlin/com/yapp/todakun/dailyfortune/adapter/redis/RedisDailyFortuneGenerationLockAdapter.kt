@@ -58,7 +58,7 @@ class RedisDailyFortuneGenerationLockAdapter(
             val acquired = redisTemplate.opsForValue().setIfAbsent(keyOf(memberId, fortuneDate), token, LOCK_TTL) ?: false
             if (acquired) token else null
         } catch (e: DataAccessException) {
-            log.error("생성 락 선점 실패(Redis 데이터 액세스 장애) - 락 없이 생성 진행: memberId={}, fortuneDate={}", memberId, fortuneDate, e)
+            log.error("생성 락 선점 실패(Redis 데이터 액세스 장애) - 락 없이 생성 진행: fortuneDate={}", fortuneDate, e)
             token
         }
     }
@@ -71,7 +71,7 @@ class RedisDailyFortuneGenerationLockAdapter(
         try {
             redisTemplate.execute(RELEASE_IF_OWNER_SCRIPT, listOf(keyOf(memberId, fortuneDate)), token)
         } catch (e: DataAccessException) {
-            log.error("생성 락 해제 실패(Redis 데이터 액세스 장애) - TTL 만료까지 자연 해제되지 않음: memberId={}, fortuneDate={}", memberId, fortuneDate, e)
+            log.error("생성 락 해제 실패(Redis 데이터 액세스 장애) - TTL 만료까지 자연 해제되지 않음: fortuneDate={}", fortuneDate, e)
         }
     }
 
