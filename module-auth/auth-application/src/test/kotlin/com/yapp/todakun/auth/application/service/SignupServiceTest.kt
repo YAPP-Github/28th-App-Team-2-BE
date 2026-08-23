@@ -8,7 +8,6 @@ import com.yapp.todakun.auth.port.outbound.OnboardingTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
 import com.yapp.todakun.common.code.ResponseCode
 import com.yapp.todakun.common.exception.ConflictException
-import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.GetMemberIdPort
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -19,9 +18,6 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
-import java.util.UUID
-
-private val DAILY_FORTUNE_ID: UUID = UUID.fromString("018f0000-0000-7000-8000-000000000006")
 
 /** member-adapter-out이 회원 유니크 제약 위반 시 던지는 예외(MemberAlreadyExistsException)의 대역. */
 private object MemberAlreadyExistsCode : ResponseCode {
@@ -38,7 +34,6 @@ class SignupServiceTest :
             val onboardingTokenPort = mockk<OnboardingTokenPort>()
             val signupTransactionService = mockk<SignupTransactionService>()
             val getMemberIdPort = mockk<GetMemberIdPort>()
-            val createDailyFortunePort = mockk<CreateDailyFortunePort>()
             val accessTokenPort = mockk<AccessTokenPort>()
             val refreshTokenPort = mockk<RefreshTokenPort>()
             val signupService =
@@ -46,7 +41,6 @@ class SignupServiceTest :
                     onboardingTokenPort = onboardingTokenPort,
                     signupTransactionService = signupTransactionService,
                     getMemberIdPort = getMemberIdPort,
-                    createDailyFortunePort = createDailyFortunePort,
                     accessTokenPort = accessTokenPort,
                     refreshTokenPort = refreshTokenPort,
                 )
@@ -56,7 +50,6 @@ class SignupServiceTest :
                     onboardingTokenPort,
                     signupTransactionService,
                     getMemberIdPort,
-                    createDailyFortunePort,
                     accessTokenPort,
                     refreshTokenPort,
                 )
@@ -83,16 +76,14 @@ class SignupServiceTest :
                         shouldThrow<OnboardingTokenInvalidException> { signupService.signup(command) }
 
                         verify(exactly = 0) { signupTransactionService.register(any(), any()) }
-                        verify(exactly = 0) { createDailyFortunePort.create(any(), any()) }
                     }
                 }
 
                 context("아직 가입되지 않은 소셜 계정이면") {
-                    it("회원·사주를 생성하고 당일 운세까지 만든 뒤 토큰을 발급하고 onboardingToken을 폐기한다") {
+                    it("회원·사주를 생성한 뒤 토큰을 발급하고 onboardingToken을 폐기한다") {
                         every { onboardingTokenPort.findProfile(command.onboardingToken) } returns profile
                         every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns null
                         every { signupTransactionService.register(profile, command) } returns memberId
-                        every { createDailyFortunePort.create(memberId, any()) } returns DAILY_FORTUNE_ID
                         stubTokenIssue()
 
                         val result = signupService.signup(command)
@@ -100,13 +91,12 @@ class SignupServiceTest :
                         result.accessToken shouldBe issuedAccessToken
                         result.refreshToken shouldBe issuedRefreshToken
                         verify(exactly = 1) { signupTransactionService.register(profile, command) }
-                        verify(exactly = 1) { createDailyFortunePort.create(memberId, any()) }
                         verify(exactly = 1) { onboardingTokenPort.revoke(command.onboardingToken) }
                     }
                 }
 
                 context("이미 같은 소셜 계정으로 가입돼 있으면(첫 요청 타임아웃 후 재시도)") {
-                    it("409 대신 기존 회원의 토큰을 발급하고 회원·운세를 다시 만들지 않는다") {
+                    it("409 대신 기존 회원의 토큰을 발급하고 회원을 다시 만들지 않는다") {
                         every { onboardingTokenPort.findProfile(command.onboardingToken) } returns profile
                         every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns memberId
                         stubTokenIssue()
@@ -116,7 +106,6 @@ class SignupServiceTest :
                         result.accessToken shouldBe issuedAccessToken
                         result.refreshToken shouldBe issuedRefreshToken
                         verify(exactly = 0) { signupTransactionService.register(any(), any()) }
-                        verify(exactly = 0) { createDailyFortunePort.create(any(), any()) }
                         verify(exactly = 1) { onboardingTokenPort.revoke(command.onboardingToken) }
                     }
                 }
@@ -133,8 +122,6 @@ class SignupServiceTest :
                         val result = signupService.signup(command)
 
                         result.accessToken shouldBe issuedAccessToken
-                        // 경합 상대가 자기 몫의 운세를 만들고 있으므로 AI를 중복 호출하지 않는다.
-                        verify(exactly = 0) { createDailyFortunePort.create(any(), any()) }
                         verify(exactly = 1) { onboardingTokenPort.revoke(command.onboardingToken) }
                     }
                 }
@@ -148,22 +135,6 @@ class SignupServiceTest :
                         shouldThrow<MemberAlreadyExistsStub> { signupService.signup(command) }
 
                         verify(exactly = 0) { onboardingTokenPort.revoke(any()) }
-                    }
-                }
-
-                context("당일 운세 생성(AI)이 실패해도") {
-                    it("회원가입은 성공 처리해 토큰을 발급하고 onboardingToken을 폐기한다") {
-                        every { onboardingTokenPort.findProfile(command.onboardingToken) } returns profile
-                        every { getMemberIdPort.findIdByOauth(profile.provider, profile.providerId) } returns null
-                        every { signupTransactionService.register(profile, command) } returns memberId
-                        every { createDailyFortunePort.create(memberId, any()) } throws IllegalStateException("AI 호출 실패")
-                        stubTokenIssue()
-
-                        val result = signupService.signup(command)
-
-                        result.accessToken shouldBe issuedAccessToken
-                        result.refreshToken shouldBe issuedRefreshToken
-                        verify(exactly = 1) { onboardingTokenPort.revoke(command.onboardingToken) }
                     }
                 }
             }
