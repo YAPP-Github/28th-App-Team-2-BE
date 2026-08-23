@@ -76,11 +76,11 @@ private val SIGNUP_COMMAND =
         onboardingToken = "unused-onboarding-token",
         name = "홍길동",
         birthDate = LocalDate.of(2000, 1, 1),
-        birthTime = "0600",
+        birthTime = "MYOSI",
         calendarType = "SOLAR",
         gender = "MALE",
         job = "STUDENT",
-        relationshipStatus = "SINGLE",
+        relationshipStatus = "SOLO",
     )
 
 /**
