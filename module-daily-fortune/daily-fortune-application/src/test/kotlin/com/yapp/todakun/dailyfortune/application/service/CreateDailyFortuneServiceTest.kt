@@ -1,8 +1,10 @@
 package com.yapp.todakun.dailyfortune.application.service
 
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationInProgressException
 import com.yapp.todakun.dailyfortune.fixture.DailyFortuneFixture
 import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
+import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneGenerationLockPort
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedCategoryFortune
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
 import com.yapp.todakun.shared.FortuneCategory
@@ -15,8 +17,10 @@ import com.yapp.todakun.shared.SajuChartSummary
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
@@ -34,6 +38,7 @@ class CreateDailyFortuneServiceTest :
         val getSajuChartPort = mockk<GetSajuChartPort>()
         val getDailyPillarPort = mockk<GetDailyPillarPort>()
         val dailyFortuneAiPort = mockk<DailyFortuneAiPort>()
+        val dailyFortuneGenerationLockPort = mockk<DailyFortuneGenerationLockPort>()
         val service =
             CreateDailyFortuneService(
                 dailyFortuneTransactionalStore,
@@ -41,6 +46,7 @@ class CreateDailyFortuneServiceTest :
                 getSajuChartPort,
                 getDailyPillarPort,
                 dailyFortuneAiPort,
+                dailyFortuneGenerationLockPort,
             )
 
         val fortuneDate = LocalDate.of(2026, 6, 24)
@@ -52,11 +58,14 @@ class CreateDailyFortuneServiceTest :
                 getSajuChartPort,
                 getDailyPillarPort,
                 dailyFortuneAiPort,
+                dailyFortuneGenerationLockPort,
             )
         }
 
         fun stubGeneration(generated: GeneratedDailyFortune) {
             every { dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate) } returns null
+            every { dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate) } returns true
+            every { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate) } just Runs
             every { getMemberFortuneProfilePort.getProfile(MEMBER_ID) } returns memberFortuneProfile()
             every { getSajuChartPort.getChart(MEMBER_ID) } returns sajuChartSummary()
             every { getDailyPillarPort.getPillar(fortuneDate) } returns pillarSummary()
@@ -72,13 +81,14 @@ class CreateDailyFortuneServiceTest :
                     val result = service.create(MEMBER_ID, fortuneDate)
 
                     result shouldBe existing.id
+                    verify(exactly = 0) { dailyFortuneGenerationLockPort.tryAcquire(any(), any()) }
                     verify(exactly = 0) { dailyFortuneAiPort.generate(any(), any(), any()) }
                     verify(exactly = 0) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
                 }
             }
 
             context("아직 생성된 적이 없으면") {
-                it("회원 정보·사주로 AI를 호출해 오늘의 운세와 LuckAction을 멱등 저장하고 ID를 반환한다") {
+                it("생성 락을 선점하고 AI를 호출해 오늘의 운세와 LuckAction을 멱등 저장한 뒤 락을 해제하고 ID를 반환한다") {
                     val saved = DailyFortuneFixture.create(memberId = MEMBER_ID, fortuneDate = fortuneDate)
                     stubGeneration(generatedDailyFortune())
                     every { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) } returns saved.id
@@ -87,9 +97,10 @@ class CreateDailyFortuneServiceTest :
 
                     result shouldBe saved.id
                     verify(exactly = 1) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
+                    verify(exactly = 1) { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate) }
                 }
 
-                it("선조회 트랜잭션 → (트랜잭션 밖) AI 호출 → 저장 트랜잭션 순서로 처리한다") {
+                it("선조회 트랜잭션 → 생성 락 선점 → (트랜잭션 밖) AI 호출 → 저장 트랜잭션 → 락 해제 순서로 처리한다") {
                     val saved = DailyFortuneFixture.create(memberId = MEMBER_ID, fortuneDate = fortuneDate)
                     stubGeneration(generatedDailyFortune())
                     every { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) } returns saved.id
@@ -98,14 +109,28 @@ class CreateDailyFortuneServiceTest :
 
                     verifyOrder {
                         dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate)
+                        dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate)
                         dailyFortuneAiPort.generate(any(), fortuneDate, any())
                         dailyFortuneTransactionalStore.saveIfAbsent(any(), any())
+                        dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate)
                     }
                 }
             }
 
+            context("이미 다른 호출자가 같은 회원·날짜를 생성 중이라 생성 락 선점에 실패하면") {
+                it("DailyFortuneGenerationInProgressException을 던지고 AI를 호출하지 않는다") {
+                    every { dailyFortuneTransactionalStore.findExistingWithLock(MEMBER_ID, fortuneDate) } returns null
+                    every { dailyFortuneGenerationLockPort.tryAcquire(MEMBER_ID, fortuneDate) } returns false
+
+                    shouldThrow<DailyFortuneGenerationInProgressException> { service.create(MEMBER_ID, fortuneDate) }
+
+                    verify(exactly = 0) { dailyFortuneAiPort.generate(any(), any(), any()) }
+                    verify(exactly = 0) { dailyFortuneGenerationLockPort.release(any(), any()) }
+                }
+            }
+
             context("AI가 카테고리를 정확히 5개(1개씩) 채우지 못하면") {
-                it("DailyFortuneGenerationFailedException을 던지고 저장하지 않는다") {
+                it("DailyFortuneGenerationFailedException을 던지고 저장하지 않되, 락은 해제한다") {
                     val duplicatedCategories =
                         listOf(
                             FortuneCategory.RELATIONSHIP,
@@ -119,6 +144,7 @@ class CreateDailyFortuneServiceTest :
                     shouldThrow<DailyFortuneGenerationFailedException> { service.create(MEMBER_ID, fortuneDate) }
 
                     verify(exactly = 0) { dailyFortuneTransactionalStore.saveIfAbsent(any(), any()) }
+                    verify(exactly = 1) { dailyFortuneGenerationLockPort.release(MEMBER_ID, fortuneDate) }
                 }
             }
         }
