@@ -68,6 +68,17 @@ private val GENERATED_FORTUNE =
                 GeneratedCategoryFortune(fortuneCategory = it, score = 80, title = "제목", content = "내용")
             },
     )
+private val SIGNUP_COMMAND =
+    SignupCommand(
+        onboardingToken = "unused-onboarding-token",
+        name = "홍길동",
+        birthDate = LocalDate.of(2000, 1, 1),
+        birthTime = "0600",
+        calendarType = "SOLAR",
+        gender = "MALE",
+        job = "STUDENT",
+        relationshipStatus = "SINGLE",
+    )
 
 /**
  * 이슈 #90: 회원가입 트랜잭션 커밋 이후에만 [com.yapp.todakun.shared.event.MemberSignedUpEvent] 리스너가 실행되고,
@@ -106,7 +117,7 @@ class SignupTransactionBoundaryIntegrationTest(
             context("register() 트랜잭션이 롤백되면") {
                 it("MemberSignedUpEvent 리스너가 실행되지 않아 AI를 호출하지 않는다") {
                     val profile = newOauthProfile(providerId = "rollback-${UUID.randomUUID()}")
-                    val command = newSignupCommand()
+                    val command = SIGNUP_COMMAND
 
                     transactionTemplate.execute<Unit> { status ->
                         signupTransactionService.register(profile, command)
@@ -121,7 +132,7 @@ class SignupTransactionBoundaryIntegrationTest(
             context("register() 트랜잭션이 커밋되면") {
                 it("요청 스레드가 아닌 전용 워커 스레드에서 오늘의 운세를 생성한다") {
                     val profile = newOauthProfile(providerId = "commit-${UUID.randomUUID()}")
-                    val command = newSignupCommand()
+                    val command = SIGNUP_COMMAND
                     stubCollaborators()
                     var generationThreadName: String? = null
                     every { dailyFortuneAiPort.generate(any(), FORTUNE_DATE, any()) } answers {
@@ -144,18 +155,6 @@ class SignupTransactionBoundaryIntegrationTest(
 
     private fun newOauthProfile(providerId: String): OauthMemberProfile =
         OauthMemberProfile(provider = OauthProvider.KAKAO, providerId = providerId, email = "$providerId@todakun.com")
-
-    private fun newSignupCommand(): SignupCommand =
-        SignupCommand(
-            onboardingToken = "unused-onboarding-token",
-            name = "홍길동",
-            birthDate = LocalDate.of(2000, 1, 1),
-            birthTime = "0600",
-            calendarType = "SOLAR",
-            gender = "MALE",
-            job = "STUDENT",
-            relationshipStatus = "SINGLE",
-        )
 
     private fun stubCollaborators() {
         every { getMemberFortuneProfilePort.getProfile(any()) } returns MEMBER_PROFILE
