@@ -1,5 +1,6 @@
 package com.yapp.todakun.compatibility.adapter.ai
 
+import com.yapp.todakun.common.format.formatSajuPillar
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.compatibility.exception.CompatibilityCircuitOpenException
 import com.yapp.todakun.compatibility.exception.CompatibilityEmptyResponseException
@@ -85,9 +86,5 @@ class VertexAiCompatibilityAdapter(
         - Sipseong (Ten Gods) distribution (character count): ${sipseong.entries.joinToString { "${it.key} ${it.value}" }}
         """.trimIndent()
 
-    private fun CompatibilityPillar.describe(): String {
-        val stemPart = stemSipseong?.let { "천간 $it, " } ?: ""
-
-        return "$stem$branch (${stemPart}지지 $branchSipseong, 십이운성 $sibiunseong)"
-    }
+    private fun CompatibilityPillar.describe(): String = formatSajuPillar(stem, branch, stemSipseong, branchSipseong, sibiunseong)
 }

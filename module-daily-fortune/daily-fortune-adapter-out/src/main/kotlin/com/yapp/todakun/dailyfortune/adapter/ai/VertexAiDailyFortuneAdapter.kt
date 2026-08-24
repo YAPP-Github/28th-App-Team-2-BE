@@ -1,5 +1,6 @@
 package com.yapp.todakun.dailyfortune.adapter.ai
 
+import com.yapp.todakun.common.format.formatSajuPillar
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneCircuitOpenException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneEmptyResponseException
@@ -103,9 +104,5 @@ class VertexAiDailyFortuneAdapter(
         6. Write all sentences in Korean, keeping a warm and positive tone while avoiding unfounded exaggeration.
         """.trimIndent()
 
-    private fun Pillar.describe(): String {
-        val stemPart = stemSipseong?.let { "천간 $it, " } ?: ""
-
-        return "$stem$branch (${stemPart}지지 $branchSipseong, 십이운성 $sibiunseong)"
-    }
+    private fun Pillar.describe(): String = formatSajuPillar(stem, branch, stemSipseong, branchSipseong, sibiunseong)
 }
