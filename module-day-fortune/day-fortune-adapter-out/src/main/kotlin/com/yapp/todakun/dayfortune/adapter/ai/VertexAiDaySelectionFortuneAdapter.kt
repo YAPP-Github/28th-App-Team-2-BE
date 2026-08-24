@@ -12,11 +12,16 @@ import com.yapp.todakun.dayfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dayfortune.port.outbound.Pillar
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "day-fortune-ai"
+
+// 프롬프트 지시문만으로는 JSON 형식이 강제되지 않아, Gemini가 문법적으로 깨진 JSON(예: 닫는 `}` 누락)을 응답할 수 있다.
+// provider 단에서 JSON 출력 모드를 강제해 BeanOutputConverter 파싱 실패를 줄인다.
+private val JSON_RESPONSE_OPTIONS = VertexAiGeminiChatOptions.builder().responseMimeType("application/json").build()
 
 /**
  * Vertex AI(Gemini)로 택일 운세를 생성하는 [DaySelectionFortuneAiPort] 구현체.
@@ -59,6 +64,7 @@ class VertexAiDaySelectionFortuneAdapter(
         chatClient
             .prompt()
             .user(buildPrompt(profile, purpose, targetDate, dayPillar))
+            .options(JSON_RESPONSE_OPTIONS)
             .call()
             .entity(GeneratedDaySelectionFortune::class.java)
 

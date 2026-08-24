@@ -11,10 +11,15 @@ import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
 import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "year-fortune-ai"
+
+// 프롬프트 지시문만으로는 JSON 형식이 강제되지 않아, Gemini가 문법적으로 깨진 JSON(예: 닫는 `}` 누락)을 응답할 수 있다.
+// provider 단에서 JSON 출력 모드를 강제해 BeanOutputConverter 파싱 실패를 줄인다.
+private val JSON_RESPONSE_OPTIONS = VertexAiGeminiChatOptions.builder().responseMimeType("application/json").build()
 
 /**
  * Vertex AI(Gemini)로 연도별 운세를 생성하는 [YearSelectionFortuneAiPort] 구현체.
@@ -55,6 +60,7 @@ class VertexAiYearSelectionFortuneAdapter(
         chatClient
             .prompt()
             .user(buildPrompt(profile, year, yearPillar))
+            .options(JSON_RESPONSE_OPTIONS)
             .call()
             .entity(GeneratedYearSelectionFortune::class.java)
 
