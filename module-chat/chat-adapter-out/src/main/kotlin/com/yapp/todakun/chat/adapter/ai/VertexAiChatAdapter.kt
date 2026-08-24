@@ -11,6 +11,7 @@ import com.yapp.todakun.chat.port.outbound.ChatPillarContext
 import com.yapp.todakun.chat.port.outbound.ChatProfileContext
 import com.yapp.todakun.chat.port.outbound.ChatPromptContext
 import com.yapp.todakun.chat.port.outbound.ChatSajuContext
+import com.yapp.todakun.common.format.formatSajuPillar
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
@@ -197,11 +198,7 @@ class VertexAiChatAdapter(
         - Sipseong (Ten Gods) distribution (character count): ${sipseong.entries.joinToString { "${it.key} ${it.value}" }}
         """.trimIndent()
 
-    private fun ChatPillarContext.describe(): String {
-        val stemPart = stemSipseong?.let { "천간 $it, " } ?: ""
-
-        return "$stem$branch (${stemPart}지지 $branchSipseong, 십이운성 $sibiunseong)"
-    }
+    private fun ChatPillarContext.describe(): String = formatSajuPillar(stem, branch, stemSipseong, branchSipseong, sibiunseong)
 
     private fun ChatProfileContext.describe(): String =
         """
