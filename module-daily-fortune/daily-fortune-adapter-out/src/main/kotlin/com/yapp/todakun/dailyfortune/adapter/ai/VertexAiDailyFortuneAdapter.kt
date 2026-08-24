@@ -9,12 +9,10 @@ import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
 import com.yapp.todakun.dailyfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dailyfortune.port.outbound.Pillar
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
 import java.time.LocalDate
-import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "daily-fortune-ai"
 
@@ -40,15 +38,12 @@ class VertexAiDailyFortuneAdapter(
         todayPillar: Pillar,
     ): GeneratedDailyFortune {
         val generated =
-            try {
-                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, fortuneDate, todayPillar) }
-            } catch (e: CallNotPermittedException) {
-                throw DailyFortuneCircuitOpenException(e)
-            } catch (e: TimeoutException) {
-                throw DailyFortuneTimeoutException(e)
-            } catch (e: Exception) {
-                throw DailyFortuneGenerationFailedException(e)
-            }
+            resilience.execute(
+                AI_RESILIENCE_INSTANCE_NAME,
+                onCircuitOpen = { DailyFortuneCircuitOpenException(it) },
+                onTimeout = { DailyFortuneTimeoutException(it) },
+                onFailure = { DailyFortuneGenerationFailedException(it) },
+            ) { callAi(profile, fortuneDate, todayPillar) }
 
         return generated ?: throw DailyFortuneEmptyResponseException()
     }

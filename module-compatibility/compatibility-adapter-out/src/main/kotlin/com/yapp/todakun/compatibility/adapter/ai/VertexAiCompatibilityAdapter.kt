@@ -10,11 +10,9 @@ import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiPort
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityChartProfile
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityPillar
 import com.yapp.todakun.compatibility.port.outbound.GeneratedCompatibility
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
-import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "compatibility-ai"
 
@@ -35,17 +33,13 @@ class VertexAiCompatibilityAdapter(
     private val chatClient = chatClientBuilder.build()
 
     override fun generate(input: CompatibilityAiInput): GeneratedCompatibility {
-        // runCatching은 Error(OOM 등)까지 삼키므로, Exception만 잡아 도메인 예외로 변환하고 그 외 JVM 오류는 전파한다.
         val generated =
-            try {
-                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(input) }
-            } catch (e: CallNotPermittedException) {
-                throw CompatibilityCircuitOpenException(e)
-            } catch (e: TimeoutException) {
-                throw CompatibilityTimeoutException(e)
-            } catch (e: Exception) {
-                throw CompatibilityGenerationFailedException(e)
-            }
+            resilience.execute(
+                AI_RESILIENCE_INSTANCE_NAME,
+                onCircuitOpen = { CompatibilityCircuitOpenException(it) },
+                onTimeout = { CompatibilityTimeoutException(it) },
+                onFailure = { CompatibilityGenerationFailedException(it) },
+            ) { callAi(input) }
 
         return generated ?: throw CompatibilityEmptyResponseException()
     }

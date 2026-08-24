@@ -9,11 +9,9 @@ import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
 import com.yapp.todakun.yearfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
-import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "year-fortune-ai"
 
@@ -39,15 +37,12 @@ class VertexAiYearSelectionFortuneAdapter(
         yearPillar: Pillar,
     ): GeneratedYearSelectionFortune {
         val generated =
-            try {
-                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, year, yearPillar) }
-            } catch (e: CallNotPermittedException) {
-                throw YearSelectionFortuneCircuitOpenException(e)
-            } catch (e: TimeoutException) {
-                throw YearSelectionFortuneTimeoutException(e)
-            } catch (e: Exception) {
-                throw YearSelectionFortuneGenerationFailedException(e)
-            }
+            resilience.execute(
+                AI_RESILIENCE_INSTANCE_NAME,
+                onCircuitOpen = { YearSelectionFortuneCircuitOpenException(it) },
+                onTimeout = { YearSelectionFortuneTimeoutException(it) },
+                onFailure = { YearSelectionFortuneGenerationFailedException(it) },
+            ) { callAi(profile, year, yearPillar) }
 
         return generated ?: throw YearSelectionFortuneEmptyResponseException()
     }

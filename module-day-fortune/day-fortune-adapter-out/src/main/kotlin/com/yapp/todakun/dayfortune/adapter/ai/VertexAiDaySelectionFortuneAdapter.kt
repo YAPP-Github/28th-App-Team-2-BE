@@ -10,12 +10,10 @@ import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.GeneratedDaySelectionFortune
 import com.yapp.todakun.dayfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dayfortune.port.outbound.Pillar
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
 import java.time.LocalDate
-import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "day-fortune-ai"
 
@@ -42,15 +40,12 @@ class VertexAiDaySelectionFortuneAdapter(
         dayPillar: Pillar,
     ): GeneratedDaySelectionFortune {
         val generated =
-            try {
-                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, purpose, targetDate, dayPillar) }
-            } catch (e: CallNotPermittedException) {
-                throw DaySelectionFortuneCircuitOpenException(e)
-            } catch (e: TimeoutException) {
-                throw DaySelectionFortuneTimeoutException(e)
-            } catch (e: Exception) {
-                throw DaySelectionFortuneGenerationFailedException(e)
-            }
+            resilience.execute(
+                AI_RESILIENCE_INSTANCE_NAME,
+                onCircuitOpen = { DaySelectionFortuneCircuitOpenException(it) },
+                onTimeout = { DaySelectionFortuneTimeoutException(it) },
+                onFailure = { DaySelectionFortuneGenerationFailedException(it) },
+            ) { callAi(profile, purpose, targetDate, dayPillar) }
 
         return generated ?: throw DaySelectionFortuneEmptyResponseException()
     }
