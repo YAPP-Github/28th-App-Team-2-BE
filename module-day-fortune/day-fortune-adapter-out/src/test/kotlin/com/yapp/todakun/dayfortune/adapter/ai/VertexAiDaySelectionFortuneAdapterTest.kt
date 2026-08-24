@@ -28,6 +28,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.retry.NonTransientAiException
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import java.time.Duration
 import java.time.LocalDate
 import java.util.concurrent.Executors
@@ -75,6 +76,9 @@ class VertexAiDaySelectionFortuneAdapterTest : DescribeSpec({
                 promptSlot.captured shouldContain FortuneCategory.LOVE.label
                 promptSlot.captured shouldContain FortuneCategory.MONEY.label
                 verify(exactly = 1) { requestSpec.call() }
+                verify(exactly = 1) {
+                    requestSpec.options(match<VertexAiGeminiChatOptions> { it.responseMimeType == "application/json" })
+                }
             }
         }
 
@@ -178,6 +182,7 @@ private fun stubChatClient(
 
     every { chatClient.prompt() } returns requestSpec
     every { requestSpec.user(capture(promptSlot)) } returns requestSpec
+    every { requestSpec.options(any()) } returns requestSpec
     every { requestSpec.call() } returns callResponseSpec
 
     return promptSlot
