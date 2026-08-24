@@ -11,10 +11,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  * 모든 도메인이 [org.springframework.ai.chat.client.ChatClient.Builder]가 감싸는 하나의 공유 [com.google.cloud.vertexai.VertexAI]
  * 클라이언트를 쓰므로(각 어댑터는 그 위에 자기 `ChatClient`만 새로 만든다) 이 값도 전역 하나다.
  * 그래서 가장 긴 사용처인 chat의 스트리밍(`STREAM_TIMEOUT` 60초)을 [streamTimeoutSeconds] 기본값의 기준으로 삼고,
- * 나머지 단건 호출 중 가장 긴 daily-fortune-ai의 TimeLimiter(20초)를 [unaryTimeoutSeconds] 기본값의 기준으로 삼아 각각 여유를 둔다.
+ * 나머지 단건 호출 중 가장 긴 daily-fortune-ai의 TimeLimiter(60초)를 [unaryTimeoutSeconds] 기본값의 기준으로 삼아 각각 10초의 여유를 둔다.
  */
 @ConfigurationProperties(prefix = "vertex-ai.transport")
 data class VertexAiTransportProperties(
-    val unaryTimeoutSeconds: Long = 25,
+    val unaryTimeoutSeconds: Long = 70,
     val streamTimeoutSeconds: Long = 70,
 )

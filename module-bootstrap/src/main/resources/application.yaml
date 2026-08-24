@@ -48,8 +48,8 @@ management:
 # stream-timeout-seconds는 chat의 스트리밍 호출에만 쓰인다.
 vertex-ai:
   transport:
-    unary-timeout-seconds: 130
-    stream-timeout-seconds: 140
+    unary-timeout-seconds: 70
+    stream-timeout-seconds: 70
 
 # Resilience4j — 도메인별 Vertex AI 호출 CircuitBreaker/Retry/TimeLimiter 설정(이슈 #54, AiResilienceConfig).
 # circuitBreaker는 5개 도메인이 모두 같은 값을 쓰므로 인스턴스별이 아닌 레지스트리 공통 기본값 하나만 둔다(미설정 시 AiResilienceProperties 기본값 사용).
@@ -73,13 +73,13 @@ ai-resilience:
       wait-duration-millis: 500
   time-limiters:
     daily-fortune-ai:
-      timeout-duration-seconds: 120
+      timeout-duration-seconds: 60
     day-fortune-ai:
-      timeout-duration-seconds: 76
+      timeout-duration-seconds: 40
     year-fortune-ai:
-      timeout-duration-seconds: 76
+      timeout-duration-seconds: 40
     compatibility-ai:
-      timeout-duration-seconds: 76
+      timeout-duration-seconds: 40
 
 # 카카오/구글이 정한 고정 API 규격 — 환경(local/dev/prod) 무관하게 동일한 값.
 oauth:
