@@ -1,5 +1,6 @@
 package com.yapp.todakun.yearfortune.adapter.ai
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCircuitOpenException
@@ -33,6 +34,7 @@ import java.time.LocalDate
 import java.util.concurrent.Executors
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "year-fortune-ai"
+private val objectMapper = ObjectMapper()
 
 class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
     val chatClientBuilder = mockk<ChatClient.Builder>()
@@ -76,7 +78,7 @@ class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
                 verify(exactly = 1) {
                     requestSpec.options(
                         match<VertexAiGeminiChatOptions> {
-                            it.responseMimeType == "application/json" && it.responseSchema?.contains("fortuneCategories") == true
+                            it.responseMimeType == "application/json" && hasSchemaProperty(it.responseSchema, "fortuneCategories")
                         },
                     )
                 }
@@ -173,6 +175,11 @@ class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
         }
     }
 })
+
+private fun hasSchemaProperty(
+    schema: String?,
+    field: String,
+): Boolean = schema?.let { objectMapper.readTree(it) }?.path("properties")?.has(field) == true
 
 private fun stubChatClient(
     chatClient: ChatClient,

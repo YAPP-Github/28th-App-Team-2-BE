@@ -1,5 +1,6 @@
 package com.yapp.todakun.dailyfortune.adapter.ai
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneCircuitOpenException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneEmptyResponseException
@@ -33,6 +34,7 @@ import java.time.LocalDate
 import java.util.concurrent.Executors
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "daily-fortune-ai"
+private val objectMapper = ObjectMapper()
 
 class VertexAiDailyFortuneAdapterTest : DescribeSpec({
     val chatClientBuilder = mockk<ChatClient.Builder>()
@@ -76,7 +78,7 @@ class VertexAiDailyFortuneAdapterTest : DescribeSpec({
                 verify(exactly = 1) {
                     requestSpec.options(
                         match<VertexAiGeminiChatOptions> {
-                            it.responseMimeType == "application/json" && it.responseSchema?.contains("luckyItems") == true
+                            it.responseMimeType == "application/json" && hasSchemaProperty(it.responseSchema, "luckyItems")
                         },
                     )
                 }
@@ -173,6 +175,11 @@ class VertexAiDailyFortuneAdapterTest : DescribeSpec({
         }
     }
 })
+
+private fun hasSchemaProperty(
+    schema: String?,
+    field: String,
+): Boolean = schema?.let { objectMapper.readTree(it) }?.path("properties")?.has(field) == true
 
 private fun stubChatClient(
     chatClient: ChatClient,

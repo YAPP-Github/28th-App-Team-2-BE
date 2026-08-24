@@ -1,5 +1,6 @@
 package com.yapp.todakun.compatibility.adapter.ai
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.compatibility.CompatibilityRelationshipType
 import com.yapp.todakun.compatibility.exception.CompatibilityCircuitOpenException
@@ -32,6 +33,7 @@ import java.time.Duration
 import java.util.concurrent.Executors
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "compatibility-ai"
+private val objectMapper = ObjectMapper()
 
 class VertexAiCompatibilityAdapterTest : DescribeSpec({
     val chatClientBuilder = mockk<ChatClient.Builder>()
@@ -71,7 +73,7 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                 verify(exactly = 1) {
                     requestSpec.options(
                         match<VertexAiGeminiChatOptions> {
-                            it.responseMimeType == "application/json" && it.responseSchema?.contains("headline") == true
+                            it.responseMimeType == "application/json" && hasSchemaProperty(it.responseSchema, "headline")
                         },
                     )
                 }
@@ -178,6 +180,11 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
         }
     }
 })
+
+private fun hasSchemaProperty(
+    schema: String?,
+    field: String,
+): Boolean = schema?.let { objectMapper.readTree(it) }?.path("properties")?.has(field) == true
 
 private fun stubChatClient(
     chatClient: ChatClient,
