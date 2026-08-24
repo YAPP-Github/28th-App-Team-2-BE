@@ -69,7 +69,11 @@ class VertexAiCompatibilityAdapterTest : DescribeSpec({
                 promptSlot.captured shouldContain input.myProfile.dayMaster
                 verify(exactly = 1) { requestSpec.call() }
                 verify(exactly = 1) {
-                    requestSpec.options(match<VertexAiGeminiChatOptions> { it.responseMimeType == "application/json" })
+                    requestSpec.options(
+                        match<VertexAiGeminiChatOptions> {
+                            it.responseMimeType == "application/json" && it.responseSchema?.contains("headline") == true
+                        },
+                    )
                 }
             }
         }

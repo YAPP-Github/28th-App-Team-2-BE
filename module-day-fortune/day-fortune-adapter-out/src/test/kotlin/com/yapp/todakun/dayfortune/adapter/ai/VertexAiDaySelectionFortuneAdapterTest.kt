@@ -77,7 +77,11 @@ class VertexAiDaySelectionFortuneAdapterTest : DescribeSpec({
                 promptSlot.captured shouldContain FortuneCategory.MONEY.label
                 verify(exactly = 1) { requestSpec.call() }
                 verify(exactly = 1) {
-                    requestSpec.options(match<VertexAiGeminiChatOptions> { it.responseMimeType == "application/json" })
+                    requestSpec.options(
+                        match<VertexAiGeminiChatOptions> {
+                            it.responseMimeType == "application/json" && it.responseSchema?.contains("fortuneCategories") == true
+                        },
+                    )
                 }
             }
         }
