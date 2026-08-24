@@ -1,5 +1,6 @@
 package com.yapp.todakun.dailyfortune.adapter.persistence
 
+import com.yapp.todakun.dailyfortune.config.JpaAuditingTestConfig
 import com.yapp.todakun.dailyfortune.config.TestContainersConfig
 import com.yapp.todakun.dailyfortune.fixture.DailyFortuneFixture
 import io.kotest.core.spec.style.DescribeSpec
@@ -28,7 +29,7 @@ private const val BLOCKED_TIMEOUT_SECONDS = 1L
 @ExperimentalUuidApi
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, JpaAuditingTestConfig::class)
 class DailyFortuneRepositoryAdapterTest(
     private val dailyFortuneJpaRepository: DailyFortuneJpaRepository,
     private val transactionManager: PlatformTransactionManager,
