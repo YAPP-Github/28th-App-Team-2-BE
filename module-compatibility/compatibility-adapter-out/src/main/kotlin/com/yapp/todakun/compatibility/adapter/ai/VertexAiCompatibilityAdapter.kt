@@ -1,6 +1,5 @@
 package com.yapp.todakun.compatibility.adapter.ai
 
-import com.yapp.todakun.common.format.formatSajuPillar
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.compatibility.exception.CompatibilityCircuitOpenException
 import com.yapp.todakun.compatibility.exception.CompatibilityEmptyResponseException
@@ -11,6 +10,7 @@ import com.yapp.todakun.compatibility.port.outbound.CompatibilityAiPort
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityChartProfile
 import com.yapp.todakun.compatibility.port.outbound.CompatibilityPillar
 import com.yapp.todakun.compatibility.port.outbound.GeneratedCompatibility
+import com.yapp.todakun.shared.formatSajuPillar
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions

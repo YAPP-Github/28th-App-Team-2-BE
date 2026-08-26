@@ -1,4 +1,4 @@
-package com.yapp.todakun.common.format
+package com.yapp.todakun.shared
 
 /**
  * 사주 명식 한 기둥(간지)을 "갑자 (천간 비견, 지지 정관, 십이운성 제왕)" 형식으로 포맷한다.
@@ -15,3 +15,6 @@ fun formatSajuPillar(
 
     return "$stem$branch (${stemPart}지지 $branchSipseong, 십이운성 $sibiunseong)"
 }
+
+/** [PillarSummary]를 [formatSajuPillar] 형식으로 포맷한다. */
+fun PillarSummary.describe(): String = formatSajuPillar(stem, branch, stemSipseong, branchSipseong, sibiunseong)

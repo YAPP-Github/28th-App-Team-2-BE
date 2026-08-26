@@ -1,6 +1,5 @@
 package com.yapp.todakun.dayfortune.adapter.ai
 
-import com.yapp.todakun.common.format.formatSajuPillar
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.dayfortune.DaySelectionPurpose
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneCircuitOpenException
@@ -11,6 +10,7 @@ import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.GeneratedDaySelectionFortune
 import com.yapp.todakun.dayfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dayfortune.port.outbound.Pillar
+import com.yapp.todakun.shared.formatSajuPillar
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions

@@ -1,7 +1,7 @@
 package com.yapp.todakun.yearfortune.adapter.ai
 
-import com.yapp.todakun.common.format.formatSajuPillar
 import com.yapp.todakun.common.resilience.AiResilienceSupport
+import com.yapp.todakun.shared.formatSajuPillar
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCircuitOpenException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneEmptyResponseException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneGenerationFailedException

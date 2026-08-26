@@ -11,8 +11,8 @@ import com.yapp.todakun.chat.port.outbound.ChatPillarContext
 import com.yapp.todakun.chat.port.outbound.ChatProfileContext
 import com.yapp.todakun.chat.port.outbound.ChatPromptContext
 import com.yapp.todakun.chat.port.outbound.ChatSajuContext
-import com.yapp.todakun.common.format.formatSajuPillar
 import com.yapp.todakun.common.resilience.AiResilienceSupport
+import com.yapp.todakun.shared.formatSajuPillar
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
