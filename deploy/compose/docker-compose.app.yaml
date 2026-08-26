@@ -12,7 +12,7 @@ services:
     env_file:
       - ../.env
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-dev}
       # Sentry 릴리즈 = 배포 이미지 태그(dev-<git sha>). Sentry가 이슈를 커밋 단위로 묶어 회귀 추적이 가능해진다.
       SENTRY_RELEASE: ${SENTRY_RELEASE:-}
     networks:
