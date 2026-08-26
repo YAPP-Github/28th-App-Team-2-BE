@@ -1,5 +1,6 @@
 package com.yapp.todakun.yearfortune.adapter.ai
 
+import com.yapp.todakun.common.ai.vertexResponseSchema
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.shared.formatSajuPillar
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCircuitOpenException
@@ -11,7 +12,6 @@ import com.yapp.todakun.yearfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
 
@@ -19,10 +19,11 @@ private const val AI_RESILIENCE_INSTANCE_NAME = "year-fortune-ai"
 
 // 프롬프트 지시문만으로는 JSON 형식·구조가 강제되지 않아, Gemini가 문법적으로 깨진 JSON을 응답하거나 [GeneratedYearSelectionFortune]와 다른 구조(필드 누락, 타입 불일치)로 응답할 수 있다.
 // provider 단에서 JSON 출력 모드 + entity() 변환 대상과 동일한 스키마를 강제해 BeanOutputConverter 파싱 실패를 줄인다.
+// responseSchema는 vertexResponseSchema로 대문자 type을 올려 전달해야 Vertex Schema proto가 타입 정보를 실제로 인식한다(소문자는 TYPE_UNSPECIFIED로 무시됨).
 private val JSON_RESPONSE_OPTIONS =
     VertexAiGeminiChatOptions.builder()
         .responseMimeType("application/json")
-        .responseSchema(BeanOutputConverter(GeneratedYearSelectionFortune::class.java).jsonSchema)
+        .responseSchema(vertexResponseSchema(GeneratedYearSelectionFortune::class.java))
         .build()
 
 /**
