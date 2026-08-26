@@ -14,6 +14,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.slf4j.Logger.ROOT_LOGGER_NAME
+import org.slf4j.MarkerFactory
 import org.springframework.ai.util.LoggingMarkers
 import org.springframework.boot.logging.logback.StructuredLogEncoder
 import org.springframework.boot.logging.logback.configureSpringBootLogback
@@ -129,6 +130,29 @@ class LogbackSpringConfigTest : DescribeSpec({
                     }
                 markerFilter.decide(plainError) shouldBe FilterReply.NEUTRAL
                 markerFilter.decide(sensitiveError) shouldBe FilterReply.DENY
+            } finally {
+                disposeContext(context)
+            }
+        }
+
+        it("SENSITIVE 마커를 참조로 포함한 계층형(composite) 마커도 걸러낸다") {
+            val context = configuredContext("dev")
+            try {
+                val discord =
+                    appendersOf(context).first { it.name == "DISCORD" }.shouldBeInstanceOf<DiscordWebhookAppender>()
+                val markerFilter = discord.copyOfAttachedFiltersList.filterIsInstance<SensitiveMarkerFilter>().singleOrNull()
+                requireNotNull(markerFilter) { "DISCORD appender에 SensitiveMarkerFilter가 없습니다" }
+
+                val testLogger = context.getLogger("com.yapp.todakun.LogbackSpringConfigTest")
+                val compositeMarker =
+                    MarkerFactory.getMarker("COMPOSITE_SENSITIVE").apply {
+                        add(LoggingMarkers.SENSITIVE_DATA_MARKER)
+                    }
+                val compositeSensitiveError =
+                    LoggingEvent(Logger::class.java.name, testLogger, Level.ERROR, "error", null, null).apply {
+                        addMarker(compositeMarker)
+                    }
+                markerFilter.decide(compositeSensitiveError) shouldBe FilterReply.DENY
             } finally {
                 disposeContext(context)
             }

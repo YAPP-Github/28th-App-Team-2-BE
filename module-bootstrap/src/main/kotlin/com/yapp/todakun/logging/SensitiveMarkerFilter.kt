@@ -16,5 +16,5 @@ import org.springframework.ai.util.LoggingMarkers
  */
 class SensitiveMarkerFilter : Filter<ILoggingEvent>() {
     override fun decide(event: ILoggingEvent): FilterReply =
-        if (event.markerList.orEmpty().contains(LoggingMarkers.SENSITIVE_DATA_MARKER)) FilterReply.DENY else FilterReply.NEUTRAL
+        if (event.markerList.orEmpty().any { it.contains(LoggingMarkers.SENSITIVE_DATA_MARKER) }) FilterReply.DENY else FilterReply.NEUTRAL
 }
