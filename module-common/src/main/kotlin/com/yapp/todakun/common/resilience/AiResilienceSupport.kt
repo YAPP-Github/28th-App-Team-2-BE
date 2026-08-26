@@ -64,6 +64,7 @@ class AiResilienceSupport(
     /**
      * [execute]를 감싸, resilience4j가 던지는 예외를 도메인별 [BusinessException]으로 변환해 다시 던진다.
      * [Exception]만 잡아 도메인 예외로 변환하고, [Error](OOM 등)는 그대로 전파한다.
+     * 실패를 예외로 올리지 않고 삼키는 호출부(예: chat의 액션 카드 추출)는 변환할 예외가 없으므로 이 오버로드의 대상이 아니다.
      */
     fun <T> execute(
         instanceName: String,
