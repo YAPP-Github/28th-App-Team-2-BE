@@ -82,10 +82,6 @@ logging:
   level:
     root: WARN
     com.yapp.todakun: INFO
-    # BeanOutputConverter는 파싱 실패마다 재시도 성공 여부와 무관하게 ERROR를 찍는다.
-    # daily-fortune 배치는 이미 회원당 3회 재시도 후 최종 skip만 DailyFortuneSkipListener가 ERROR로 알린다(discord).
-    # 이 로거를 그대로 두면 재시도로 자연 복구되는 파싱 실패까지 Discord로 오탐 알림이 간다.
-    org.springframework.ai.converter.BeanOutputConverter: "OFF"
 
 springdoc:
   swagger-ui:

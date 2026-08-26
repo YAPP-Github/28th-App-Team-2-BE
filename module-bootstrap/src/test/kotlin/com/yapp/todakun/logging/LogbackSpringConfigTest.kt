@@ -14,6 +14,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.slf4j.Logger.ROOT_LOGGER_NAME
+import org.springframework.ai.util.LoggingMarkers
 import org.springframework.boot.logging.logback.StructuredLogEncoder
 import org.springframework.boot.logging.logback.configureSpringBootLogback
 import org.springframework.mock.env.MockEnvironment
@@ -112,6 +113,27 @@ class LogbackSpringConfigTest : DescribeSpec({
             }
         }
 
+        it("DISCORD는 SENSITIVE 마커가 붙은 ERROR만 걸러내고 그 외 ERROR는 그대로 통과시킨다") {
+            val context = configuredContext("dev")
+            try {
+                val discord =
+                    appendersOf(context).first { it.name == "DISCORD" }.shouldBeInstanceOf<DiscordWebhookAppender>()
+                val markerFilter = discord.copyOfAttachedFiltersList.filterIsInstance<SensitiveMarkerFilter>().singleOrNull()
+                requireNotNull(markerFilter) { "DISCORD appender에 SensitiveMarkerFilter가 없습니다" }
+
+                val testLogger = context.getLogger("com.yapp.todakun.LogbackSpringConfigTest")
+                val plainError = LoggingEvent(Logger::class.java.name, testLogger, Level.ERROR, "error", null, null)
+                val sensitiveError =
+                    LoggingEvent(Logger::class.java.name, testLogger, Level.ERROR, "error", null, null).apply {
+                        addMarker(LoggingMarkers.SENSITIVE_DATA_MARKER)
+                    }
+                markerFilter.decide(plainError) shouldBe FilterReply.NEUTRAL
+                markerFilter.decide(sensitiveError) shouldBe FilterReply.DENY
+            } finally {
+                disposeContext(context)
+            }
+        }
+
         it("CONSOLE appender의 인코더가 StructuredLogEncoder다(구조화 콘솔 → Alloy → Loki 파이프라인 유지)") {
             val context = configuredContext("dev")
             try {
@@ -141,6 +163,16 @@ class LogbackSpringConfigTest : DescribeSpec({
                     FilterReply.DENY
                 thresholdFilter.decide(LoggingEvent(Logger::class.java.name, testLogger, Level.ERROR, "error", null, null)) shouldBe
                     FilterReply.NEUTRAL
+
+                val markerFilter = discord.copyOfAttachedFiltersList.filterIsInstance<SensitiveMarkerFilter>().singleOrNull()
+                requireNotNull(markerFilter) { "DISCORD appender에 SensitiveMarkerFilter가 없습니다" }
+                val sensitiveError =
+                    LoggingEvent(Logger::class.java.name, testLogger, Level.ERROR, "error", null, null).apply {
+                        addMarker(LoggingMarkers.SENSITIVE_DATA_MARKER)
+                    }
+                markerFilter.decide(LoggingEvent(Logger::class.java.name, testLogger, Level.ERROR, "error", null, null)) shouldBe
+                    FilterReply.NEUTRAL
+                markerFilter.decide(sensitiveError) shouldBe FilterReply.DENY
 
                 val console =
                     appenders.first { it.name == "CONSOLE" }.shouldBeInstanceOf<ConsoleAppender<ILoggingEvent>>()
