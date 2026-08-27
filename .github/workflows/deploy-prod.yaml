@@ -18,15 +18,18 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
+# 워크플로 기본 권한은 최소로 두고, GHCR 푸시 권한은 실제로 필요한 build 잡에만 부여한다.
 permissions:
   contents: read
-  packages: write # GHCR 푸시 (GITHUB_TOKEN)
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: prod
+    permissions:
+      contents: read
+      packages: write # GHCR 푸시 (GITHUB_TOKEN)
     outputs:
       image: ${{ steps.meta.outputs.image }}
     steps:
@@ -54,13 +57,22 @@ jobs:
 
       - name: 릴리즈 버전 결정 (workflow_dispatch 입력 우선, 없으면 HEAD의 git 태그에서 추출)
         id: release
+        # 수동 입력은 run 스크립트에 직접 보간하지 않고 env로 전달한다 —
+        # `${{ ... }}`를 셸에 그대로 렌더링하면 입력에 담긴 셸 구문이 runner에서 실행된다(스크립트 인젝션).
+        env:
+          RELEASE_VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          version="${{ github.event.inputs.version }}"
+          version="$RELEASE_VERSION_INPUT"
           if [ -z "$version" ]; then
             version="$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//')" || true
           fi
           if [ -z "$version" ]; then
             echo "::error::시맨틱 버전을 결정할 수 없습니다 — workflow_dispatch의 version 입력을 채우거나, HEAD 커밋에 vX.Y.Z 형식의 git 태그를 달아주세요."
+            exit 1
+          fi
+          # 형식 검증 — 이 값이 뒤에서 이미지 태그로 쓰이므로 여기서 한 번 막아둔다.
+          if ! printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::version은 X.Y.Z 형식이어야 합니다 (입력값: ${version})."
             exit 1
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
@@ -98,12 +110,21 @@ jobs:
           persist-credentials: false
 
       - name: Set up SSH key for Ansible
+        # ssh-keyscan은 받은 키의 소유자를 검증하지 않는다 — 네트워크 공격자가 응답을 바꾸면
+        # runner가 공격자 키를 신뢰하고 prod 배포 시크릿을 그쪽으로 보낼 수 있다.
+        # 그래서 사전에 검증해 둔 호스트 키를 VM_KNOWN_HOSTS 시크릿에서 그대로 주입한다.
+        env:
+          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          VM_KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
+          printf '%s\n' "$VM_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          # 호스트 키 검증 비활성화(HOST_KEY_CHECKING=False) 대신 known_hosts를 사전에 채워 MITM 방지.
-          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          if [ -z "$VM_KNOWN_HOSTS" ]; then
+            echo "::error::VM_KNOWN_HOSTS 시크릿이 비어 있습니다 — VM의 검증된 호스트 키를 등록해 주세요."
+            exit 1
+          fi
+          printf '%s\n' "$VM_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Render Ansible inventory
