@@ -1,6 +1,8 @@
 package com.yapp.todakun.yearfortune.adapter.ai
 
+import com.yapp.todakun.common.ai.vertexResponseSchema
 import com.yapp.todakun.common.resilience.AiResilienceSupport
+import com.yapp.todakun.shared.formatSajuPillar
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCircuitOpenException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneEmptyResponseException
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneGenerationFailedException
@@ -9,12 +11,20 @@ import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
 import com.yapp.todakun.yearfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.yearfortune.port.outbound.Pillar
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
-import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "year-fortune-ai"
+
+// 프롬프트 지시문만으로는 JSON 형식·구조가 강제되지 않아, Gemini가 문법적으로 깨진 JSON을 응답하거나 [GeneratedYearSelectionFortune]와 다른 구조(필드 누락, 타입 불일치)로 응답할 수 있다.
+// provider 단에서 JSON 출력 모드 + entity() 변환 대상과 동일한 스키마를 강제해 BeanOutputConverter 파싱 실패를 줄인다.
+// responseSchema는 vertexResponseSchema로 대문자 type을 올려 전달해야 Vertex Schema proto가 타입 정보를 실제로 인식한다(소문자는 TYPE_UNSPECIFIED로 무시됨).
+private val JSON_RESPONSE_OPTIONS =
+    VertexAiGeminiChatOptions.builder()
+        .responseMimeType("application/json")
+        .responseSchema(vertexResponseSchema(GeneratedYearSelectionFortune::class.java))
+        .build()
 
 /**
  * Vertex AI(Gemini)로 연도별 운세를 생성하는 [YearSelectionFortuneAiPort] 구현체.
@@ -34,15 +44,12 @@ class VertexAiYearSelectionFortuneAdapter(
         yearPillar: Pillar,
     ): GeneratedYearSelectionFortune {
         val generated =
-            try {
-                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, year, yearPillar) }
-            } catch (e: CallNotPermittedException) {
-                throw YearSelectionFortuneCircuitOpenException(e)
-            } catch (e: TimeoutException) {
-                throw YearSelectionFortuneTimeoutException(e)
-            } catch (e: Exception) {
-                throw YearSelectionFortuneGenerationFailedException(e)
-            }
+            resilience.execute(
+                AI_RESILIENCE_INSTANCE_NAME,
+                onCircuitOpen = { YearSelectionFortuneCircuitOpenException(it) },
+                onTimeout = { YearSelectionFortuneTimeoutException(it) },
+                onFailure = { YearSelectionFortuneGenerationFailedException(it) },
+            ) { callAi(profile, year, yearPillar) }
 
         return generated ?: throw YearSelectionFortuneEmptyResponseException()
     }
@@ -55,6 +62,7 @@ class VertexAiYearSelectionFortuneAdapter(
         chatClient
             .prompt()
             .user(buildPrompt(profile, year, yearPillar))
+            .options(JSON_RESPONSE_OPTIONS)
             .call()
             .entity(GeneratedYearSelectionFortune::class.java)
 
@@ -96,9 +104,5 @@ class VertexAiYearSelectionFortuneAdapter(
         5. Write all sentences in Korean, keeping a warm and positive tone while avoiding unfounded exaggeration.
         """.trimIndent()
 
-    private fun Pillar.describe(): String {
-        val stemPart = stemSipseong?.let { "천간 $it, " } ?: ""
-
-        return "$stem$branch (${stemPart}지지 $branchSipseong, 십이운성 $sibiunseong)"
-    }
+    private fun Pillar.describe(): String = formatSajuPillar(stem, branch, stemSipseong, branchSipseong, sibiunseong)
 }

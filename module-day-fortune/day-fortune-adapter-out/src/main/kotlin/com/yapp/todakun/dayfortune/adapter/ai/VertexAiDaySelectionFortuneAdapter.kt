@@ -1,5 +1,6 @@
 package com.yapp.todakun.dayfortune.adapter.ai
 
+import com.yapp.todakun.common.ai.vertexResponseSchema
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.dayfortune.DaySelectionPurpose
 import com.yapp.todakun.dayfortune.exception.DaySelectionFortuneCircuitOpenException
@@ -10,13 +11,22 @@ import com.yapp.todakun.dayfortune.port.outbound.DaySelectionFortuneAiPort
 import com.yapp.todakun.dayfortune.port.outbound.GeneratedDaySelectionFortune
 import com.yapp.todakun.dayfortune.port.outbound.MemberSajuProfile
 import com.yapp.todakun.dayfortune.port.outbound.Pillar
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException
+import com.yapp.todakun.shared.formatSajuPillar
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
 import java.time.LocalDate
-import java.util.concurrent.TimeoutException
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "day-fortune-ai"
+
+// 프롬프트 지시문만으로는 JSON 형식·구조가 강제되지 않아, Gemini가 문법적으로 깨진 JSON을 응답하거나 [GeneratedDaySelectionFortune]와 다른 구조(필드 누락, 타입 불일치)로 응답할 수 있다.
+// provider 단에서 JSON 출력 모드 + entity() 변환 대상과 동일한 스키마를 강제해 BeanOutputConverter 파싱 실패를 줄인다.
+// responseSchema는 vertexResponseSchema로 대문자 type을 올려 전달해야 Vertex Schema proto가 타입 정보를 실제로 인식한다(소문자는 TYPE_UNSPECIFIED로 무시됨).
+private val JSON_RESPONSE_OPTIONS =
+    VertexAiGeminiChatOptions.builder()
+        .responseMimeType("application/json")
+        .responseSchema(vertexResponseSchema(GeneratedDaySelectionFortune::class.java))
+        .build()
 
 /**
  * Vertex AI(Gemini)로 택일 운세를 생성하는 [DaySelectionFortuneAiPort] 구현체.
@@ -37,15 +47,12 @@ class VertexAiDaySelectionFortuneAdapter(
         dayPillar: Pillar,
     ): GeneratedDaySelectionFortune {
         val generated =
-            try {
-                resilience.execute(AI_RESILIENCE_INSTANCE_NAME) { callAi(profile, purpose, targetDate, dayPillar) }
-            } catch (e: CallNotPermittedException) {
-                throw DaySelectionFortuneCircuitOpenException(e)
-            } catch (e: TimeoutException) {
-                throw DaySelectionFortuneTimeoutException(e)
-            } catch (e: Exception) {
-                throw DaySelectionFortuneGenerationFailedException(e)
-            }
+            resilience.execute(
+                AI_RESILIENCE_INSTANCE_NAME,
+                onCircuitOpen = { DaySelectionFortuneCircuitOpenException(it) },
+                onTimeout = { DaySelectionFortuneTimeoutException(it) },
+                onFailure = { DaySelectionFortuneGenerationFailedException(it) },
+            ) { callAi(profile, purpose, targetDate, dayPillar) }
 
         return generated ?: throw DaySelectionFortuneEmptyResponseException()
     }
@@ -59,6 +66,7 @@ class VertexAiDaySelectionFortuneAdapter(
         chatClient
             .prompt()
             .user(buildPrompt(profile, purpose, targetDate, dayPillar))
+            .options(JSON_RESPONSE_OPTIONS)
             .call()
             .entity(GeneratedDaySelectionFortune::class.java)
 
@@ -103,9 +111,5 @@ class VertexAiDaySelectionFortuneAdapter(
         5. Write all sentences in Korean, keeping a warm and positive tone while avoiding unfounded exaggeration.
         """.trimIndent()
 
-    private fun Pillar.describe(): String {
-        val stemPart = stemSipseong?.let { "천간 $it, " } ?: ""
-
-        return "$stem$branch (${stemPart}지지 $branchSipseong, 십이운성 $sibiunseong)"
-    }
+    private fun Pillar.describe(): String = formatSajuPillar(stem, branch, stemSipseong, branchSipseong, sibiunseong)
 }

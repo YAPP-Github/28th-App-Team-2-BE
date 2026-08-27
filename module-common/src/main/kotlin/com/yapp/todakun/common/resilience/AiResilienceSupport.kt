@@ -1,5 +1,7 @@
 package com.yapp.todakun.common.resilience
 
+import com.yapp.todakun.common.exception.BusinessException
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.github.resilience4j.retry.Retry
@@ -9,6 +11,7 @@ import org.springframework.beans.factory.DisposableBean
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeoutException
 import java.util.function.Supplier
 
 /**
@@ -57,6 +60,28 @@ class AiResilienceSupport(
 
         return decorated.get()
     }
+
+    /**
+     * [execute]를 감싸, resilience4j가 던지는 예외를 도메인별 [BusinessException]으로 변환해 다시 던진다.
+     * [Exception]만 잡아 도메인 예외로 변환하고, [Error](OOM 등)는 그대로 전파한다.
+     * 실패를 예외로 올리지 않고 삼키는 호출부(예: chat의 액션 카드 추출)는 변환할 예외가 없으므로 이 오버로드의 대상이 아니다.
+     */
+    fun <T> execute(
+        instanceName: String,
+        onCircuitOpen: (CallNotPermittedException) -> BusinessException,
+        onTimeout: (TimeoutException) -> BusinessException,
+        onFailure: (Exception) -> BusinessException,
+        supplier: () -> T,
+    ): T =
+        try {
+            execute(instanceName, supplier)
+        } catch (e: CallNotPermittedException) {
+            throw onCircuitOpen(e)
+        } catch (e: TimeoutException) {
+            throw onTimeout(e)
+        } catch (e: Exception) {
+            throw onFailure(e)
+        }
 
     override fun destroy() {
         executors.values.forEach { it.shutdown() }

@@ -72,6 +72,8 @@ spring-web = { module = "org.springframework:spring-web" }
 spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
 spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
 spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
+# provider-agnostic 코어(BeanOutputConverter/ModelOptionsUtils)만 필요한 common의 vertexResponseSchema()용. Vertex 전용 스타터는 아님.
+spring-ai-model = { module = "org.springframework.ai:spring-ai-model" }
 
 # --- 로깅 / 서블릿 API (common-web, Boot BOM 관리) ---
 slf4j-api = { module = "org.slf4j:slf4j-api" }

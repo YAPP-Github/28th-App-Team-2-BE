@@ -18,7 +18,9 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import reactor.core.publisher.Flux
 import java.time.Duration
 import java.time.LocalDate
@@ -108,6 +110,25 @@ class VertexAiChatAdapterTest : DescribeSpec({
     }
 
     describe("extractAction") {
+        context("AI가 정상적으로 액션 카드를 반환하면") {
+            it("JSON 출력 모드를 강제해 호출한다") {
+                val callResponseSpec = mockk<ChatClient.CallResponseSpec>()
+                every { chatClient.prompt() } returns requestSpec
+                every { requestSpec.system(any<String>()) } returns requestSpec
+                every { requestSpec.user(any<String>()) } returns requestSpec
+                every { requestSpec.options(any()) } returns requestSpec
+                every { requestSpec.call() } returns callResponseSpec
+                every { callResponseSpec.entity(RawChatAction::class.java) } returns
+                    RawChatAction(hasAction = false, type = null, label = null, category = null, date = null)
+
+                adapter.extractAction(context, "답변").shouldBeNull()
+
+                verify(exactly = 1) {
+                    requestSpec.options(match<VertexAiGeminiChatOptions> { it.responseMimeType == "application/json" })
+                }
+            }
+        }
+
         context("CircuitBreaker가 열려 있으면") {
             it("예외를 던지지 않고 null을 반환한다(부가 기능이므로 실패해도 답변 자체는 막지 않는다)") {
                 val circuitBreakerRegistry = CircuitBreakerRegistry.ofDefaults()
@@ -134,6 +155,7 @@ class VertexAiChatAdapterTest : DescribeSpec({
                 every { chatClient.prompt() } returns requestSpec
                 every { requestSpec.system(any<String>()) } returns requestSpec
                 every { requestSpec.user(any<String>()) } returns requestSpec
+                every { requestSpec.options(any()) } returns requestSpec
                 every { requestSpec.call() } returns callResponseSpec
                 every { callResponseSpec.entity(RawChatAction::class.java) } throws RuntimeException("model call failed")
 

@@ -1,5 +1,7 @@
 package com.yapp.todakun.yearfortune.adapter.ai
 
+import com.google.cloud.vertexai.api.Type
+import com.yapp.todakun.common.ai.vertexResponseSchema
 import com.yapp.todakun.common.resilience.AiResilienceSupport
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.yearfortune.exception.YearSelectionFortuneCircuitOpenException
@@ -17,6 +19,7 @@ import io.github.resilience4j.timelimiter.TimeLimiterConfig
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.mockk.CapturingSlot
@@ -27,6 +30,8 @@ import io.mockk.slot
 import io.mockk.verify
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.retry.NonTransientAiException
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
+import org.springframework.ai.vertexai.gemini.schema.VertexAiSchemaConverter
 import java.time.Duration
 import java.time.LocalDate
 import java.util.concurrent.Executors
@@ -72,6 +77,25 @@ class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
                 promptSlot.captured shouldContain FortuneCategory.LOVE.label
                 promptSlot.captured shouldContain FortuneCategory.MONEY.label
                 verify(exactly = 1) { requestSpec.call() }
+                verify(exactly = 1) {
+                    requestSpec.options(
+                        match<VertexAiGeminiChatOptions> {
+                            it.responseMimeType == "application/json" &&
+                                it.responseSchema == vertexResponseSchema(GeneratedYearSelectionFortune::class.java)
+                        },
+                    )
+                }
+            }
+        }
+
+        context("responseSchema를 구성하면") {
+            it("Vertex Schema proto로 변환 가능한 형태다") {
+                // nullable 필드가 섞이면 BeanOutputConverter가 ["string","null"]을 내고 fromOpenApiSchema가
+                // InvalidProtocolBufferException을 던진다(VertexAiChatAdapter의 chat 제외 사유 주석 참고).
+                assertVertexSchemaConvertible(
+                    GeneratedYearSelectionFortune::class.java,
+                    setOf("title", "content", "score", "fortuneCategories"),
+                )
             }
         }
 
@@ -166,6 +190,16 @@ class VertexAiYearSelectionFortuneAdapterTest : DescribeSpec({
     }
 })
 
+private fun assertVertexSchemaConvertible(
+    type: Class<*>,
+    expectedFields: Set<String>,
+) {
+    val schema = VertexAiSchemaConverter.fromOpenApiSchema(vertexResponseSchema(type))
+
+    schema.type shouldBe Type.OBJECT
+    schema.propertiesMap.keys shouldContainAll expectedFields
+}
+
 private fun stubChatClient(
     chatClient: ChatClient,
     requestSpec: ChatClient.ChatClientRequestSpec,
@@ -175,6 +209,7 @@ private fun stubChatClient(
 
     every { chatClient.prompt() } returns requestSpec
     every { requestSpec.user(capture(promptSlot)) } returns requestSpec
+    every { requestSpec.options(any()) } returns requestSpec
     every { requestSpec.call() } returns callResponseSpec
 
     return promptSlot

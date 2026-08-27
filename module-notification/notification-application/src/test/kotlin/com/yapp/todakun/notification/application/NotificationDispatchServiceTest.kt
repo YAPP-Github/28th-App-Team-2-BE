@@ -15,7 +15,6 @@ import com.yapp.todakun.shared.NotificationType
 import com.yapp.todakun.shared.SendNotificationCommand
 import com.yapp.todakun.shared.SendNotificationPort
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -146,14 +145,16 @@ class NotificationDispatchServiceTest :
                     val m2 = Uuid.generateV7().toJavaUuid()
                     every { getMemberIdsPort.getMemberIds(null, 100) } returns listOf(m1, m2)
                     every { getMemberIdsPort.getMemberIds(m2, 100) } returns emptyList()
-                    val commands = mutableListOf<SendNotificationCommand>()
-                    every { sendNotificationPort.send(capture(commands)) } just Runs
+                    every { sendNotificationPort.send(any()) } just Runs
 
                     service.publish(PublishNoticeCommand("공지 제목", "공지 내용", "notice/1", NoticeType.GENERAL))
 
+                    // 회원별 발송이 notificationDispatchDispatcher로 실제 동시에 실행되므로(#81), 공유 mutableListOf에
+                    // capture하면 데이터 레이스로 원소가 소실돼 드물게 실패한다(스레드 안전하지 않은 ArrayList.add 경합).
+                    // 회원별 match verify는 MockK 내부 호출 기록(스레드 세이프)만 읽으므로 이 문제가 없다.
                     verify(exactly = 2) { sendNotificationPort.send(any()) }
-                    commands.map { it.type }.toSet() shouldBe setOf(NotificationType.NOTICE)
-                    commands.map { it.memberId } shouldContainExactlyInAnyOrder listOf(m1, m2)
+                    verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m1 && it.type == NotificationType.NOTICE }) }
+                    verify(exactly = 1) { sendNotificationPort.send(match { it.memberId == m2 && it.type == NotificationType.NOTICE }) }
                 }
 
                 context("다른 인스턴스가 이미 공지를 발송 중이면") {

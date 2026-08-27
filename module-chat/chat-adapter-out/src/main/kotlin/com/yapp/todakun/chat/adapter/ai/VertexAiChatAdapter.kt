@@ -12,8 +12,10 @@ import com.yapp.todakun.chat.port.outbound.ChatProfileContext
 import com.yapp.todakun.chat.port.outbound.ChatPromptContext
 import com.yapp.todakun.chat.port.outbound.ChatSajuContext
 import com.yapp.todakun.common.resilience.AiResilienceSupport
+import com.yapp.todakun.shared.formatSajuPillar
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
@@ -24,6 +26,13 @@ private val STREAM_TIMEOUT = Duration.ofSeconds(120)
 private val ACTION_TIMEOUT = Duration.ofSeconds(40)
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "chat-ai"
+
+// 프롬프트 지시문만으로는 JSON 형식이 강제되지 않아, Gemini가 문법적으로 깨진 JSON(예: 닫는 `}` 누락)을 응답할 수 있다.
+// provider 단에서 JSON 출력 모드를 강제해 BeanOutputConverter 파싱 실패를 줄인다.
+// [RawChatAction]은 hasAction=false일 때 나머지 필드가 비는 nullable 구조라, responseSchema(entity 대상 타입 기준 스키마 강제)는
+// BeanOutputConverter가 nullable 필드를 `"type": ["string", "null"]`로 생성해 Vertex의 Schema proto(단일 타입만 허용)가
+// 이를 파싱하지 못하고 매 호출마다 실패한다. 그래서 스키마까지는 강제하지 않고 JSON 문법만 강제한다.
+private val JSON_RESPONSE_OPTIONS = VertexAiGeminiChatOptions.builder().responseMimeType("application/json").build()
 
 /**
  * 답변 생성용 시스템 프롬프트. [today]를 상수가 아닌 인자로 받는 이유는, 모델이 현재 시각을 알 수 없어
@@ -143,6 +152,7 @@ class VertexAiChatAdapter(
                             .prompt()
                             .system(actionSystemPrompt(context.today))
                             .user(buildActionUserData(context, answer))
+                            .options(JSON_RESPONSE_OPTIONS)
                             .call()
                             .entity(RawChatAction::class.java)
                     }
@@ -188,11 +198,7 @@ class VertexAiChatAdapter(
         - Sipseong (Ten Gods) distribution (character count): ${sipseong.entries.joinToString { "${it.key} ${it.value}" }}
         """.trimIndent()
 
-    private fun ChatPillarContext.describe(): String {
-        val stemPart = stemSipseong?.let { "천간 $it, " } ?: ""
-
-        return "$stem$branch (${stemPart}지지 $branchSipseong, 십이운성 $sibiunseong)"
-    }
+    private fun ChatPillarContext.describe(): String = formatSajuPillar(stem, branch, stemSipseong, branchSipseong, sibiunseong)
 
     private fun ChatProfileContext.describe(): String =
         """
