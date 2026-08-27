@@ -10,9 +10,6 @@ services:
     # ${DOMAIN}은 `docker compose --env-file .env`로 보간된다(Ansible playbook이 명시 지정).
     environment:
       - DOMAIN=${DOMAIN:?DOMAIN 환경변수가 필요합니다}
-      # 보조 도메인(임시). 미설정/빈 값이면 alias.invalid로 폴백한다 — 빈 값이 그대로 흘러가면
-      # Caddyfile 주소 목록이 깨져 Caddy가 기동조차 못 한다(:- 는 unset과 빈 값을 모두 처리).
-      - DOMAIN_ALIAS=${DOMAIN_ALIAS:-alias.invalid}
     ports:
       - "80:80"
       - "443:443"
