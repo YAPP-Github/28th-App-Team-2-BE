@@ -6,9 +6,11 @@ import com.yapp.todakun.auth.application.service.SignupTransactionService
 import com.yapp.todakun.auth.port.inbound.SignupCommand
 import com.yapp.todakun.config.DailyFortuneAiMockConfig
 import com.yapp.todakun.config.TestContainersConfig
+import com.yapp.todakun.dailyfortune.DailyFortune
 import com.yapp.todakun.dailyfortune.port.outbound.DailyFortuneAiPort
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedCategoryFortune
 import com.yapp.todakun.dailyfortune.port.outbound.GeneratedDailyFortune
+import com.yapp.todakun.dailyfortune.repository.DailyFortuneRepository
 import com.yapp.todakun.shared.CreateLuckActionPort
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.GetDailyPillarPort
@@ -21,8 +23,9 @@ import com.yapp.todakun.shared.SajuChartSummary
 import com.yapp.todakun.shared.currentDate
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldNotBeBlank
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldStartWith
 import io.mockk.clearMocks
 import io.mockk.every
@@ -33,6 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.LocalDate
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -96,6 +100,7 @@ private val SIGNUP_COMMAND =
 class SignupTransactionBoundaryIntegrationTest(
     private val signupTransactionService: SignupTransactionService,
     private val dailyFortuneAiPort: DailyFortuneAiPort,
+    private val dailyFortuneRepository: DailyFortuneRepository,
     transactionManager: PlatformTransactionManager,
 ) : DescribeSpec() {
     private val transactionTemplate = TransactionTemplate(transactionManager)
@@ -123,7 +128,7 @@ class SignupTransactionBoundaryIntegrationTest(
                     val profile = newOauthProfile(providerId = "rollback-${Uuid.generateV7().toJavaUuid()}")
                     val command = SIGNUP_COMMAND
 
-                    transactionTemplate.execute<Unit> { status ->
+                    transactionTemplate.execute { status ->
                         signupTransactionService.register(profile, command)
                         status.setRollbackOnly()
                     }
@@ -138,20 +143,22 @@ class SignupTransactionBoundaryIntegrationTest(
                     val profile = newOauthProfile(providerId = "commit-${Uuid.generateV7().toJavaUuid()}")
                     val command = SIGNUP_COMMAND
                     stubCollaborators()
-                    var generationThreadName: String? = null
+                    val generationThreadName = AtomicReference<String>()
                     every { dailyFortuneAiPort.generate(any(), FORTUNE_DATE, any()) } answers {
-                        generationThreadName = Thread.currentThread().name
+                        generationThreadName.set(Thread.currentThread().name)
                         GENERATED_FORTUNE
                     }
                     val requestThreadName = Thread.currentThread().name
 
-                    signupTransactionService.register(profile, command)
+                    val memberId = signupTransactionService.register(profile, command)
 
                     eventually(5.seconds) {
-                        generationThreadName.shouldNotBeBlank()
+                        generationThreadName.get().shouldNotBeNull()
+                        persistedFortune(memberId).shouldNotBeNull()
                     }
-                    generationThreadName!! shouldStartWith "signup-fortune-"
-                    (generationThreadName == requestThreadName) shouldBe false
+                    generationThreadName.get() shouldStartWith "signup-fortune-"
+                    generationThreadName.get() shouldNotBe requestThreadName
+                    persistedFortune(memberId)?.title shouldBe GENERATED_FORTUNE.title
                 }
             }
         }
@@ -159,6 +166,12 @@ class SignupTransactionBoundaryIntegrationTest(
 
     private fun newOauthProfile(providerId: String): OauthMemberProfile =
         OauthMemberProfile(provider = OauthProvider.KAKAO, providerId = providerId, email = "$providerId@todakun.com")
+
+    // OSIV가 꺼져 있어 트랜잭션 밖에서는 리포지토리를 호출할 수 없다.
+    private fun persistedFortune(memberId: UUID): DailyFortune? =
+        transactionTemplate.execute {
+            dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, FORTUNE_DATE)
+        }
 
     private fun stubCollaborators() {
         every { getMemberFortuneProfilePort.getProfile(any()) } returns MEMBER_PROFILE
