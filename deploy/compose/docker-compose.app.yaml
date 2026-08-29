@@ -8,6 +8,10 @@ services:
     image: ${APP_IMAGE}
     container_name: todakun-app-${COLOR}
     restart: unless-stopped
+    # application.yaml의 spring.lifecycle.timeout-per-shutdown-phase(130s, graceful shutdown 대기)보다
+    # 20s 더 길게 둬 JVM이 자체적으로 정리를 마칠 여유를 준다. 기본 10s로는 switch.sh의
+    # `docker compose down`이 진행 중인 chat 스트림을 SIGKILL로 끊을 수 있다.
+    stop_grace_period: 150s
     # 앱 런타임 시크릿(DB/Redis/GCS). VM의 deploy/.env에서 주입.
     env_file:
       - ../.env

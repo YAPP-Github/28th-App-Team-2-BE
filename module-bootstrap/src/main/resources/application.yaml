@@ -3,10 +3,17 @@ server:
   # 미설정 시 서블릿이 뒷단 http 스킴만 보고 springdoc이 servers를 http://로 생성 →
   # https Swagger 페이지에서 mixed-content/CORS 차단. 프록시 없는 local은 헤더가 없어 no-op.
   forward-headers-strategy: framework
+  # graceful이 아니면 컨텍스트 종료 시 임베디드 톰캣이 진행 중인 SSE 연결(chat 스트리밍)을 즉시 끊는다.
+  # SIGTERM 수신 시 새 요청은 거부하고 기존 요청은 아래 timeout-per-shutdown-phase까지 완료를 기다린다.
+  shutdown: graceful
 
 spring:
   application:
     name: todakun
+  lifecycle:
+    # docker-compose.app.yaml의 stop_grace_period(130s)와 맞춘 값.
+    # chat 스트리밍 워커의 최대 소요 시간(60s+30s) + executor 종료 대기(30s) + 여유.
+    timeout-per-shutdown-phase: 130s
   jpa:
     # OSIV 비활성화 — 지연 로딩은 application 계층 트랜잭션 안에서 끝낸다.
     open-in-view: false
