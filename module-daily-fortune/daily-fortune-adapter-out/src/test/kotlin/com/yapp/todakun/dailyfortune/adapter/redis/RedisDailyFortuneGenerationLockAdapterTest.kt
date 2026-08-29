@@ -57,6 +57,7 @@ class RedisDailyFortuneGenerationLockAdapterTest(
 
                         val secondToken = adapter.tryAcquire(memberId, FORTUNE_DATE)
 
+                        secondToken.shouldNotBeNull()
                         secondToken shouldNotBe firstToken
                     }
                 }
