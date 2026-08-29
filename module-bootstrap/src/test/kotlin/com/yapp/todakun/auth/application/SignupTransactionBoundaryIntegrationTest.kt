@@ -20,7 +20,6 @@ import com.yapp.todakun.shared.MemberFortuneProfile
 import com.yapp.todakun.shared.OauthProvider
 import com.yapp.todakun.shared.PillarSummary
 import com.yapp.todakun.shared.SajuChartSummary
-import com.yapp.todakun.shared.currentDate
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -43,7 +42,6 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 private val LUCK_ACTION_ID = UUID.fromString("018f0000-0000-7000-8000-000000000201")
-private val FORTUNE_DATE: LocalDate = currentDate()
 
 private val MEMBER_PROFILE =
     MemberFortuneProfile(
@@ -144,7 +142,11 @@ class SignupTransactionBoundaryIntegrationTest(
                     val command = SIGNUP_COMMAND
                     stubCollaborators()
                     val generationThreadName = AtomicReference<String>()
-                    every { dailyFortuneAiPort.generate(any(), FORTUNE_DATE, any()) } answers {
+                    val generatedFortuneDate = AtomicReference<LocalDate>()
+                    // 리스너는 비동기 워커 스레드에서 currentDate()를 다시 계산하므로, 테스트 초기화 시점 날짜와 자정을 사이에 두고 어긋날 수 있다.
+                    // 실제 호출에 쓰인 날짜를 캡처해 이후 스텁·조회에 동일하게 재사용한다.
+                    every { dailyFortuneAiPort.generate(any(), any(), any()) } answers {
+                        generatedFortuneDate.set(secondArg())
                         generationThreadName.set(Thread.currentThread().name)
                         GENERATED_FORTUNE
                     }
@@ -154,11 +156,11 @@ class SignupTransactionBoundaryIntegrationTest(
 
                     eventually(5.seconds) {
                         generationThreadName.get().shouldNotBeNull()
-                        persistedFortune(memberId).shouldNotBeNull()
+                        persistedFortune(memberId, generatedFortuneDate.get()).shouldNotBeNull()
                     }
                     generationThreadName.get() shouldStartWith "signup-fortune-"
                     generationThreadName.get() shouldNotBe requestThreadName
-                    persistedFortune(memberId)?.title shouldBe GENERATED_FORTUNE.title
+                    persistedFortune(memberId, generatedFortuneDate.get())?.title shouldBe GENERATED_FORTUNE.title
                 }
             }
         }
@@ -168,15 +170,18 @@ class SignupTransactionBoundaryIntegrationTest(
         OauthMemberProfile(provider = OauthProvider.KAKAO, providerId = providerId, email = "$providerId@todakun.com")
 
     // OSIV가 꺼져 있어 트랜잭션 밖에서는 리포지토리를 호출할 수 없다.
-    private fun persistedFortune(memberId: UUID): DailyFortune? =
+    private fun persistedFortune(
+        memberId: UUID,
+        fortuneDate: LocalDate,
+    ): DailyFortune? =
         transactionTemplate.execute {
-            dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, FORTUNE_DATE)
+            dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, fortuneDate)
         }
 
     private fun stubCollaborators() {
         every { getMemberFortuneProfilePort.getProfile(any()) } returns MEMBER_PROFILE
         every { getSajuChartPort.getChart(any()) } returns SAJU_CHART
-        every { getDailyPillarPort.getPillar(FORTUNE_DATE) } returns PILLAR
+        every { getDailyPillarPort.getPillar(any()) } returns PILLAR
         every { createLuckActionPort.create(any(), any(), any(), any(), any(), any()) } returns LUCK_ACTION_ID
     }
 }
