@@ -7,5 +7,5 @@ interface GetTodayFortuneUseCase {
     fun getToday(
         memberId: UUID,
         fortuneDate: LocalDate,
-    ): TodayFortuneSummary
+    ): TodayFortuneResult
 }

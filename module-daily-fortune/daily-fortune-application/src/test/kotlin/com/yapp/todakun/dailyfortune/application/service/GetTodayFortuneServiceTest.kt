@@ -3,6 +3,7 @@ package com.yapp.todakun.dailyfortune.application.service
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationFailedException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationInProgressException
 import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
+import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneResult
 import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.CreateDailyFortunePort
 import io.kotest.assertions.throwables.shouldThrow
@@ -40,21 +41,21 @@ class GetTodayFortuneServiceTest :
 
             describe("getToday") {
                 context("이미 생성된 오늘의 운세가 있으면") {
-                    it("생성을 호출하지 않고 그대로 반환한다") {
+                    it("생성을 호출하지 않고 완료 상태로 그대로 반환한다") {
                         every { todayFortuneReader.find(memberId, fortuneDate) } returns summary
 
-                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe summary
+                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe TodayFortuneResult.completed(summary)
 
                         verify(exactly = 0) { createDailyFortunePort.create(any(), any()) }
                     }
                 }
 
                 context("아직 생성되지 않았으면(가입 직후 AI 실패·배치 skip)") {
-                    it("조회 시점에 생성한 뒤 다시 조회해 반환한다") {
+                    it("조회 시점에 생성한 뒤 다시 조회해 완료 상태로 반환한다") {
                         every { todayFortuneReader.find(memberId, fortuneDate) } returnsMany listOf(null, summary)
                         every { createDailyFortunePort.create(memberId, any()) } returns summary.id
 
-                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe summary
+                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe TodayFortuneResult.completed(summary)
 
                         verify(exactly = 1) { createDailyFortunePort.create(memberId, any()) }
                     }
@@ -70,11 +71,11 @@ class GetTodayFortuneServiceTest :
                 }
 
                 context("생성은 실패했지만 경합 상대나 배치가 이미 저장해 뒀으면") {
-                    it("재조회한 결과를 반환한다") {
+                    it("재조회한 결과를 완료 상태로 반환한다") {
                         every { todayFortuneReader.find(memberId, fortuneDate) } returnsMany listOf(null, summary)
                         every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationFailedException()
 
-                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe summary
+                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe TodayFortuneResult.completed(summary)
                     }
                 }
 
@@ -88,22 +89,20 @@ class GetTodayFortuneServiceTest :
                 }
 
                 context("생성 락 선점에 실패했지만(이미 다른 호출자가 생성 중) 그 사이 저장이 끝나 있으면") {
-                    it("재조회한 결과를 반환한다") {
+                    it("재조회한 결과를 완료 상태로 반환한다") {
                         every { todayFortuneReader.find(memberId, fortuneDate) } returnsMany listOf(null, summary)
                         every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationInProgressException()
 
-                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe summary
+                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe TodayFortuneResult.completed(summary)
                     }
                 }
 
                 context("생성 락 선점에 실패했고 재조회에도 없으면") {
-                    it("404로 가리지 않고 생성 중임을 그대로 전파한다") {
+                    it("AI 완료를 기다리지 않고 생성 중 상태를 반환한다") {
                         every { todayFortuneReader.find(memberId, fortuneDate) } returns null
                         every { createDailyFortunePort.create(memberId, any()) } throws DailyFortuneGenerationInProgressException()
 
-                        shouldThrow<DailyFortuneGenerationInProgressException> {
-                            getTodayFortuneService.getToday(memberId, fortuneDate)
-                        }
+                        getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe TodayFortuneResult.generating()
                     }
                 }
             }

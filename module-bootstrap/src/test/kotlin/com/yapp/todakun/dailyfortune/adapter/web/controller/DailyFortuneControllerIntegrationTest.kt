@@ -13,6 +13,7 @@ import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneHistoryUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetDailyFortuneUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.GetTodayFortuneUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.RegenerateDailyFortunesUseCase
+import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneResult
 import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneSummary
 import com.yapp.todakun.shared.FortuneCategory
 import com.yapp.todakun.shared.LuckActionScore
@@ -111,18 +112,30 @@ class DailyFortuneControllerIntegrationTest(
             }
 
             context("인증된 회원의 오늘의 운세가 있으면") {
-                it("200과 함께 오늘의 운세 요약을 반환한다") {
+                it("200과 함께 완료 상태의 오늘의 운세 요약을 반환한다") {
                     val summary = TodayFortuneSummary.from(DAILY_FORTUNE, LUCK_ACTION_SCORES)
-                    every { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) } returns summary
+                    every { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) } returns TodayFortuneResult.completed(summary)
 
                     val data = successData(mockMvc.get("/api/v1/daily-fortunes/today") { with(authenticatedMember()) })
 
+                    data["status"].asString() shouldBe "COMPLETED"
                     data["id"].asString() shouldBe DAILY_FORTUNE.id.toString()
                     data["fortuneDate"].asString() shouldBe DAILY_FORTUNE.fortuneDate.toString()
                     data["score"].asInt() shouldBe DAILY_FORTUNE.score
                     data["title"].asString() shouldBe DAILY_FORTUNE.title
                     data["luckActionScores"][0]["fortuneCategory"].asString() shouldBe FortuneCategory.HEALTH.name
                     verify(exactly = 1) { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) }
+                }
+            }
+
+            context("다른 호출자가 이미 생성 중이면") {
+                it("200과 함께 생성 중 상태만 반환하고 나머지 필드는 생략한다") {
+                    every { getTodayFortuneUseCase.getToday(DAILY_FORTUNE.memberId, any()) } returns TodayFortuneResult.generating()
+
+                    val data = successData(mockMvc.get("/api/v1/daily-fortunes/today") { with(authenticatedMember()) })
+
+                    data["status"].asString() shouldBe "GENERATING"
+                    data.has("id") shouldBe false
                 }
             }
 
