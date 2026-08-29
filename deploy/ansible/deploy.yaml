@@ -1,8 +1,9 @@
 # Blue/Green 배포 — GitHub Actions가 이미지 푸시 후 실행한다.
 # 최신 deploy 산출물을 VM에 동기화한 뒤 switch.sh로 전환한다(헬스 체크·롤백은 switch.sh가 수행).
-#   실행:  APP_IMAGE=<registry>/todakun/app:<tag> ansible-playbook -i inventory/dev/hosts.ini deploy.yaml
+#   실행(dev):  APP_IMAGE=<registry>/todakun/app:<tag> ansible-playbook -i inventory/dev/hosts.ini deploy.yaml
+#   실행(prod): APP_IMAGE=<registry>/todakun/app:<tag> ansible-playbook -i inventory/prod/hosts.ini deploy.yaml -e target_group=todakun_prod -e spring_profile=prod
 - name: Deploy todakun (Blue/Green switch)
-  hosts: todakun_dev
+  hosts: "{{ target_group | default('todakun_dev') }}"
   become: true
   vars:
     app_dir: /opt/todakun
@@ -58,6 +59,7 @@
         chdir: "{{ app_dir }}"
       environment:
         APP_IMAGE: "{{ app_image }}"
+        SPRING_PROFILE: "{{ spring_profile | default('dev') }}"
       register: switch_result
       changed_when: true
 

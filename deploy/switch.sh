@@ -4,7 +4,8 @@
 #   2) idle color 기동 후, 일회성 curl 컨테이너로 /actuator/health 폴링(앱 이미지엔 curl 없음)
 #   3) Caddy 업스트림을 idle로 교체하고 무중단 reload
 #   4) 이전 active color 종료
-# 사용법:  APP_IMAGE=<registry>/todakun:<tag> ./switch.sh
+# 사용법:  APP_IMAGE=<registry>/todakun:<tag> [SPRING_PROFILE=dev|prod] ./switch.sh
+#   SPRING_PROFILE 미설정 시 dev로 폴백.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -38,7 +39,8 @@ echo "[switch] active=$ACTIVE → idle 배포: $IDLE (image=$APP_IMAGE)"
 # 여기선 로컬 이미지를 그대로 기동한다(--pull never) — switch.sh가 레지스트리 인증에
 # 의존하지 않게 해 become 환경변수 전파 이슈를 회피한다.
 # SENTRY_RELEASE = 이미지 태그(dev-<git sha>) — Sentry Java SDK가 자동으로 읽어 이슈를 커밋 단위로 묶는다.
-COLOR="$IDLE" APP_IMAGE="$APP_IMAGE" SENTRY_RELEASE="${APP_IMAGE##*:}" \
+# SPRING_PROFILE 미설정 시 dev로 폴백(기존 dev 배포 경로 하위 호환).
+COLOR="$IDLE" APP_IMAGE="$APP_IMAGE" SENTRY_RELEASE="${APP_IMAGE##*:}" SPRING_PROFILE="${SPRING_PROFILE:-dev}" \
   docker compose -p "todakun-$IDLE" -f "$APP_COMPOSE" up -d --pull never
 
 # health 대기 — todakun-net 안에서 일회성 curl 컨테이너로 컨테이너명에 직접 요청.
