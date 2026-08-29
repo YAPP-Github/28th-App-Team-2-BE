@@ -11,8 +11,8 @@ spring:
   application:
     name: todakun
   lifecycle:
-    # docker-compose.app.yaml의 stop_grace_period(130s)와 맞춘 값.
     # chat 스트리밍 워커의 최대 소요 시간(60s+30s) + executor 종료 대기(30s) + 여유.
+    # docker-compose.app.yaml의 stop_grace_period(150s)보다 짧게 잡아, Spring이 그레이스풀 종료를 끝낸 뒤 Docker가 SIGKILL을 보내도록 함.
     timeout-per-shutdown-phase: 130s
   jpa:
     # OSIV 비활성화 — 지연 로딩은 application 계층 트랜잭션 안에서 끝낸다.
