@@ -24,7 +24,11 @@ class GetTodayFortuneService(
     private val createDailyFortunePort: CreateDailyFortunePort,
 ) : GetTodayFortuneUseCase {
     // 회원별 하루 1건, 생성 후 불변이라 evict 없이 TTL(CacheNames 참고)만으로 무효화한다(이슈 #56).
-    @Cacheable(cacheNames = [CacheNames.TODAY_FORTUNE], key = "#memberId + ':' + #fortuneDate")
+    @Cacheable(
+        cacheNames = [CacheNames.TODAY_FORTUNE],
+        key = "#memberId + ':' + #fortuneDate",
+        unless = "#result.status.name() == 'GENERATING'",
+    )
     override fun getToday(
         memberId: UUID,
         fortuneDate: LocalDate,
