@@ -36,7 +36,7 @@ class SignupDailyFortuneAsyncConfig {
         ThreadPoolTaskExecutor().apply {
             corePoolSize = CORE_POOL_SIZE
             maxPoolSize = MAX_POOL_SIZE
-            setQueueCapacity(QUEUE_CAPACITY)
+            queueCapacity = QUEUE_CAPACITY
             setThreadNamePrefix(THREAD_NAME_PREFIX)
             setWaitForTasksToCompleteOnShutdown(true)
             setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS)
