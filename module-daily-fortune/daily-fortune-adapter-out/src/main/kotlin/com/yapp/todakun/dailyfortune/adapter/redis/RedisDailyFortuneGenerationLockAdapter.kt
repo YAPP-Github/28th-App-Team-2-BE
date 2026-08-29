@@ -15,8 +15,11 @@ import kotlin.uuid.toJavaUuid
 
 private const val LOCK_KEY_PREFIX = "daily-fortune:generating:"
 
-// daily-fortune-ai TimeLimiter(application.yaml `ai-resilience.time-limiters.daily-fortune-ai.timeout-duration-seconds`,
-// 현재 120초)보다 반드시 커야 한다 — 짧아지면 아직 생성 중인 호출의 락이 만료돼 다른 호출자가 가로챌 수 있다.
+// 락 TTL은 한 번의 생성이 실제로 점유할 수 있는 최대 시간보다 반드시 커야 한다.
+// 짧아지면 아직 생성 중인 호출의 락이 만료돼 다른 호출자가 가로챌 수 있다.
+// TimeLimiter(`ai-resilience.time-limiters.daily-fortune-ai`, 현재 60초)가 만료돼도 실행 중인 동기 호출의 스레드는
+// 인터럽트되지 않으므로(AiResilienceSupport 참고), 기준은 네트워크 호출 자체의 상한인
+// `vertex-ai.transport.unary-timeout-seconds`(현재 70초)다.
 private val LOCK_TTL: Duration = Duration.ofSeconds(150)
 
 // 토큰이 일치할 때만 삭제한다(compare-and-delete). TTL 만료 후 다른 호출자가 이미 새로 선점한 락을
@@ -58,7 +61,7 @@ class RedisDailyFortuneGenerationLockAdapter(
             val acquired = redisTemplate.opsForValue().setIfAbsent(keyOf(memberId, fortuneDate), token, LOCK_TTL) ?: false
             if (acquired) token else null
         } catch (e: DataAccessException) {
-            log.error("생성 락 선점 실패(Redis 데이터 액세스 장애) - 락 없이 생성 진행: fortuneDate={}", fortuneDate, e)
+            log.error("생성 락 선점 실패(Redis 데이터 액세스 장애) - 락 없이 생성 진행: memberId={}, fortuneDate={}", memberId, fortuneDate, e)
             token
         }
     }
@@ -71,7 +74,7 @@ class RedisDailyFortuneGenerationLockAdapter(
         try {
             redisTemplate.execute(RELEASE_IF_OWNER_SCRIPT, listOf(keyOf(memberId, fortuneDate)), token)
         } catch (e: DataAccessException) {
-            log.error("생성 락 해제 실패(Redis 데이터 액세스 장애) - TTL 만료까지 자연 해제되지 않음: fortuneDate={}", fortuneDate, e)
+            log.error("생성 락 해제 실패(Redis 데이터 액세스 장애) - TTL 만료까지 자연 해제되지 않음: memberId={}, fortuneDate={}", memberId, fortuneDate, e)
         }
     }
 
