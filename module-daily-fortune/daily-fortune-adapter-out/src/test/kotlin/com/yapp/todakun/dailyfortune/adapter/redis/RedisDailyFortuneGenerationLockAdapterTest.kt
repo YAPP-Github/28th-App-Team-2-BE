@@ -4,7 +4,7 @@ import com.yapp.todakun.dailyfortune.config.TestContainersConfig
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
-import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.springframework.boot.data.redis.test.autoconfigure.DataRedisTest
 import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -49,15 +49,15 @@ class RedisDailyFortuneGenerationLockAdapterTest(
                     }
                 }
 
-                context("호출마다") {
-                    it("서로 다른 토큰을 발급한다") {
+                context("같은 조합에 대해 해제 후 재선점하면") {
+                    it("이전 호출과 다른 토큰을 발급한다") {
                         val memberId = Uuid.generateV7().toJavaUuid()
-                        val otherMemberId = Uuid.generateV7().toJavaUuid()
+                        val firstToken = adapter.tryAcquire(memberId, FORTUNE_DATE)!!
+                        adapter.release(memberId, FORTUNE_DATE, firstToken)
 
-                        val token = adapter.tryAcquire(memberId, FORTUNE_DATE)
-                        val otherToken = adapter.tryAcquire(otherMemberId, FORTUNE_DATE)
+                        val secondToken = adapter.tryAcquire(memberId, FORTUNE_DATE)
 
-                        (token == otherToken) shouldBe false
+                        secondToken shouldNotBe firstToken
                     }
                 }
 
