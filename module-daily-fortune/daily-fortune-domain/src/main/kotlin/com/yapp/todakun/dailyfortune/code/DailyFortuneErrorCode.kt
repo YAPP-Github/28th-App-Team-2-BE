@@ -15,6 +15,7 @@ enum class DailyFortuneErrorCode(
     DAILY_FORTUNE_GENERATION_FAILED("DAILY-FORTUNE-500", "오늘의 운세 생성에 실패했습니다.", 500),
     DAILY_FORTUNE_EMPTY_RESPONSE("DAILY-FORTUNE-500", "AI로부터 빈 응답을 받았습니다.", 500),
     DAILY_FORTUNE_BATCH_ALREADY_RUNNING("DAILY-FORTUNE-409", "이미 실행 중인 오늘의 운세 배치가 있습니다.", 409),
+    DAILY_FORTUNE_GENERATION_IN_PROGRESS("DAILY-FORTUNE-409", "오늘의 운세를 생성하는 중입니다. 잠시 후 다시 시도해 주세요.", 409),
     DAILY_FORTUNE_CIRCUIT_OPEN("DAILY-FORTUNE-503", "지금은 요청이 많아 오늘의 운세를 생성할 수 없습니다. 잠시 후 다시 시도해 주세요.", 503),
     DAILY_FORTUNE_TIMEOUT("DAILY-FORTUNE-504", "오늘의 운세 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.", 504),
 }

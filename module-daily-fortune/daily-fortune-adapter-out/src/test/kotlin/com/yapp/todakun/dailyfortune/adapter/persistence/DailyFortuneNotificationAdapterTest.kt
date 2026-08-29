@@ -1,5 +1,6 @@
 package com.yapp.todakun.dailyfortune.adapter.persistence
 
+import com.yapp.todakun.dailyfortune.config.JpaAuditingTestConfig
 import com.yapp.todakun.dailyfortune.config.TestContainersConfig
 import com.yapp.todakun.dailyfortune.fixture.DailyFortuneFixture
 import io.kotest.core.spec.style.DescribeSpec
@@ -20,7 +21,7 @@ private val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
 @ExperimentalUuidApi
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(TestContainersConfig::class)
+@Import(TestContainersConfig::class, JpaAuditingTestConfig::class)
 class DailyFortuneNotificationAdapterTest(
     private val dailyFortuneJpaRepository: DailyFortuneJpaRepository,
 ) : DescribeSpec(

@@ -22,8 +22,8 @@ import reactor.core.scheduler.Schedulers
 import java.time.Duration
 import java.time.LocalDate
 
-private val STREAM_TIMEOUT = Duration.ofSeconds(120)
-private val ACTION_TIMEOUT = Duration.ofSeconds(40)
+private val STREAM_TIMEOUT = Duration.ofSeconds(60)
+private val ACTION_TIMEOUT = Duration.ofSeconds(30)
 
 private const val AI_RESILIENCE_INSTANCE_NAME = "chat-ai"
 

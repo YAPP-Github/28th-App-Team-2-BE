@@ -5,18 +5,21 @@ import com.yapp.todakun.auth.port.inbound.SignupCommand
 import com.yapp.todakun.common.annotation.CommandService
 import com.yapp.todakun.shared.CreateMemberPort
 import com.yapp.todakun.shared.CreateSajuChartPort
+import com.yapp.todakun.shared.event.MemberSignedUpEvent
+import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
 
 /**
  * 회원가입의 DB 트랜잭션 경계를 소유하는 협력 빈.
  * 회원 생성과 본인(SELF) 사주 명식 생성만 한 트랜잭션으로 묶어, 둘 중 하나만 남는 상태를 막는다.
- * 외부 AI 호출(오늘의 운세)은 이 빈 밖([SignupService])에서 실행해, 수십 초 걸리는 네트워크 I/O 동안
- * DB 커넥션과 회원 유니크 제약의 잠금 구간을 붙잡고 있지 않게 한다.
+ * 당일 운세 생성(외부 AI 호출)은 이 트랜잭션의 커밋 이후에만 시작돼야 하므로,
+ * 직접 호출하지 않고 [MemberSignedUpEvent]를 발행해 `@TransactionalEventListener(AFTER_COMMIT)` 리스너에 위임한다.
  */
 @CommandService
 class SignupTransactionService(
     private val createMemberPort: CreateMemberPort,
     private val createSajuChartPort: CreateSajuChartPort,
+    private val applicationEventPublisher: ApplicationEventPublisher,
 ) {
     fun register(
         profile: OauthMemberProfile,
@@ -47,6 +50,9 @@ class SignupTransactionService(
             birthTime = command.birthTime,
             isLeapMonth = false,
         )
+
+        // AFTER_COMMIT 리스너가 처리하므로 커밋 전 이벤트가 먼저 처리되는 경쟁이 생기지 않는다.
+        applicationEventPublisher.publishEvent(MemberSignedUpEvent(memberId))
 
         return memberId
     }
