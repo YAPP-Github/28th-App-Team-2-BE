@@ -9,7 +9,11 @@ private const val CORE_POOL_SIZE = 6
 private const val MAX_POOL_SIZE = 8
 private const val QUEUE_CAPACITY = 20
 private const val THREAD_NAME_PREFIX = "signup-fortune-"
-private const val AWAIT_TERMINATION_SECONDS = 30
+
+// TimeLimiter(60s)는 실행 중인 동기 호출의 스레드 인터럽트를 보장하지 않으므로,
+// 실제 스레드 점유 상한은 `vertex-ai.transport.unary-timeout-seconds`(70s)다. 그보다 짧으면
+// 종료 시점에 정상 완료 직전인 작업까지 끊길 수 있어 70s + 여유로 잡는다.
+private const val AWAIT_TERMINATION_SECONDS = 80
 
 /**
  * 회원가입 직후 당일 운세 생성(AI 호출)을 요청 스레드에서 분리해 실행하는 전용 워커 풀.
