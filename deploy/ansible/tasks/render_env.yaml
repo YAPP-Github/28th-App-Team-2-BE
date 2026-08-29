@@ -1,0 +1,25 @@
+---
+# SOPS 복호화 vars(group_vars/all.sops.yaml)로 VM의 /opt/todakun/.env 를 렌더링.
+# 복호화는 컨트롤러(CI/로컬)에서 community.sops vars 플러그인이 수행 → VM엔 렌더 결과만 내려간다.
+- name: SOPS 시크릿 로드/복호화 확인
+  ansible.builtin.assert:
+    that:
+      - domain is defined
+      - db_password is defined
+      - jwt_secret is defined
+      - gc_token is defined
+      # 값이 'ENC[' 로 시작하면 vars 플러그인이 복호화하지 못한 것(암호문 그대로).
+      # community.sops는 group_vars/<group>.sops.yaml 플랫 파일만 복호화하며,
+      # group_vars/all/ 하위 디렉터리 파일은 복호화하지 않는다.
+      - not (domain | string).startswith('ENC[')
+      - not (jwt_secret | string).startswith('ENC[')
+    fail_msg: "SOPS 복호화 실패 — 값이 암호문(ENC[...)입니다. SOPS_AGE_KEY, sops 바이너리, 그리고 시크릿이 group_vars/<group>.sops.yaml 플랫 경로에 있는지 확인하세요."
+  no_log: true
+
+- name: /opt/todakun/.env 렌더링 (0600, root only)
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/env.j2"
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ ansible_user }}"
+    mode: "0600"
+  no_log: true

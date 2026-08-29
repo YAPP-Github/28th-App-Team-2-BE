@@ -1,0 +1,34 @@
+package com.yapp.todakun.dailyfortune.adapter.persistence
+
+import com.yapp.todakun.dailyfortune.DailyFortune
+import com.yapp.todakun.dailyfortune.repository.DailyFortuneRepository
+import org.springframework.stereotype.Repository
+import java.time.LocalDate
+import java.util.UUID
+
+@Repository
+class DailyFortuneRepositoryAdapter(
+    private val dailyFortuneJpaRepository: DailyFortuneJpaRepository,
+) : DailyFortuneRepository {
+    override fun save(dailyFortune: DailyFortune): DailyFortune =
+        dailyFortuneJpaRepository.save(DailyFortuneJpaEntity.fromDomain(dailyFortune)).toDomain()
+
+    override fun findById(id: UUID): DailyFortune? = dailyFortuneJpaRepository.findById(id).map { it.toDomain() }.orElse(null)
+
+    override fun findByMemberIdAndFortuneDate(
+        memberId: UUID,
+        fortuneDate: LocalDate,
+    ): DailyFortune? = dailyFortuneJpaRepository.findByMemberIdAndFortuneDate(memberId, fortuneDate)?.toDomain()
+
+    override fun findAllByMemberIdBetweenFortuneDates(
+        memberId: UUID,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<DailyFortune> =
+        dailyFortuneJpaRepository.findAllByMemberIdAndFortuneDateBetweenOrderByFortuneDateAsc(memberId, from, to).map { it.toDomain() }
+
+    override fun lock(
+        memberId: UUID,
+        fortuneDate: LocalDate,
+    ) = dailyFortuneJpaRepository.lock(memberId, fortuneDate)
+}

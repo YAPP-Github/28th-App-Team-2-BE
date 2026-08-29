@@ -1,0 +1,6 @@
+package com.yapp.todakun.dailyfortune
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+
+@SpringBootApplication
+class DailyFortuneAdapterOutTestApplication

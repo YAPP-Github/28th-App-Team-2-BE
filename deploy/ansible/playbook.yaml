@@ -1,0 +1,219 @@
+# todakun-instance 프로비저닝 — 멱등성.
+#   - Docker Engine + compose 플러그인 설치
+#   - deploy 산출물(compose/caddy/switch.sh) 배치
+#   - todakun-net 네트워크 + 공용 인프라(Caddy/Redis) 기동
+# 배포(Blue/Green 전환) 자체는 이 playbook이 아니라 VM 위 switch.sh를 CI가 트리거한다.
+#   실행(dev):  ansible-playbook -i inventory/dev/hosts.ini playbook.yaml
+#   실행(prod): ansible-playbook -i inventory/prod/hosts.ini playbook.yaml -e target_group=todakun_prod
+- name: Provision todakun VM
+  hosts: "{{ target_group | default('todakun_dev') }}"
+  become: true
+  vars:
+    app_dir: /opt/todakun
+
+  tasks:
+    # apt-get update가 캐시를 쓸 공간조차 없어 실패하는 경우(No space left on device)를 막기 위해
+    # 매 실행마다 먼저 디스크를 정리한다. blue/green 전환 시 switch.sh가 이전 color 컨테이너는
+    # 내리지만 이미지는 지우지 않아 배포를 반복할수록 디스크가 계속 줄어든다.
+    - name: 디스크 공간 확보 (apt 캐시 / 저널 로그 / 미사용 도커 이미지 정리)
+      ansible.builtin.shell: |
+        set -e
+        apt-get clean
+        journalctl --vacuum-size=200M
+        if command -v docker >/dev/null 2>&1; then
+          docker system prune -af
+        fi
+      changed_when: false
+
+    # 신규 프로비저닝 VM은 첫 부팅 시 cloud-init이 자체적으로 apt-get update/upgrade를 돌리며
+    # apt 락을 쥐고 있을 수 있다. 이 대기가 끝나기 전에 apt 태스크를 실행하면 실패한다.
+    - name: cloud-init 완료 대기 (첫 부팅 시 apt 락 경쟁 방지)
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+      failed_when: false
+
+    # unattended-upgrades 타이머가 배포 중간에 apt 락을 잡지 않도록 비활성화한다.
+    - name: unattended-upgrades 타이머 비활성화 (배포 중 apt 락 경쟁 방지)
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: false
+        state: stopped
+        masked: true
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+        - unattended-upgrades.service
+
+    # lock_timeout은 dpkg 락 대기(설치 단계)에만 적용되고, apt-get update 자체의 재시도는
+    # update_cache_retries/update_cache_retry_max_delay가 별도로 제어한다(기본 5회/12초, 총 대기 ~32초에 불과해 락 경쟁 상황에서 부족하다).
+    - name: APT 캐시 갱신 및 선행 패키지 설치
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+        lock_timeout: 600
+        update_cache_retries: 20
+        update_cache_retry_max_delay: 60
+
+    - name: apt keyrings 디렉터리 생성
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    # apt_key는 deprecated(ansible-core에서 제거 예정)이며 Ubuntu 24.04+에서 실패할 수 있어
+    # get_url로 keyring에 직접 내려받고 apt_repository의 signed-by로 참조한다.
+    - name: Docker 공식 GPG 키 등록
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Docker APT 저장소 등록
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Docker Engine + compose 플러그인 설치
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+        lock_timeout: 600
+
+    - name: docker 서비스 활성화
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: SSH 유저를 docker 그룹에 추가
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: 앱 디렉터리 구조 생성
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: "0755"
+      loop:
+        - "{{ app_dir }}"
+        - "{{ app_dir }}/compose"
+        - "{{ app_dir }}/caddy"
+
+    - name: deploy 산출물 복사 (compose/caddy/switch)
+      ansible.builtin.copy:
+        src: "../{{ item.src }}"
+        dest: "{{ app_dir }}/{{ item.dest }}"
+        owner: "{{ ansible_user }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: "compose/docker-compose.infra.yaml", dest: "compose/docker-compose.infra.yaml", mode: "0644" }
+        - { src: "compose/docker-compose.app.yaml", dest: "compose/docker-compose.app.yaml", mode: "0644" }
+        - { src: "caddy/Caddyfile.template", dest: "caddy/Caddyfile.template", mode: "0644" }
+        - { src: "switch.sh", dest: "switch.sh", mode: "0755" }
+
+    - name: todakun-net 도커 네트워크 생성 (멱등)
+      ansible.builtin.command: docker network create todakun-net
+      register: net_create
+      changed_when: "'already exists' not in net_create.stderr"
+      failed_when: net_create.rc != 0 and 'already exists' not in net_create.stderr
+
+    # Caddyfile은 active color 상태를 담는 파일이라 업스트림 줄만큼은 switch.sh가 소유한다
+    # (배포 성공 시 idle color로 재렌더 + `caddy reload`). provision이 매 실행마다 blue로 덮으면,
+    # health 실패로 롤백된 배포 뒤에는 disk=blue(이미 제거된 컨테이너)로 남아 Caddy 재시작/재생성 시
+    # 전체 502가 된다.
+    # → 업스트림은 기존 렌더 결과에서 그대로 물려받고(파일이 없는 최초 1회만 blue), 템플릿의 나머지
+    #   변경분은 매 프로비저닝마다 반영한다. "파일이 있으면 통째로 건너뛰기"로 두면 템플릿에 새 핸들러
+    #   (/.well-known/*)를 추가해도 기존 VM에는 영원히 반영되지 않는다 — switch.sh의 재렌더는 health
+    #   통과 이후에만 실행되므로, 롤백된 배포에서는 검증 파일과 마운트만 배치되고 핸들러는 빠진다.
+    - name: 기존 렌더된 Caddyfile의 활성 업스트림 추출
+      ansible.builtin.shell: |
+        f="{{ app_dir }}/caddy/Caddyfile"
+        [ -f "$f" ] || exit 0
+        sed -n 's/.*reverse_proxy \(todakun-app-[a-z]*:[0-9]*\).*/\1/p' "$f" | head -n 1
+      register: caddy_active_upstream
+      changed_when: false
+
+    - name: Caddyfile 렌더링 (활성 업스트림 보존, 템플릿 변경분 반영)
+      ansible.builtin.command: >
+        sed "s|__APP_UPSTREAM__|{{ caddy_active_upstream.stdout | trim | default('todakun-app-blue:8080', true) }}|"
+        {{ app_dir }}/caddy/Caddyfile.template
+      register: caddy_rendered
+      changed_when: "false"
+
+    - name: Caddyfile 저장
+      ansible.builtin.copy:
+        content: "{{ caddy_rendered.stdout }}\n"
+        dest: "{{ app_dir }}/caddy/Caddyfile"
+        owner: "{{ ansible_user }}"
+        mode: "0644"
+      register: caddyfile_written
+
+    - name: SOPS 시크릿 → /opt/todakun/.env 렌더링
+      ansible.builtin.import_tasks: tasks/render_env.yaml
+
+    - name: SOPS 시크릿 → Cloudflare Origin 인증서 렌더링
+      ansible.builtin.import_tasks: tasks/render_certs.yaml
+
+    # Caddy 기동 전에 렌더링해야 한다 — compose가 이 디렉터리를 :ro 마운트하므로,
+    # 없으면 도커가 root 소유 빈 디렉터리를 만들어 404가 나간다.
+    - name: SOPS 시크릿 → App Links/Universal Links 검증 파일 렌더링
+      ansible.builtin.import_tasks: tasks/render_wellknown.yaml
+
+    - name: Caddy/Redis 기동
+      # DOMAIN 보간을 위해 .env를 명시 지정한다. compose는 compose 파일 위치 기준으로 .env를
+      # 찾으므로 CWD(chdir)의 .env를 자동으로 읽지 않는다. --env-file은 보간용일 뿐,
+      # caddy 컨테이너에는 environment 블록의 DOMAIN만 주입된다(전체 시크릿 비상속 유지).
+      ansible.builtin.command: >
+        docker compose -f compose/docker-compose.infra.yaml
+        --env-file .env up -d
+      args:
+        chdir: "{{ app_dir }}"
+      register: infra_up
+      changed_when: "'Started' in infra_up.stderr or 'Created' in infra_up.stderr"
+
+    # Caddyfile은 bind 마운트라 파일만 갱신해서는 실행 중인 Caddy에 반영되지 않는다(기동 시 1회 로드).
+    # 위 compose up이 컨테이너를 재생성했다면 이미 새 설정으로 떴지만, 변경이 없어 기존 컨테이너가
+    # 그대로 유지된 경우엔 reload가 필요하다. reload는 무중단이며 업스트림은 위에서 보존했으므로
+    # 이 시점의 트래픽 경로는 바뀌지 않는다(추가된 정적 핸들러만 반영).
+    # 재시도는 위 compose up이 방금 컨테이너를 만든 경우의 경합(admin API가 아직 안 뜸)만 흡수한다.
+    # 설정 자체가 잘못되면 재시도해도 계속 실패하므로 프로비저닝이 그대로 중단된다(의도).
+    - name: Caddy 설정 reload (Caddyfile 변경 시)
+      ansible.builtin.command: >
+        docker exec todakun-caddy
+        caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+      when: caddyfile_written.changed
+      register: caddy_reload
+      until: caddy_reload.rc == 0
+      retries: 5
+      delay: 3
+      changed_when: true
+
+    - name: 모니터링 스택 산출물 동기화 (prometheus/loki/alloy/grafana)
+      ansible.builtin.copy:
+        src: "../monitoring/"
+        dest: "{{ app_dir }}/monitoring/"
+        owner: "{{ ansible_user }}"
+        mode: "0644"
+        directory_mode: "0755"
+
+    - name: Grafana Alloy 기동
+      ansible.builtin.command: >
+        docker compose -f monitoring/docker-compose.monitoring.yaml
+        --env-file .env up -d
+      args:
+        chdir: "{{ app_dir }}"
+      register: monitoring_up
+      changed_when: "'Started' in monitoring_up.stderr or 'Created' in monitoring_up.stderr"

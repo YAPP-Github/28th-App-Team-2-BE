@@ -28,6 +28,16 @@ Passing Ktlint is required: `./gradlew ktlintCheck` / auto-fix: `./gradlew ktlin
 | Command service | `@CommandService` + `*Service` | `CreateUserService` |
 | Query service | `@QueryService` + `*Service` | `GetUserService` |
 
+### Naming consistency (recurring PR-review points)
+
+These come up in review over and over — apply them up front.
+
+- **Put the target entity noun in the name.** A use case that withdraws a *member* is `WithdrawMemberUseCase`, not a bare `WithdrawUseCase` — match the existing sibling (`UpdateMemberUseCase`). The same noun flows through the whole vertical slice.
+- **Rename the whole family together, in the same commit.** When one name changes, rename its siblings *and its test*: `*UseCase` · `*Command` · `*Request` · `*Service` · `*ServiceTest`. A half-renamed slice (`WithdrawMemberService` left with `WithdrawRequest`) is exactly what reviewers flag.
+- **`shared` port names use a concrete resource/entity noun, never a vague one.** `DeleteMemberSajusPort` (concrete `Sajus`), not `DeleteMemberSajuDataPort` (vague `Data`) — mirror the sibling ports (`CreateSajuChartPort`, `RevokeMemberTokensPort`, `CreateMemberPort`).
+- **Use the domain's real id name.** A member id is `memberId`, not a generic `userId`, even inside a `shared` port signature — stay consistent with the rest of the codebase.
+- **Pick the verb prefix by semantics.** `Create*` = pure new creation (`CreateMemberUseCase`). `Save*` = upsert / create-or-update (`SaveTermsAgreementUseCase`: first submit inserts, re-submit updates). Don't default to `Create` when the operation also updates.
+
 ---
 
 ## 2. Packages & Modules
@@ -60,6 +70,15 @@ com.yapp.todakun.auth.adapter.redis    # auth-adapter-out (Redis)
 
 - Package names are always **lowercase**, no underscores
 - When adding a new domain, register all 4 modules together in `settings.gradle.kts`
+
+### File organization — one public type per file (recurring PR-review points)
+
+Reviewers consistently ask for these splits; do them from the start rather than bundling.
+
+- **One `*Request`/`*Response` DTO per file**, file name == class name. Don't pack `RegisterDeviceTokenRequest` + `UnregisterDeviceTokenRequest` into one `DeviceTokenRequests.kt`.
+- **One `*UseCase` per file.** Don't merge `GetNotificationSettingUseCase` + `UpdateNotificationSettingUseCase` into a `NotificationSettingUseCases.kt`.
+- **Never mix a Query port and a Command port in one file.** A query port (`GetNotificationsUseCase`) and a command port (`ReadNotificationUseCase`) go in separate files — the `@QueryService`/`@CommandService` (CQRS) boundary must be visible in the file layout, not hidden inside a shared `*UseCases.kt`.
+- **One exception per file.** Split domain exceptions one-per-file (`NotificationNotFoundException.kt`, `NotificationAccessDeniedException.kt`, `PushSendFailedException.kt`) — don't collect them in a single `*Exceptions.kt`. Match the existing `member`/`saju`/`terms` layout.
 
 ---
 
@@ -157,6 +176,10 @@ Write annotations before modifiers:
 @Named("Foo")
 private val foo: Foo
 ```
+
+### End of file (recurring PR-review point)
+
+- **Every file ends with exactly one trailing newline (POSIX EOF).** A missing final newline is a frequent review comment across `.kt`/`.java`/`.yaml`/`.gradle.kts`/`.md` files — `ktlintFormat` fixes Kotlin, but keep it in mind for non-Kotlin files too.
 
 ---
 
@@ -353,6 +376,19 @@ println("""
 ```kotlin
 if (value == true) { }    // good
 if (value != false) { }   // bad
+```
+
+### Null handling — prefer `?.let` + elvis over `!= null`
+```kotlin
+token?.let { authenticate(it) } ?: reject()   // good — Kotlin idiom
+if (token != null) authenticate(token)         // avoid — works, but not idiomatic
+```
+
+### Negated range instead of two comparisons
+Fold a `>=`/`<` pair into a single range check — it reads as one intent (the complement of the day window):
+```kotlin
+return hour !in DAY_START until DAY_END       // good
+return hour >= DAY_END || hour < DAY_START    // avoid — two comparisons
 ```
 
 ### Named arguments

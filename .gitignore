@@ -42,3 +42,22 @@ out/
 
 ### Oh My Claude Code ###
 .omc/
+
+### Deploy (VM 로컬 산출물 — 커밋 금지) ###
+deploy/ansible/inventory/dev/hosts.ini
+deploy/ansible/inventory/prod/hosts.ini
+deploy/caddy/Caddyfile
+
+### Cloudflare Origin Certificate (개인키 포함 — 절대 커밋 금지) ###
+deploy/caddy/certs/*.pem
+deploy/caddy/certs/*.key
+
+### SOPS age 개인키 — 절대 커밋 금지 (암호화된 secrets.sops.yaml은 커밋 O) ###
+**/*.agekey
+**/age-keys.txt
+**/keys.txt
+
+### Ansible SOPS 시크릿 — 암호화 후에만 커밋 (평문 절대 커밋 금지) ###
+# sops -e -i 암호화 완료 후 git add 로 추가. 평문 상태로 커밋 시 즉시 전 시크릿 회전.
+# all.sops.yaml은 암호화 상태로만 커밋
+all.sops.origin.yaml

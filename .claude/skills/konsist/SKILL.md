@@ -22,7 +22,8 @@ Test location: `architecture-test/src/test/kotlin/com/yapp/todakun/architecture/
 | No JPA annotations on domain classes | The same targets may not have `jakarta.persistence.*` annotations |
 | CQRS service location | `@CommandService`/`@QueryService` classes live only in the `.application` package |
 | Controller → Api implementation enforced | `*Controller` classes must implement a `*Api` interface |
-| UseCase location | `*UseCase` interfaces live only in the `.application` package |
+| UseCase location | `*UseCase` interfaces (inbound port) live only in the `.port.inbound` package (`{domain}-domain`, not `{domain}-application`) |
+| Outbound Port location | `*Port` interfaces live only in the `.port.outbound` package (`{domain}-domain`); cross-domain ports in `shared` (e.g. `UserAuthPort`) are excluded |
 | JpaEntity location | `*JpaEntity` classes live only in the `.adapter` package |
 | Adapter location | `*Adapter` classes live only in the `.adapter` package |
 | Api interface location | `*Api` interfaces live only in the `.adapter` package |
@@ -37,13 +38,13 @@ Test location: `architecture-test/src/test/kotlin/com/yapp/todakun/architecture/
 
 ```kotlin
 Konsist.scopeFromProject().assertArchitecture {
-    val domain     = Layer("Domain",      "com.yapp.todakun.auth..")   // example
-    val application = Layer("Application", "com.yapp.todakun..application..")
-    val adapter    = Layer("Adapter",     "com.yapp.todakun..adapter..")
+  val domain     = Layer("Domain",      "com.yapp.todakun.auth..")   // example
+  val application = Layer("Application", "com.yapp.todakun..application..")
+  val adapter    = Layer("Adapter",     "com.yapp.todakun..adapter..")
 
-    domain.dependsOnNothing()
-    application.dependsOn(domain)
-    adapter.dependsOn(application, domain)
+  domain.dependsOnNothing()
+  application.dependsOn(domain)
+  adapter.dependsOn(application, domain)
 }
 ```
 
@@ -56,8 +57,8 @@ Konsist.scopeFromProject().assertArchitecture {
 Konsist.scopeFromProject()
 
 // Specific module (specify nested modules by path)
-Konsist.scopeFromModule("auth:auth-domain")
-Konsist.scopeFromModule("user:user-application")
+Konsist.scopeFromModule("auth:domain")
+Konsist.scopeFromModule("user:application")
 
 // Specific directory
 Konsist.scopeFromDirectory("auth/auth-domain/src/main/kotlin")
@@ -94,43 +95,43 @@ scope.typeAliases()   // all type aliases
 ### By name
 ```kotlin
 .withName("Foo")                    // exactly "Foo"
-.withNameContaining("Service")      // name contains "Service"
-.withNameStartingWith("Abstract")   // starts with "Abstract"
-.withNameEndingWith("Controller")   // ends with "Controller"
-.withNameMatching(Regex("Foo.*"))   // regex match
+  .withNameContaining("Service")      // name contains "Service"
+  .withNameStartingWith("Abstract")   // starts with "Abstract"
+  .withNameEndingWith("Controller")   // ends with "Controller"
+  .withNameMatching(Regex("Foo.*"))   // regex match
 ```
 
 ### By package (`..` = any segment)
 ```kotlin
 .withPackage("..application..")     // contains "application" somewhere in the package
-.withPackage("com.yapp.todakun..") // starts with the root package
-.withPackage("..adapter.web")       // ends with "adapter.web"
-.withoutPackage("..test..")         // excludes the test package
+  .withPackage("com.yapp.todakun..") // starts with the root package
+  .withPackage("..adapter.web")       // ends with "adapter.web"
+  .withoutPackage("..test..")         // excludes the test package
 ```
 
 ### By annotation
 ```kotlin
 .withAnnotationNamed("RestController")         // search by name
-.withAnnotationOf<RestController>()            // search by type (import required)
-.withAllAnnotationsOf(A::class, B::class)      // has all annotations
-.withSomeAnnotationsOf(A::class, B::class)     // has at least one
+  .withAnnotationOf<RestController>()            // search by type (import required)
+  .withAllAnnotationsOf(A::class, B::class)      // has all annotations
+  .withSomeAnnotationsOf(A::class, B::class)     // has at least one
 ```
 
 ### By parent class / interface
 ```kotlin
 .withParentClass { it.name == "BaseEntity" }
-.withParentInterface { it.name.endsWith("Api") }
-.withParentOf<SomeClass>()
+  .withParentInterface { it.name.endsWith("Api") }
+  .withParentOf<SomeClass>()
 ```
 
 ### By modifier
 ```kotlin
 .withPublicModifier()
-.withPrivateModifier()
-.withAbstractModifier()
-.withDataModifier()
-.withOpenModifier()
-.withSealedModifier()
+  .withPrivateModifier()
+  .withAbstractModifier()
+  .withDataModifier()
+  .withOpenModifier()
+  .withSealedModifier()
 ```
 
 ---
@@ -169,19 +170,19 @@ it.hasAbstractModifier()
 .assertTrue { it.hasPublicModifier() }
 
 // no element may satisfy the condition
-.assertFalse { it.hasAnnotationNamed("Entity") }
+  .assertFalse { it.hasAnnotationNamed("Entity") }
 
 // the list must be empty
-.assertEmpty()
+  .assertEmpty()
 
 // the list must have elements
-.assertNotEmpty()
+  .assertNotEmpty()
 
 // extra options
-.assertTrue(
+  .assertTrue(
     strict = true,
     additionalMessage = "If this rule is violated, do X"
-) { it.hasPublicModifier() }
+  ) { it.hasPublicModifier() }
 ```
 
 ---
@@ -190,13 +191,13 @@ it.hasAbstractModifier()
 
 ```kotlin
 Konsist.scopeFromProject().assertArchitecture {
-    val domain      = Layer("Domain",      "com.yapp.todakun..") // exclude .application/.adapter via filter
-    val application = Layer("Application", "com.yapp.todakun..application..")
-    val adapter     = Layer("Adapter",     "com.yapp.todakun..adapter..")
+  val domain      = Layer("Domain",      "com.yapp.todakun..") // exclude .application/.adapter via filter
+  val application = Layer("Application", "com.yapp.todakun..application..")
+  val adapter     = Layer("Adapter",     "com.yapp.todakun..adapter..")
 
-    domain.dependsOnNothing()                // no external dependencies
-    application.dependsOn(domain)            // may depend only on domain
-    adapter.dependsOn(application, domain)   // may depend on application, domain
+  domain.dependsOnNothing()                // no external dependencies
+  application.dependsOn(domain)            // may depend only on domain
+  adapter.dependsOn(application, domain)   // may depend on application, domain
 }
 ```
 
@@ -221,12 +222,12 @@ Add a `@Test` method to `ArchitectureTest.kt`.
 ```kotlin
 @Test
 fun `new rule name`() {
-    scope
-        .classes()
-        .withNameEndingWith("Service")          // 1. select targets
-        .assertTrue {                           // 2. verify the condition
-            it.packageName.contains(".application")
-        }
+  scope
+    .classes()
+    .withNameEndingWith("Service")          // 1. select targets
+    .assertTrue {                           // 2. verify the condition
+      it.packageName.contains(".application")
+    }
 }
 ```
 

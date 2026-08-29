@@ -4,6 +4,28 @@ Backend server for YAPP 28th App Team 2 (targeting AOS/iOS clients). Domain-orie
 
 > **Language**: All user-facing responses MUST be written in Korean, without exception (code, identifiers, logs, etc. are excluded).
 
+## Agent Harness Design (Software 3.0)
+
+This `.claude/` config is the team's **harness** — an *executable* single source of truth that programs the agent's behavior, not mere documentation. Treat it like source code: layered, single-responsibility, reviewed. It raises the team's floor — every member runs the top performer's workflow via one command. (Refs: [Toss — 팀 생산성을 위한 하네스](https://toss.tech/article/harness-for-team-productivity), [Toss — Software 3.0 시대의 에이전트 개발](https://toss.tech/article/software-3-0-era).)
+
+**Component → layered-architecture mapping** (design each artifact like the layer it maps to):
+
+| Harness artifact | Maps to | Responsibility |
+|------------------|---------|----------------|
+| `CLAUDE.md` | `package.json` / manifest | Small, stable **router**: what exists + when to load it — never the details. |
+| `.claude/commands/*` (`/new-domain`, `/run-checks`) | Controller | Entry point for a user-triggered procedure. |
+| Sub-agents (`domain-scaffolder`, `code-reviewer`, `test-*`) | Service | Orchestrate multi-step work in an isolated context. |
+| `.claude/skills/<name>/SKILL.md` | SRP component | One knowledge domain = the single source for its rules. |
+| MCP servers | Adapter / infra | Abstract external systems (GitHub, Notion, …). |
+| `.claude/scripts/*` (`check-all.sh`) | Deterministic core | Conventions/verification that must NOT vary — run as code, not LLM judgment. |
+
+**Operating principles** (derived from the layers above):
+
+- **필요성 원칙 — need-to-know / progressive disclosure**: load only the context the current task needs. The *Per-Task Loading* table below is the concrete enforcement — don't dump the whole rulebook up front.
+- **Facade**: `SKILL.md` is the entry point; push long detail into `references/`·`examples/` so the skill stays scannable. Avoid the *God Skill* / *Spaghetti CLAUDE.md* anti-patterns.
+- **Deterministic → script, judgment → LLM**: conventions (ktlint, EOF newline, layer rules) live in scripts/Konsist; only non-deterministic decisions are left to the agent.
+- **"Exception → Question"**: hard-to-reverse or outward-facing actions (delete, deploy, force-push, publish) get a confirmation, never a silent guess. A good agent knows *when to ask*.
+
 ## Per-Task Loading (Pre-Task)
 
 Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures in **commands** (`.claude/commands/`), and shared code templates in **examples** (`.claude/examples/`). When one of the tasks below is detected, the skill is **auto-loaded** (manual invocation: `/<name>`).
@@ -16,6 +38,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | Exception/error handling | `error-handling` |
 | Adding/verifying architecture rules (Konsist) | `konsist` |
 | Spring AI / Vertex AI (Gemini) · pgvector | `spring-ai` |
+| FCM push notifications (Firebase Admin SDK) | `fcm` |
 | Branch/commit/PR conventions | `git-workflow` |
 | Commit · push · create PR | `commit-push-pr` |
 | Creating GitHub issues | `create-issue` |
@@ -52,8 +75,8 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | `*Controller` implements the `*Api` interface (Swagger on `*Api`; use `@DisableSwaggerSecurity` for unauthenticated APIs) | Konsist-enforced rule |
 | JPA entities in Java (`*JpaEntity`), domain entities in Kotlin | Immutability/proxy compatibility |
 | Commit messages `[#issue-number] type: description` (in Korean) | Convention (`git-workflow`) |
-| Prefix top-level module **directories** with `module-{module-name}`; for a nested domain, prefix only the outer wrapper (`module-{domain}/`), keep inner layer dirs plain. Gradle project name stays unprefixed (mapped via `projectDir` in `settings.gradle.kts`) | Keeps module folders grouped at the repo root (prevents dispersion) |
-| Register the 4 modules in `settings.gradle.kts` when adding a new domain | Prevents missing modules |
+| Prefix top-level module **directories** with `module-{module-name}`; for a nested domain, prefix only the outer wrapper (`module-{domain}/`), keep inner layer dirs plain. Gradle project name drops the `module-` prefix; a **domain**'s layer modules are **nested Gradle projects** under a `:{domain}` container with just the layer name as leaf (`:auth:domain`, `:auth:adapter-in`), mapped via `projectDir` in `settings.gradle.kts` | Keeps module folders grouped at the repo root (prevents dispersion) + mirrors the domain boundary in the Gradle project graph |
+| Register the 4 modules under the `:{domain}` container in `settings.gradle.kts` when adding a new domain (`include("{domain}:domain")`, …) | Prevents missing modules |
 | Manage all versions in `gradle/libs.versions.toml`, reference via `libs.*` | Single source of truth (SSOT) for versions |
 
 ## Tech Stack
@@ -63,6 +86,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | WAS | Spring Boot 4.1.0 / JDK 25 / Kotlin 2.3.21 / Gradle 9.5.1 |
 | DB / Cache | PostgreSQL 17.10 (JPA·Hibernate, pgvector extension) / Redis 7.2 |
 | AI | Spring AI / Google Vertex AI (Gemini) / pgvector |
+| Push | FCM (Firebase Cloud Messaging) / Firebase Admin SDK (ADC auth) |
 | Test & Lint | Kotest / MockK / TestContainer / Ktlint / Konsist |
 | Auth | OAuth 2.0 (Kakao/Google/Apple) + JWT / Refresh Token → Redis |
 
@@ -70,7 +94,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 
 Each domain module maintains a bounded-context boundary so it can be extracted as an independent service (detailed package rules in the `architecture` and `code-style` skills).
 
-> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …). For a **nested domain**, only the outer wrapper directory gets the prefix (`module-{domain}/`); the inner layer modules keep their plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **logical project name** stays unprefixed (`:common`); `settings.gradle.kts` maps each name to its directory via `projectDir`. The prefix keeps module folders grouped at the repo root so they don't scatter among config dirs (`build`, `gradle`, `buildSrc`, …).
+> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …). For a **nested domain**, only the outer wrapper directory gets the prefix (`module-{domain}/`); the inner layer modules keep their plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **project path** drops the `module-` prefix. Top-level modules stay flat (`:common`, `:bootstrap`); a **domain**'s layer modules are **nested** under a `:{domain}` container project with only the layer name as leaf (`:auth:domain`, `:auth:adapter-in`, …), and the container (`:auth`) is a source-less group project pointing at `module-{domain}/`. `settings.gradle.kts` maps each project path to its directory via `projectDir` (the leaf `:auth:domain` maps to the `module-auth/auth-domain` dir). The prefix keeps module folders grouped at the repo root so they don't scatter among config dirs (`build`, `gradle`, `buildSrc`, …), and the nested Gradle graph mirrors the domain boundary.
 
 ```
 todakun/                              # top-level module dirs carry the `module-` prefix (Gradle names mapped via projectDir)
@@ -78,16 +102,19 @@ todakun/                              # top-level module dirs carry the `module-
 ├── module-common/                    # (:common) AppException, ResponseCode, @CommandService/@QueryService (spring-tx/context only)
 ├── module-common-web/                # (:common-web) CommonResponse, GlobalExceptionHandler, @DisableSwaggerSecurity (com.yapp.todakun.web)
 ├── module-shared/                    # (:shared) Cross-domain sharing (UserId, OAuthProvider, UserAuthPort)
-├── module-{domain}/                  # auth, user, ... outer wrapper only is prefixed; each domain = 4 modules
-│   ├── {domain}-domain/              # (:{domain}-domain) Pure Kotlin entities & ports — inner modules keep plain names
-│   ├── {domain}-application/         # (:{domain}-application) UseCase services (@CommandService/@QueryService)
-│   ├── {domain}-adapter-in/          # (:{domain}-adapter-in) REST Controller, DTO, Swagger Api
-│   └── {domain}-adapter-out/         # (:{domain}-adapter-out) JPA(Java), OAuth, JWT, Redis adapters
+├── module-{domain}/                  # (:{domain} container) auth, user, ... outer wrapper only is prefixed; each domain = 4 nested modules
+│   ├── {domain}-domain/              # (:{domain}:domain) Pure Kotlin entities & ports — dir keeps `{domain}-` prefix, Gradle leaf drops it
+│   ├── {domain}-application/         # (:{domain}:application) UseCase services (@CommandService/@QueryService)
+│   ├── {domain}-adapter-in/          # (:{domain}:adapter-in) REST Controller, DTO, Swagger Api
+│   └── {domain}-adapter-out/         # (:{domain}:adapter-out) JPA(Java), OAuth, JWT, Redis adapters
 └── module-architecture-test/         # (:architecture-test) Konsist architecture-rule verification
 ```
 
 **Dependency direction:** `adapter-in`/`adapter-out` → `application` → `domain`; all modules → `common`/`shared`; `bootstrap` → integrates everything.
-**Cross-domain references:** `auth-application` → `shared.UserAuthPort` ← implemented by `user-application` (on MSA migration, swap the implementation for an HTTP client).
+**Cross-domain references:** 다른 도메인 데이터를 그냥 조회하는 게 아니라, 그 데이터로 자기 도메인이 분기/실행해야 할 때만 `shared` 포트를 거친다.
+- 예: `LoginService`는 로그인 시 "이미 가입한 회원인지"에 따라 토큰 발급/온보딩 발급을 분기해야 하므로 `shared.GetMemberPort` ← `member-adapter-out`(`GetMemberAdapter`)를 거친다.
+- 지금(모놀리식)은 `GetMemberAdapter`가 JPA로 `MemberRepository`를 조회하지만, MSA로 `member`가 분리되면 같은 `GetMemberPort`를 HTTP 어댑터로 구현체만 교체하면 되고 `auth-application`의 코드는 바뀌지 않는다 — 포트가 안정적인 계약 역할을 하기 때문.
+- 반례: 단순히 "내 프로필 화면에 회원 정보를 보여준다"는 auth가 알 필요 없는 member 자신의 조회이므로, member의 `*UseCase`를 클라이언트가 직접 호출하면 됨 — 크로스 도메인 포트 불필요.
 
 ## Core Development Principles (decisions not covered by skills)
 

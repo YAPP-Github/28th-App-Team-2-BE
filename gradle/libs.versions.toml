@@ -10,17 +10,41 @@ springBoot = "4.1.0"
 springdocOpenapi = "2.8.3"
 konsist = "0.17.3"
 kotest = "5.9.1"
+kotestExtensionsSpring = "1.3.0"
 mockk = "1.13.13"
 springmockk = "4.0.2"
 jjwt = "0.12.6"
 springAi = "1.1.0"
+# GCP 라이브러리 BOM (google-cloud-storage 등 버전 관리). 최신 26.x 라인으로 필요 시 갱신.
+googleCloudLibrariesBom = "26.50.0"
+# Sentry (APM/에러 추적). Spring Boot 4 전용 스타터(sentry-spring-boot-4-starter) 사용.
+sentry = "8.47.0"
+# Firebase Admin SDK (FCM 푸시 발송). Boot BOM 미관리 → 자체 버전. VM은 ADC로 인증(키 파일 불필요).
+firebaseAdmin = "9.10.0"
+nimbusJoseJwt = "10.9.1"
+# Lombok (Java JPA 엔티티 보일러플레이트 생성). JDK 25 지원 버전.
+lombok = "1.18.46"
+# Resilience4j(CircuitBreaker/Retry/TimeLimiter). core 모듈은 Spring Boot 버전에 비의존적인 순수 Java 라이브러리라 사용
+# (resilience4j-spring-boot3 스타터는 Boot 4 호환이 아직 미확정 — https://github.com/resilience4j/resilience4j/issues/2351).
+resilience4j = "2.4.0"
+# KSP(Kotlin Symbol Processing): @Loggable 어노테이션 처리(로거 필드 자동 생성)용.
+# Kotlin(2.3.21)과 정확히 같은 패치 버전의 KSP 릴리즈가 아직 없어 최신 릴리즈(2.3.11)를 사용한다 —
+# Kotlin 패치 버전 간에는 컴파일러 플러그인 API가 깨지지 않는 게 일반적이라 위험이 낮다.
+ksp = "2.3.11"
+# kotlinx.coroutines: 회원별 병렬 처리(async/awaitAll)용(day-fortune-application 날짜별 AI 호출, notification-application 알림 발송/재시도).
+kotlinxCoroutines = "1.11.0"
 
 [libraries]
 # --- 빌드 플러그인 클래스패스 (buildSrc/build.gradle.kts 전용, 앱 의존성 아님) ---
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-allopen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
+# kotlin("plugin.lombok"): 같은 모듈의 Kotlin 코드가 Lombok이 생성한 멤버를 인식하게 해준다(Java entity + Kotlin adapter 혼재 모듈용).
+kotlin-lombok-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-lombok", version.ref = "kotlin" }
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
 ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin", version.ref = "ktlint" }
+ksp-gradle-plugin = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+# common-logging(KSP 프로세서 구현) 전용 API. SymbolProcessor/SymbolProcessorProvider 계약.
+ksp-symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 # --- 문서화 / Swagger (adapter-in) ---
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdocOpenapi" }
@@ -34,33 +58,79 @@ spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-batch = { module = "org.springframework.boot:spring-boot-starter-batch" }
+spring-boot-jdbc = { module = "org.springframework.boot:spring-boot-jdbc" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-oauth2-client = { module = "org.springframework.boot:spring-boot-starter-oauth2-client" }
 
 # --- Spring Framework 경량 모듈 (common/common-web, Boot BOM 관리) ---
 spring-context = { module = "org.springframework:spring-context" }
 spring-tx = { module = "org.springframework:spring-tx" }
+spring-web = { module = "org.springframework:spring-web" }
+
+# --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
+spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
+spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
+spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
+# provider-agnostic 코어(BeanOutputConverter/ModelOptionsUtils)만 필요한 common의 vertexResponseSchema()용. Vertex 전용 스타터는 아님.
+spring-ai-model = { module = "org.springframework.ai:spring-ai-model" }
 
 # --- 로깅 / 서블릿 API (common-web, Boot BOM 관리) ---
 slf4j-api = { module = "org.slf4j:slf4j-api" }
 jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api" }
 
 # --- 직렬화 / Kotlin (Boot BOM 관리) ---
-jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 
+# --- 코루틴 (day-fortune-application: 날짜별 AI 호출 병렬 처리 / notification-application: 알림 발송·재시도 병렬 처리) ---
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+
+# --- Jackson 2용 코틀린 모듈 (spring-ai BeanOutputConverter 전용, jackson-bom 관리) ---
+# spring-ai의 구조화 출력 변환기가 아직 Jackson 3를 지원하지 않아 내부적으로 Jackson 2 ObjectMapper를 직접 생성한다.
+jackson-module-kotlin-jackson2 = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+
 # --- 영속성 (adapter-out, Boot BOM 관리) ---
 postgresql = { module = "org.postgresql:postgresql" }
+
+# --- Lombok (Java JPA 엔티티: common-persistence, *-adapter-out) ---
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+
+# --- 모니터링 / APM (bootstrap) ---
+# Prometheus 메트릭 노출(/actuator/prometheus). 버전은 Boot BOM(Micrometer)이 관리.
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+# 커스텀 비즈니스 지표 등록(MeterRegistry, notification-application). 버전은 Boot BOM(Micrometer)이 관리.
+micrometer-core = { module = "io.micrometer:micrometer-core" }
+# Sentry: DSN 미설정 시 자동 비활성(no-op).
+sentry-spring-boot4-starter = { module = "io.sentry:sentry-spring-boot-4-starter", version.ref = "sentry" }
+# Sentry logback appender. 스타터가 클래스패스에 있으면 런타임에 root 로거로 자동 부착 → log.error()가 Sentry 이슈로 적재된다.
+sentry-logback = { module = "io.sentry:sentry-logback", version.ref = "sentry" }
+
+# --- Resilience4j (common: AiResilienceSupport, 각 도메인 adapter-out: CallNotPermittedException catch용) ---
+resilience4j-circuitbreaker = { module = "io.github.resilience4j:resilience4j-circuitbreaker", version.ref = "resilience4j" }
+resilience4j-retry = { module = "io.github.resilience4j:resilience4j-retry", version.ref = "resilience4j" }
+resilience4j-timelimiter = { module = "io.github.resilience4j:resilience4j-timelimiter", version.ref = "resilience4j" }
+resilience4j-micrometer = { module = "io.github.resilience4j:resilience4j-micrometer", version.ref = "resilience4j" }
+
+# --- Cloud Storage (adapter-out: GCS raw 클라이언트) ---
+# Spring Cloud GCP 대신 raw 클라이언트 사용(Boot 4 호환 안전 + 헥사고날 어댑터로 격리).
+# VM에서는 서비스 계정 ADC로 인증 → 키 파일/시크릿 불필요.
+google-cloud-libraries-bom = { module = "com.google.cloud:libraries-bom", version.ref = "googleCloudLibrariesBom" }
+google-cloud-storage = { module = "com.google.cloud:google-cloud-storage" }
+
+# --- FCM 푸시 알림 (adapter-out: Firebase Admin SDK) ---
+# 외부 시스템 → outbound adapter로 격리. VM은 인스턴스 서비스 계정 ADC로 인증(키 파일 불필요).
+# fcm.enabled=false면 Firebase 빈 미생성(no-op).
+firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebaseAdmin" }
 
 # --- JWT (auth adapter-out) ---
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 
-# --- Spring AI (adapter-out: Vertex AI Gemini + pgvector) ---
-spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
-spring-ai-starter-model-vertex-ai-gemini = { module = "org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini" }
-spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
+# --- 구글 ID 토큰(JWKS) 검증 (auth adapter-out) ---
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
 
 # --- 아키텍처 테스트 ---
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
@@ -68,17 +138,42 @@ konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 # --- 테스트 (Boot BOM이 testcontainers 버전 관리) ---
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-extensions-spring = { module = "io.kotest.extensions:kotest-extensions-spring", version.ref = "kotestExtensionsSpring" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
-testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+testcontainers-core = { module = "org.testcontainers:testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
+spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
+spring-boot-data-jpa-test = { module = "org.springframework.boot:spring-boot-data-jpa-test" }
+spring-boot-data-redis-test = { module = "org.springframework.boot:spring-boot-data-redis-test" }
+spring-boot-test = { module = "org.springframework.boot:spring-boot-test" }
+spring-boot-test-autoconfigure = { module = "org.springframework.boot:spring-boot-test-autoconfigure" }
+spring-boot-webmvc-test = { module = "org.springframework.boot:spring-boot-webmvc-test" }
+spring-test = { module = "org.springframework:spring-test" }
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
 
 [bundles]
 # 모든 모듈 공통 테스트(Kotest). MockK는 필요 모듈에서 개별 추가.
 kotest = ["kotest-runner-junit5", "kotest-assertions-core"]
-# adapter-out 통합 테스트 인프라.
-testcontainers = ["testcontainers-postgresql", "testcontainers-junit-jupiter"]
+
+# adapter-out 통합 테스트 인프라(@ServiceConnection, @DataJpaTest 등).
+testcontainers = [
+    "testcontainers-postgresql",
+    "testcontainers-junit-jupiter",
+    "spring-boot-testcontainers",
+    "spring-boot-data-jpa-test",
+]
+
+# adapter-out Redis 통합 테스트 인프라(@ServiceConnection, @DataRedisTest 등).
+testcontainers-redis = [
+    "testcontainers-core",
+    "testcontainers-junit-jupiter",
+    "spring-boot-testcontainers",
+    "spring-boot-data-redis-test",
+]
+
 # JWT (auth adapter-out): api는 implementation, impl/jackson은 runtimeOnly 권장.
 jjwt = ["jjwt-api", "jjwt-impl", "jjwt-jackson"]

@@ -1,0 +1,6 @@
+package com.yapp.todakun.dailyfortune.exception
+
+import com.yapp.todakun.common.exception.BadRequestException
+import com.yapp.todakun.dailyfortune.code.DailyFortuneErrorCode
+
+class DailyFortuneHistoryToOutOfRangeException : BadRequestException(DailyFortuneErrorCode.DAILY_FORTUNE_HISTORY_TO_OUT_OF_RANGE)

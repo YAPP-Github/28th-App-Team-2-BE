@@ -22,7 +22,21 @@ class ArchitectureTest {
                     !clazz.resideInPackage("..common..") &&
                     !clazz.resideInPackage("..architecture..") &&
                     !clazz.resideInPackage("..web..") &&
+                    !clazz.resideInPackage("..config..") &&
                     clazz.annotations.none { it.name == "SpringBootApplication" }
+            }
+
+    /** 도메인 클래스 안이 아니라 함수 자체(멤버 함수 포함)를 대상으로 한 순수 도메인 패키지 함수. */
+    private val domainFunctions
+        get() =
+            scope.functions().filter { function ->
+                !function.resideInPackage("..application..") &&
+                    !function.resideInPackage("..adapter..") &&
+                    !function.resideInPackage("..shared..") &&
+                    !function.resideInPackage("..common..") &&
+                    !function.resideInPackage("..architecture..") &&
+                    !function.resideInPackage("..web..") &&
+                    !function.resideInPackage("..config..")
             }
 
     @Test
@@ -45,6 +59,33 @@ class ArchitectureTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `도메인 함수는 Spring 어노테이션을 사용하지 않는다`() {
+        // 클래스 레벨 검사(위)만으로는 @Cacheable/@CacheEvict 같은 함수 레벨 애너테이션이 도메인으로
+        // 새는 것을 잡지 못해 함수 단위로 추가 검증한다(이슈 #56).
+        domainFunctions.forEach { function ->
+            function.annotations.forEach { annotation ->
+                check(!(annotation.fullyQualifiedName ?: "").startsWith("org.springframework")) {
+                    "도메인 함수 ${function.name}에 Spring 어노테이션(${annotation.name}) 사용 불가"
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `캐시 애너테이션은 application 패키지에만 위치한다`() {
+        // RedisCacheConfig(bootstrap)의 설계 결정 — 캐시는 인프라 관심사이지만 @Cacheable/@CacheEvict
+        // 표준 애너테이션은 application 조회·명령 서비스에만 붙이기로 했다(이슈 #56).
+        scope
+            .functions()
+            .filter { function -> function.annotations.any { it.name == "Cacheable" || it.name == "CacheEvict" } }
+            .forEach { function ->
+                check(function.resideInPackage("..application..")) {
+                    "${function.name}의 캐시 애너테이션은 application 패키지에서만 사용해야 한다"
+                }
+            }
     }
 
     @Test
@@ -72,13 +113,25 @@ class ArchitectureTest {
     }
 
     @Test
-    fun `UseCase 인터페이스는 application 패키지에만 위치한다`() {
+    fun `UseCase 인터페이스는 domain의 port_inbound 패키지에만 위치한다`() {
         scope
             .interfaces()
             .filter { it.name.endsWith("UseCase") }
             .forEach { iface ->
-                check(iface.resideInPackage("..application..")) {
-                    "${iface.name}는 .application 패키지에 위치해야 한다"
+                check(iface.resideInPackage("..port.inbound..")) {
+                    "${iface.name}는 port.inbound 패키지에 위치해야 한다"
+                }
+            }
+    }
+
+    @Test
+    fun `아웃바운드 Port 인터페이스는 domain의 port_outbound 패키지에만 위치한다`() {
+        scope
+            .interfaces()
+            .filter { it.name.endsWith("Port") && !it.resideInPackage("..shared..") }
+            .forEach { iface ->
+                check(iface.resideInPackage("..port.outbound..")) {
+                    "${iface.name}는 port.outbound 패키지에 위치해야 한다"
                 }
             }
     }
@@ -157,11 +210,11 @@ class ArchitectureTest {
 
     @Test
     fun `레이어 의존성 방향을 지킨다`() {
-        // 도메인 모듈이 아직 없으면 application/adapter 레이어가 비어 Konsist precondition이 실패한다.
-        // 첫 도메인이 추가되면 자동으로 활성화된다.
-        val hasLayeredModules =
-            scope.classes().any { it.resideInPackage("..application..") || it.resideInPackage("..adapter..") }
-        if (!hasLayeredModules) return
+        // application/adapter 레이어 중 하나라도 비어 있으면 Konsist precondition이 실패하므로, 두 레이어에 모두 파일이 존재할 때만 검증한다.
+        // 아직 application 계층 파일이 없는 도메인이 추가되면 자동으로 건너뛰고, 채워지면 자동으로 활성화된다.
+        val hasApplicationClasses = scope.classes().any { it.resideInPackage("..application..") }
+        val hasAdapterClasses = scope.classes().any { it.resideInPackage("..adapter..") }
+        if (!hasApplicationClasses || !hasAdapterClasses) return
 
         Konsist
             .scopeFromProject()
@@ -172,6 +225,50 @@ class ArchitectureTest {
 
                 application.dependsOn(domain)
                 adapter.dependsOn(application, domain)
+            }
+    }
+
+    @Test
+    fun `Firebase 타입은 adapter 패키지에서만 임포트한다`() {
+        // class뿐 아니라 object/interface만 있는 파일(FcmConfig 등)도 누락 없이 검사하도록 파일 단위로 임포트를 검증한다.
+        scope.files
+            .filter { file -> file.imports.any { it.name.startsWith("com.google.firebase") } }
+            .forEach { file ->
+                check(file.hasPackage("..adapter..")) {
+                    "${file.name}: com.google.firebase 임포트는 .adapter 패키지에서만 허용된다"
+                }
+            }
+    }
+
+    @Test
+    fun `LoggerFactory를 직접 사용하지 않고 Loggable 어노테이션을 사용한다`() {
+        // .은 정규식에서 임의의 한 문자를 뜻하므로 리터럴 마침표를 매치하려면 \.으로 이스케이프해야 한다.
+        val fullyQualifiedCallRegex = Regex("""org\.slf4j\.LoggerFactory\.getLogger""")
+
+        scope.files
+            .filterNot { it.path.contains("${java.io.File.separator}build${java.io.File.separator}") }
+            .filterNot { it.hasPackage("..architecture..") }
+            .filter { file ->
+                file.imports.any { it.name == "org.slf4j.LoggerFactory" } ||
+                    file.imports.any { it.isWildcard && it.name == "org.slf4j" } ||
+                    file.hasTextMatching(fullyQualifiedCallRegex)
+            }
+            .forEach { file ->
+                check(false) {
+                    "${file.name}: org.slf4j.LoggerFactory 직접 사용 금지, @Loggable 어노테이션을 사용할 것"
+                }
+            }
+    }
+
+    @Test
+    fun `Fcm 어댑터는 adapter_fcm 패키지에만 위치한다`() {
+        scope
+            .classes()
+            .filter { it.name.startsWith("Fcm") && it.name.endsWith("Adapter") }
+            .forEach { clazz ->
+                check(clazz.resideInPackage("..adapter.fcm..")) {
+                    "${clazz.name}는 .adapter.fcm 패키지에 위치해야 한다"
+                }
             }
     }
 }

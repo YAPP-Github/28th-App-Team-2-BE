@@ -93,6 +93,8 @@ Because PKs are UUIDv7, random values every time make assertions unstable. Unify
 
 - Build them as factory functions with default values, overriding only the per-test values via named arguments.
 - Place `*Fixture` in the `fixture` package under each module's `src/test`. (Prefer explicit fixed values over random-data libraries.)
+- **Don't repeat `X.create(...)` inline across tests** (recurring review point). Route construction through the domain's `*Fixture` (or a local helper function) so setup stays DRY and maintainable.
+- **Hoist hardcoded UUIDs to a `private val` at the top of the spec file** (`MEMBER_ID`, `PARTNER_SAJU_ID`, …) and reuse it, instead of scattering literal UUID strings through the test body.
 
 ## Kotest Global Config
 
@@ -113,4 +115,4 @@ Example Konsist rules: automatically verify architecture constraints such as no 
 
 - Tests must run independently (no shared state between tests, `afterTest { clearMocks() }`).
 - Generate test data with `*Fixture`, overriding only the mutable values via named arguments.
-- Test class names: `*Test`; integration tests: `*IntegrationTest` (composed with `@Import(TestContainersConfig::class)`).
+- Test class names: `*Test`; integration tests: `*IntegrationTest` (composed with `@Import(TestContainersConfig::class)`). **Controller integration tests follow `{Controller}ControllerIntegrationTest`** — e.g. `NotificationControllerIntegrationTest`, not `NotificationIntegrationTest` — to match the sibling test names (recurring review point).

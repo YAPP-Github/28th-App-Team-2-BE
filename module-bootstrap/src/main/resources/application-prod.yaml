@@ -12,8 +12,79 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     show-sql: false
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID}
+          location: ${VERTEX_AI_LOCATION}
+          chat:
+            options:
+              model: ${VERTEX_AI_CHAT_MODEL}
+
+# Spring Batch 메타데이터 테이블(BATCH_JOB_INSTANCE 등)은 자동 생성하지 않는다.
+# 배포 전 운영 DB에 spring-batch-core가 제공하는 org/springframework/batch/core/schema-postgresql.sql을 1회 수동 실행해야 한다.
+batch:
+  schema:
+    initialization-mode: never
+
+# GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
+gcp:
+  project-id: ${GCP_PROJECT_ID}
+  storage:
+    bucket: ${GCS_BUCKET}
+
+# FCM 푸시 알림(Firebase Admin SDK). VM 서비스 계정 ADC로 인증 → 키 파일 불필요.
+fcm:
+  enabled: ${FCM_ENABLED:true}    # false면 Firebase 빈 미생성(no-op)
+  project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
+
+# Sentry(APM/에러 추적). DSN 미설정 시 비활성(no-op).
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: prod
+  traces-sample-rate: 0.1
+  logging:
+    minimum-event-level: error       # ERROR 로그를 Sentry 이슈로 적재
+    minimum-breadcrumb-level: info   # INFO 이상은 이슈에 붙는 breadcrumb으로만 기록
+
+token:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiry-seconds: 604800  # 7일(액세스 토큰 만료시간)
+  onboarding:
+    expiry-seconds: 600  # 10분(온보딩 토큰 만료시간)
+  redis:
+    expiry-seconds: 2592000  # 30일(리프레시 토큰 만료시간)
+
+oauth:
+  google:
+    client-ids: ${GOOGLE_OAUTH_CLIENT_IDS}  # 콤마 구분(Android/iOS 등 플랫폼별 클라이언트 ID)
+  apple:
+    client-ids: ${APPLE_CLIENT_IDS}  # 콤마 구분(여러 클라이언트 ID 지원 시)
+    team-id: ${APPLE_TEAM_ID}
+    key-id: ${APPLE_KEY_ID}
+    private-key: ${APPLE_PRIVATE_KEY}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}  # 콤마 구분
+
+# ERROR 로그 → Discord 웹훅 직접 발송(logback appender). URL 미설정 시 자동 no-op.
+discord:
+  webhook-url: ${DISCORD_WEBHOOK_URL:}
 
 logging:
+  # 구조화 로그(JSON) → stdout → Alloy가 level 파싱 → Loki(조회·대시보드용).
+  # ERROR 알림은 이 경로가 아니라 위 discord.webhook-url(앱이 직접 발송)이 담당한다.
+  structured:
+    format:
+      console: logstash
   level:
     root: WARN
     com.yapp.todakun: INFO
+
+springdoc:
+  swagger-ui:
+    path: /${SWAGGER_SECRET_PATH}/swagger-ui.html
+  api-docs:
+    path: /${SWAGGER_SECRET_PATH}/v3/api-docs

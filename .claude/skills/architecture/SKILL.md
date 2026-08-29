@@ -19,7 +19,7 @@ bootstrap     ──→  integrates all modules
 
 Never add dependencies in the reverse direction. `*-domain` does not depend on any external framework.
 
-> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …) so module folders stay grouped at the repo root instead of dispersing among config dirs. For a **nested domain**, only the outer wrapper dir is prefixed (`module-{domain}/`); inner layer modules keep plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **logical project name** stays unprefixed (`:common`, `:{domain}-domain`); `settings.gradle.kts` maps it via `project(":name").projectDir = file("module-name")`. Tables/paths below use the unprefixed logical names.
+> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …) so module folders stay grouped at the repo root instead of dispersing among config dirs. For a **nested domain**, only the outer wrapper dir is prefixed (`module-{domain}/`); inner layer modules keep plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **project path** drops the `module-` prefix: top-level modules stay flat (`:common`), but a domain's layer modules are **nested** under a source-less `:{domain}` container with just the layer name as leaf (`:auth:domain`, `:auth:adapter-in`). `settings.gradle.kts` maps each path via `project(":path").projectDir = file("module-...")` (leaf `:auth:domain` → dir `module-auth/auth-domain`). Tables/paths below use these Gradle project paths.
 
 ## Role of Each Module
 
@@ -41,8 +41,8 @@ Each domain (`auth`, `user`, ...) has the following 4 modules.
 
 | Module | Role | Spring dependency |
 |--------|------|-------------------|
-| `{domain}-domain` | Pure Kotlin domain entities, port interfaces | None |
-| `{domain}-application` | Use-case services (`@CommandService`/`@QueryService`) | spring-tx/context (via common), `todakun.spring` convention |
+| `{domain}-domain` | Pure Kotlin domain entities, inbound port(`*UseCase` + its command/result models, `port.inbound`) and outbound port(`*Port`, `port.outbound`) interfaces | None |
+| `{domain}-application` | Use-case service **implementations** (`@CommandService`/`@QueryService`) of the `port.inbound` interfaces | spring-tx/context (via common), `todakun.spring` convention |
 | `{domain}-adapter-in` | REST Controller, DTO, Swagger interface | spring-web, springdoc |
 | `{domain}-adapter-out` | JPA(Java), OAuth, JWT, Redis adapters | spring-data-jpa, security, etc. |
 
@@ -53,23 +53,28 @@ Shared module config (Kotlin/JVM, ktlint, JDK 25 toolchain, Spring BOM, tests) i
 | Convention plugin | Composition | Modules it applies to |
 |-------------------|-------------|-----------------------|
 | `todakun.kotlin-common` | Kotlin/JVM + ktlint + toolchain + BOM + tests | Base for all modules (`*-domain`, `common`, `common-web`, `shared`, `architecture-test`) |
-| `todakun.spring` | `kotlin-common` + `kotlin-spring` (all-open) | Modules needing Spring bean proxies (`*-application`, `*-adapter-in`, `*-adapter-out`) |
+| `todakun.spring` | `kotlin-common` + `kotlin-spring` (all-open) | `*-application`; base for the two adapter plugins below |
+| `todakun.adapter-web` | `todakun.spring` + `common-web` + web/security/validation/springdoc | Inbound web adapters (`*-adapter-in`) |
+| `todakun.adapter-persistence` | `todakun.spring` + `todakun.lombok` + `common-persistence` + spring-data-jpa + Testcontainers/postgresql | JPA outbound adapters (`*-adapter-out`) — **except** `auth-adapter-out` (Redis/JWT, no JPA → applies `todakun.spring` directly) |
 | `todakun.spring-boot` | `todakun.spring` + Spring Boot plugin | The entry point `bootstrap` |
+| `todakun.lombok` | `kotlin-lombok` + Lombok (compileOnly/annotationProcessor) | Java JPA entity modules (`common-persistence`; composed into `adapter-persistence`) |
 
-> **The `kotlin-jpa` (no-arg) plugin is not used.** Since JPA entities are written in **Java** (`*JpaEntity.java`), entities need no no-arg/all-open (→ "Domain entity vs JPA entity"). `kotlin-spring` (all-open) is applied not for entities but for **Kotlin beans proxied by CGLIB** (`@CommandService`/`@QueryService`, `@Repository` adapters, `@SpringBootApplication`); `*-adapter-out` also uses `todakun.spring` for Kotlin `@Repository` adapter proxies.
+> **The `kotlin-jpa` (no-arg) plugin is not used.** Since JPA entities are written in **Java** (`*JpaEntity.java`), entities need no no-arg/all-open (→ "Domain entity vs JPA entity"). `kotlin-spring` (all-open) is applied not for entities but for **Kotlin beans proxied by CGLIB** (`@CommandService`/`@QueryService`, `@Repository` adapters, `@SpringBootApplication`); `*-adapter-out` gets the same proxy support via `todakun.adapter-persistence`, which composes `todakun.spring`.
 
 ```kotlin
 // e.g. {domain}-application/build.gradle.kts
 plugins {
-    id("todakun.spring")
+  id("todakun.spring")
 }
 dependencies {
-    implementation(project(":common"))
-    implementation(project(":shared"))
-    implementation(project(":{domain}:{domain}-domain"))
+  // :common is auto-injected by the todakun.kotlin-common convention plugin (no per-module declaration needed).
+  implementation(project(":shared"))
+  implementation(project(":{domain}:domain"))
 }
 ```
 
+> **Adapter modules apply only their role plugin** — `todakun.adapter-web` (adapter-in) or `todakun.adapter-persistence` (JPA adapter-out) — and declare **only** their own `project(...)` deps (`{domain}:domain`, `{domain}:application`, and `:shared` **only when the module actually references shared types**) plus **domain-specific** libs (`spring-ai`, `firebase-admin`, …). Never re-list the shared web/JPA/Testcontainers stack per module — it lives in the plugin. `auth-adapter-out` is the exception (Redis/JWT, no JPA → `todakun.spring`).
+>
 > External plugin versions are managed in one place, `buildSrc/build.gradle.kts`. If a new external plugin is needed, add its classpath dependency there and then declare it in a convention plugin.
 
 ## Package Structure
@@ -83,6 +88,17 @@ dependencies {
 | `*-adapter-in` | `com.yapp.todakun.{domain}.adapter.web` |
 | `*-adapter-out` | `com.yapp.todakun.{domain}.adapter.{tech}` |
 
+`*-domain` separates port interfaces by direction (traditional hexagonal `port.in`/`port.out` naming, adjusted since `in` is a hard keyword in Kotlin and a literal `port.in`/`` port.`in` `` package also fails ktlint's `standard:package-name` rule).
+
+| Sub-package | Purpose | Example class |
+|-------------|---------|---------------|
+| `.port.inbound` | Inbound port: `*UseCase` interface + its command/result models (the use case's input/output contract lives with the interface, not in `*-application`) | `LoginUseCase`, `LoginCommand`, `LoginResult` |
+| `.port.outbound` | Outbound port: interface the domain requires from the outside, implemented by `*-adapter-out` (or `*-adapter-in` for things like JWT filters) | `AccessTokenPort`, `OAuthPort` |
+
+`*-application` holds only the `*Service` classes that implement `port.inbound` interfaces — no port interfaces or command/result models live there.
+
+> **One inbound port per file, and never mix a Query port with a Command port in the same file.** The `@QueryService`/`@CommandService` (CQRS) split must be visible in the file layout, not buried inside a shared `*UseCases.kt` (`GetXUseCase` and `ReadXUseCase` → two files). Likewise split exceptions and DTOs one-per-file. (Details in `code-style` §2 "File organization".)
+
 `*-adapter-out` separates sub-packages by technology.
 
 | Sub-package | Purpose | Example class |
@@ -94,10 +110,14 @@ dependencies {
 
 When adding a new technology adapter, create a new sub-package named after the technology.
 
+> Konsist enforces both: `*UseCase` interfaces must reside in `..port.inbound..`, and `*Port` interfaces (except cross-domain ports in `shared`, e.g. `UserAuthPort`) must reside in `..port.outbound..` (`module-architecture-test/.../ArchitectureTest.kt`).
+
 ## Domain Entity vs JPA Entity
 
 - **Domain entity** (`*-domain`, Kotlin): owns business rules, no `@Entity`, Spring/JPA imports forbidden
 - **JPA entity** (`*-adapter-out`, Java): uses `@Entity`, `*JpaEntity` suffix, works around Kotlin immutability/JPA proxy compatibility
+- **Mark every logically-required column `@Column(nullable = false)`** (recurring review point). Columns that are invariants (`id`, `name`, enum-backed fields such as `solarTermName`/`cheonganSipseong`, …) must declare `nullable = false` so the DDL constraint matches the domain invariant — don't leave them implicitly nullable.
+- The `*JpaEntity` naming is deliberate: exposing the persistence tech in the name is fine (and encouraged) at the **adapter** layer — it signals a persistence-only object and prevents accidental use of a JPA entity in the domain layer. (The "don't leak the tech into the name" rule applies to the **domain** layer, not adapters.)
 
 ## DB PK
 
@@ -109,17 +129,26 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
-@OptIn(ExperimentalUuidApi::class)
+@ExperimentalUuidApi
 val id: UUID = Uuid.generateV7().toJavaUuid()  // domain entity / value object
 ```
 > `UUID.ofVersion7()` does not exist in the JDK (do not use it). Always use `Uuid.generateV7()`.
 
+### `@ExperimentalUuidApi` (opt-in) rule
+
+`Uuid.generateV7()` is still an experimental stdlib API ([Kotlin docs](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.uuid/-uuid/-companion/generate-v7.html)), so every declaration that (transitively) calls it must opt in. **Use the propagating marker `@ExperimentalUuidApi`, not `@OptIn(ExperimentalUuidApi::class)`.**
+
+- **Why propagate instead of `@OptIn`**: `@OptIn` swallows the experimental requirement at that spot; `@ExperimentalUuidApi` re-exposes it so callers make the same conscious choice. This keeps the whole UUIDv7 chain honest and is the established convention (`Member.create`, `SajuChart.create`, `CreateSajuChartService.create`).
+- **Where it goes**: the domain factory (`companion object { @ExperimentalUuidApi fun create(...) }`), the service **override** that calls it, and any **concrete-type** caller such as a `*ServiceTest` class (annotate the test class).
+- **Where it does NOT go**: the inbound `*UseCase`/`shared` **port interfaces stay un-annotated** — that's the propagation boundary, so controllers/other domains calling through the interface type need no opt-in (see `CreateSajuChartPort` ← `SignupService`).
+
 ## Cross-Domain References
 
 - Direct references between domain entities are forbidden
-- If you need data from another domain, go through a port interface in the `shared` module
-- `auth-application` → `shared.UserAuthPort` ← implemented by `user-application`
-- On MSA migration, replace the `user-application` implementation with an HTTP client
+- Going through a `shared` port is only warranted when a domain's own use case must branch/act on another domain's data — not whenever data merely needs to be displayed. If nothing about the caller's logic depends on the result, let the client call the other domain's own `*UseCase` directly instead of coupling the two domains on the backend.
+- Example: `LoginService` must branch between issuing tokens vs. an onboarding token depending on whether the member already exists, so it goes through `shared.GetMemberPort` ← implemented by `member-adapter-out` (`GetMemberAdapter`), not `member-application` — the port implementation is an adapter, not a use-case service.
+- Today (monolith) `GetMemberAdapter` queries `MemberRepository` via JPA; once `member` is split out for MSA, only that adapter is swapped for an HTTP client — `auth-application`'s code doesn't change, because the port is the stable contract.
+- Counter-example: "show the member's own profile screen" needs no branching in another domain, so it doesn't need a cross-domain port — the client calls member's own `*UseCase` directly.
 
 ## Swagger Patterns
 
@@ -131,31 +160,31 @@ Structure the docs so that **① the API description and ② the parameters** ar
 // *-adapter-in module (com.yapp.todakun.{domain}.adapter.web)
 @Tag(name = "User", description = "User API")
 interface UserApi {
-    @Operation(
-        summary = "Get my info",
-        description = "Returns the authenticated user's own profile.",
-    )
-    @GetMapping("/me")
-    fun getMe(
-        @Parameter(hidden = true) userId: UserId,
-    ): ResponseEntity<CommonResponse<UserResponse>>
+  @Operation(
+    summary = "Get my info",
+    description = "Returns the authenticated user's own profile.",
+  )
+  @GetMapping("/me")
+  fun getMe(
+    @Parameter(hidden = true) userId: UserId,
+  ): ResponseEntity<CommonResponse<UserResponse>>
 
-    @Operation(summary = "Check nickname availability", description = "A public API callable without authentication.")
-    @DisableSwaggerSecurity // API requiring no auth → removes the lock icon from the Swagger docs
-    @GetMapping("/nickname/check")
-    fun checkNickname(
-        @Parameter(description = "Nickname to check", example = "todak")
-        @RequestParam nickname: String,
-    ): ResponseEntity<CommonResponse<Boolean>>
+  @Operation(summary = "Check nickname availability", description = "A public API callable without authentication.")
+  @DisableSwaggerSecurity // API requiring no auth → removes the lock icon from the Swagger docs
+  @GetMapping("/nickname/check")
+  fun checkNickname(
+    @Parameter(description = "Nickname to check", example = "todak")
+    @RequestParam nickname: String,
+  ): ResponseEntity<CommonResponse<Boolean>>
 }
 
 @RestController
 @RequestMapping("/users")
 class UserController(
-    private val getUserUseCase: GetUserUseCase,
+  private val getUserUseCase: GetUserUseCase,
 ) : UserApi {
-    override fun getMe(userId: UserId): ResponseEntity<CommonResponse<UserResponse>> =
-        CommonResponse.retrieved(UserResponse.from(getUserUseCase.getUser(userId)))
+  override fun getMe(userId: UserId): ResponseEntity<CommonResponse<UserResponse>> =
+    CommonResponse.retrieved(UserResponse.from(getUserUseCase.getUser(userId)))
 }
 ```
 
@@ -164,6 +193,8 @@ Rules:
 - Write both `summary` + `description` in `@Operation`.
 - Annotate parameters with `@Parameter(description, example)` for descriptions/examples. (For `@PathVariable`/`@RequestParam`/`@RequestBody` alike.)
 - Response schemas/examples are auto-generated from the return type `CommonResponse<T>`, so do not write `@ApiResponses` by hand.
+- **Hide server-injected parameters** (recurring review point). Params the server fills from the `SecurityContext` — the `@AuthenticationPrincipal memberId`, a `@BearerToken` access token — must carry `@Parameter(hidden = true)`. Otherwise Swagger UI / "Try it out" shows them as client-supplied inputs and clients mistakenly think they have to send them.
+- **Give enum / whitelist string fields an `example`** (recurring review point). For `*Request` fields constrained to a fixed value set (`birthTime`, `calendarType`, `gender`, `job`, `relationshipStatus`, …), a regex/validation message alone doesn't tell the client the valid values — add `@Schema(example = "...")` on the field.
 
 > springdoc `OperationCustomizer` skeleton (bootstrap):
 > ```kotlin
@@ -189,6 +220,7 @@ Declare transactions by attaching a **CQRS stereotype** (`com.yapp.todakun.commo
 | `@QueryService` | `@Service` + `@Transactional(readOnly = true)` | Query use cases |
 
 ```kotlin
+// CreateUserUseCase/GetUserUseCase come from {domain}-domain's com.yapp.todakun.{domain}.port.inbound
 @CommandService
 class CreateUserService(...) : CreateUserUseCase { ... }
 
@@ -202,16 +234,16 @@ class GetUserService(...) : GetUserUseCase { ... }
 
 ## DTO ↔ Domain Mapping
 
-- Mapping happens **only in the adapter layer**. The domain knows nothing of DTOs (no importing `*Request`/`*Response` in `*-domain`/`*-application`).
+- Mapping happens **only in the adapter layer**. The domain knows nothing of `*Request`/`*Response` (no importing them in `*-domain`/`*-application`) — but it does own the UseCase's own input/output models (`*Command`/`*Result` in `port.inbound`), since those are the port's contract, not adapter DTOs.
 - Response: a `from(domain)` factory in the `companion object` of `*Response`. The controller wraps it in `CommonResponse` (`*Response` itself knows nothing of the envelope).
-- Request: a `toCommand()` / domain-conversion function on `*Request`.
+- Request: a `toCommand()` / domain-conversion function on `*Request`, building the `port.inbound` command type.
 - Persistence: `toDomain()` / `fromDomain(domain)` on `*JpaEntity` (adapter-out).
 
 ```kotlin
 data class UserResponse(val id: UUID, val nickname: String) {
-    companion object {
-        fun from(user: User) = UserResponse(id = user.id, nickname = user.nickname)
-    }
+  companion object {
+    fun from(user: User) = UserResponse(id = user.id, nickname = user.nickname)
+  }
 }
 ```
 

@@ -12,8 +12,80 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     show-sql: false
+    hibernate:
+      ddl-auto: update  # 자동 스키마 생성 사용
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID}
+          location: ${VERTEX_AI_LOCATION}
+          chat:
+            options:
+              model: ${VERTEX_AI_CHAT_MODEL}
+
+batch:
+  schema:
+    initialization-mode: always  # Spring Batch 메타데이터 테이블 자동 생성(이미 있으면 스킵되는 멱등 동작)
+
+# GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
+gcp:
+  project-id: ${GCP_PROJECT_ID}
+  storage:
+    bucket: ${GCS_BUCKET}
+
+# FCM 푸시 알림(Firebase Admin SDK). VM 서비스 계정 ADC로 인증 → 키 파일 불필요.
+fcm:
+  enabled: ${FCM_ENABLED:true}    # false면 Firebase 빈 미생성(no-op)
+  project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
+
+# Sentry(APM/에러 추적). DSN 미설정 시 비활성(no-op).
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: dev
+  traces-sample-rate: 0.2
+  logging:
+    minimum-event-level: error       # ERROR 로그를 Sentry 이슈로 적재
+    minimum-breadcrumb-level: info   # INFO 이상은 이슈에 붙는 breadcrumb으로만 기록
+
+token:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiry-seconds: 604800  # 7일(액세스 토큰 만료시간)
+  onboarding:
+    expiry-seconds: 600  # 10분(온보딩 토큰 만료시간)
+  redis:
+    expiry-seconds: 2592000  # 30일(리프레시 토큰 만료시간)
+
+oauth:
+  google:
+    client-ids: ${GOOGLE_OAUTH_CLIENT_IDS}  # 콤마 구분(Android/iOS 등 플랫폼별 클라이언트 ID)
+  apple:
+    client-ids: ${APPLE_CLIENT_IDS}  # 콤마 구분(여러 클라이언트 ID 지원 시)
+    team-id: ${APPLE_TEAM_ID}
+    key-id: ${APPLE_KEY_ID}
+    private-key: ${APPLE_PRIVATE_KEY}
+
+# [임시] 탈퇴 후 재가입 90일 제한 해제 — 동일 SNS 계정으로 탈퇴·재가입 테스트를 반복하기 위함.
+# 탈퇴 기록(해시+TTL)은 계속 쌓이므로, 아래 줄을 지우거나 true로 되돌리면 남은 기간만큼 제한이 되살아난다.
+# prod는 application.yaml의 restriction-enabled: true(90일 제한)를 그대로 따른다.
+account:
+  withdrawal:
+    restriction-enabled: false
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}  # 콤마 구분
+
+# ERROR 로그 → Discord 웹훅 직접 발송(logback appender). URL 미설정 시 자동 no-op.
+discord:
+  webhook-url: ${DISCORD_WEBHOOK_URL:}
 
 logging:
+  # 구조화 로그(JSON) → stdout → Alloy가 level 파싱 → Loki(조회·대시보드용).
+  # ERROR 알림은 이 경로가 아니라 위 discord.webhook-url(앱이 직접 발송)이 담당한다.
+  structured:
+    format:
+      console: logstash
   level:
     root: INFO
     com.yapp.todakun: DEBUG

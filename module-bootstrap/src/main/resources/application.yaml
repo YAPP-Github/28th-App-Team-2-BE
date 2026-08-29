@@ -1,0 +1,113 @@
+server:
+  # 리버스 프록시(Cloudflare→Caddy) 뒤에서 X-Forwarded-Proto/Host를 반영한다.
+  # 미설정 시 서블릿이 뒷단 http 스킴만 보고 springdoc이 servers를 http://로 생성 →
+  # https Swagger 페이지에서 mixed-content/CORS 차단. 프록시 없는 local은 헤더가 없어 no-op.
+  forward-headers-strategy: framework
+  # graceful이 아니면 컨텍스트 종료 시 임베디드 톰캣이 진행 중인 SSE 연결(chat 스트리밍)을 즉시 끊는다.
+  # SIGTERM 수신 시 새 요청은 거부하고 기존 요청은 아래 timeout-per-shutdown-phase까지 완료를 기다린다.
+  shutdown: graceful
+
+spring:
+  application:
+    name: todakun
+  lifecycle:
+    # chat 스트리밍 워커의 최대 소요 시간(60s+30s) + executor 종료 대기(30s) + 여유.
+    # docker-compose.app.yaml의 stop_grace_period(150s)보다 짧게 잡아, Spring이 그레이스풀 종료를 끝낸 뒤 Docker가 SIGKILL을 보내도록 함.
+    timeout-per-shutdown-phase: 130s
+  jpa:
+    # OSIV 비활성화 — 지연 로딩은 application 계층 트랜잭션 안에서 끝낸다.
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate  # 공통 기본값 — 각 프로필에서 오버라이드 가능
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  batch:
+    job:
+      enabled: false  # 배치 Job은 3시 스케줄러(JobLauncher 직접 호출)로만 트리거 — 앱 기동 시 자동 실행 방지
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+# 헬스 체크(Blue/Green) + Prometheus 메트릭 노출(/actuator/prometheus, CircuitBreaker 상태는 TaggedCircuitBreakerMetrics로 포함).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# Vertex AI 전송 계층(gRPC/REST) RPC deadline(VertexAiTransportConfig).
+# TimeLimiter의 timeout은 이미 실행 중인 동기 호출의 스레드 인터럽트를 보장하지 않으므로,
+# 여기서 네트워크 호출 자체를 실제로 중단시키는 상한선을 둔다.
+# 모든 도메인이 하나의 공유 VertexAI 클라이언트를 쓰므로 전역 값 하나다.
+# stream-timeout-seconds는 chat의 스트리밍 호출에만 쓰인다.
+vertex-ai:
+  transport:
+    unary-timeout-seconds: 70
+    stream-timeout-seconds: 70
+
+# Resilience4j — 도메인별 Vertex AI 호출 CircuitBreaker/Retry/TimeLimiter 설정(이슈 #54, AiResilienceConfig).
+# circuitBreaker는 5개 도메인이 모두 같은 값을 쓰므로 인스턴스별이 아닌 레지스트리 공통 기본값 하나만 둔다(미설정 시 AiResilienceProperties 기본값 사용).
+# executor도 같은 이유로 크기값은 공통 기본값 하나지만, TimeLimiter를 쓰는 인스턴스마다 별개의 풀 "객체"를 지연 생성해 격리한다.
+# 한 도메인의 반복 timeout이 다른 도메인의 스레드/큐까지 점유하지 않도록 하기 위함(큐 포화 시 AbortPolicy로 즉시 거절).
+# retries/timeLimiters에 이름이 없는 인스턴스는 해당 단계를 적용하지 않는다:
+#   - chat-ai: 이미 리액티브 스트림 자체 Duration 타임아웃이 있어 TimeLimiter 생략, 스트리밍 중 재전송 위험 때문에 retry도 생략.
+#   - daily-fortune-ai: 배치 Step이 이미 3회 재시도하므로 retry를 또 두면 최대 3x3회까지 AI 호출이 낭비돼 생략.
+ai-resilience:
+  executor:
+    pool-size: 5
+  retries:
+    day-fortune-ai:
+      max-attempts: 2
+      wait-duration-millis: 500
+    year-fortune-ai:
+      max-attempts: 2
+      wait-duration-millis: 500
+    compatibility-ai:
+      max-attempts: 2
+      wait-duration-millis: 500
+  time-limiters:
+    daily-fortune-ai:
+      timeout-duration-seconds: 60
+    day-fortune-ai:
+      timeout-duration-seconds: 40
+    year-fortune-ai:
+      timeout-duration-seconds: 40
+    compatibility-ai:
+      timeout-duration-seconds: 40
+
+# 카카오/구글이 정한 고정 API 규격 — 환경(local/dev/prod) 무관하게 동일한 값.
+oauth:
+  kakao:
+    user-me-uri: https://kapi.kakao.com/v2/user/me
+  google:
+    jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+    issuers:
+      - https://accounts.google.com
+      - accounts.google.com
+  apple:
+    jwk-set-uri: https://appleid.apple.com/auth/keys
+    issuer: https://appleid.apple.com
+    token-endpoint: https://appleid.apple.com/auth/token
+    revoke-endpoint: https://appleid.apple.com/auth/revoke
+
+# 회원 탈퇴 정책 v1.0 — 탈퇴 후 재가입 제한/SNS 식별자 보관 기간(90일). 환경 무관 고정값.
+account:
+  withdrawal:
+    restriction-seconds: 7776000  # 90일
+    # 제한 판별 on/off. 여기(=prod 포함 기본값)는 정책대로 켠 상태를 유지하고,
+    # 테스트 편의를 위해 dev/local 프로파일에서만 false로 임시 해제한다.
+    # false여도 탈퇴 기록(해시+TTL)은 계속 쌓이므로, true로 되돌리면 남은 기간만큼 제한이 되살아난다.
+    restriction-enabled: true

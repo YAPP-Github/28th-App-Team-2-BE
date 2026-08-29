@@ -1,0 +1,53 @@
+spring:
+  # 통합 테스트 클래스마다 @MockkBean 조합이 달라 Spring 컨텍스트 캐시 키가 전부 분리되고, 캐시된 컨텍스트는
+  # JVM이 끝날 때까지 각자의 커넥션 풀을 붙들고 있다. Hikari 기본값(maximum-pool-size 10, minimum-idle=풀 크기)이면
+  # 컨텍스트 12개 × 10 = 120개가 하나의 공유 Postgres 컨테이너(max_connections 기본 100)에 몰려
+  # "FATAL: sorry, too many clients already"로 컨텍스트 로딩이 실패한다(이슈 #66 CI 실패).
+  # 통합 테스트는 커넥션을 동시에 여러 개 쓰지 않으므로 풀을 작게 잡는다
+  # (배치 스키마 초기화가 락용 커넥션 + 스크립트 실행용 커넥션을 함께 쓰므로 2개로는 부족해 4로 둔다).
+  datasource:
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  ai:
+    model:
+      chat: none  # 테스트 컨텍스트에서 Vertex AI 빈 생성 자체를 막는다(project-id 미설정 시 기동 실패 방지, 실제 호출 금지)
+  batch:
+    job:
+      enabled: false  # main의 application.yaml은 테스트 클래스패스에서 로드되지 않는다 — 배치 Job 자동 실행 방지를 테스트에도 동일하게 적용
+
+# 알림 재시도 폴러 등 @Scheduled가 매분 도는 탓에 @SpringBootTest 컨텍스트(특히 Testcontainers 정리 이후)에서
+# 스케줄러가 실행돼 로그 노이즈·커넥션 풀 경합이 생기는 것을 막는다.
+scheduling:
+  enabled: false
+
+token:
+  jwt:
+    secret: "3b1c2e7f9a4d6081c5e2f7a9b3d6180425e8f1a7c4b9d2e6f3081a5c7e9b2d4"
+    expiry-seconds: 300
+  onboarding:
+    expiry-seconds: 300
+  redis:
+    expiry-seconds: 300
+
+oauth:
+  kakao:
+    user-me-uri: https://kapi.kakao.com/v2/user/me
+  google:
+    client-ids: test-google-client-id
+    jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+    issuers:
+      - https://accounts.google.com
+      - accounts.google.com
+  apple:
+    client-ids: com.yapp.todakun
+    jwk-set-uri: https://appleid.apple.com/auth/keys
+    issuer: https://appleid.apple.com
+    team-id: TEST_TEAM_ID
+    key-id: TEST_KEY_ID
+    private-key: MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQghmEmCwznIII8wfBYp7RvGZpyjyrdYz8ch31xaj6RN9ShRANCAAQckNHiXp7RKVKJR87CZO1/OlO21NUBNMPuZ6diIHAgqLvUkoSsTWVtOmQJDRRvjQN8TediJoMTaSyBBwbLsPnM
+    token-endpoint: https://appleid.apple.com/auth/token
+    revoke-endpoint: https://appleid.apple.com/auth/revoke

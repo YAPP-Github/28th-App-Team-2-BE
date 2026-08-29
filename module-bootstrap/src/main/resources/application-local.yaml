@@ -12,9 +12,74 @@ spring:
       port: ${REDIS_PORT:6379}
   jpa:
     show-sql: true
+    hibernate:
+      ddl-auto: update  # 자동 스키마 생성 사용
     properties:
       hibernate:
         format_sql: true
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID}
+          location: ${VERTEX_AI_LOCATION}
+          chat:
+            options:
+              model: ${VERTEX_AI_CHAT_MODEL}
+
+batch:
+  schema:
+    initialization-mode: always  # Spring Batch 메타데이터 테이블 자동 생성(이미 있으면 스킵되는 멱등 동작)
+
+# GCP Cloud Storage (raw 클라이언트). 로컬은 gcloud ADC(gcloud auth application-default login) 또는 키 파일로 인증.
+gcp:
+  project-id: ${GCP_PROJECT_ID}
+  storage:
+    bucket: ${GCS_BUCKET}
+
+# FCM 푸시 알림(Firebase Admin SDK). ADC 인증(GCS와 공유). 로컬은 기본 비활성 → 필요 시 FCM_ENABLED=true.
+fcm:
+  enabled: ${FCM_ENABLED:false}   # false면 Firebase 빈 미생성(no-op) → 로컬 실행에 Firebase 불필요
+  project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
+
+# Sentry — local은 완전 비활성. 로컬 디버깅 노이즈가 운영 이슈 트래커로 새는 것을 막는다.
+# `dsn: ${SENTRY_DSN:}`만으로는 부족하다: Sentry 오토컨피그 게이트가 @ConditionalOnProperty("sentry.dsn")라
+# 값이 비어 있어도 "프로퍼티 존재"로 통과하고, .env의 SENTRY_DSN은 relaxed binding으로 sentry.dsn에 그대로 붙는다.
+# 그래서 SDK 자체를 끄는 enabled=false를 명시한다(SentryProperties extends SentryOptions).
+# 로컬에서 Sentry 연동을 점검해야 하면 enabled를 true로 바꾸고 dsn/environment/debug를 잠시 넣을 것.
+sentry:
+  enabled: false        # SDK 전송 차단 — .env에 SENTRY_DSN이 채워져 있어도 아무것도 보내지 않는다
+  logging:
+    enabled: false      # SentryAppender를 root 로거에 붙이지 않는다(로그 기반 적재도 차단)
+
+# Discord ERROR 웹훅 — local은 발송 경로 자체가 없다. logback-spring.xml의 `!dev & !prod` 분기에
+# DISCORD appender를 선언하지 않으므로, .env에 DISCORD_WEBHOOK_URL이 채워져 있어도
+# 로컬 디버깅 중 발생한 ERROR가 팀 Discord 채널로 새지 않는다(그래서 여기 webhook-url을 두지 않는다).
+
+token:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiry-seconds: 604800  # 7일(액세스 토큰 만료시간)
+  onboarding:
+    expiry-seconds: 600  # 10분(온보딩 토큰 만료시간)
+  redis:
+    expiry-seconds: 2592000  # 30일(리프레시 토큰 만료시간)
+
+oauth:
+  google:
+    client-ids: ${GOOGLE_OAUTH_CLIENT_IDS}  # 콤마 구분(Android/iOS 등 플랫폼별 클라이언트 ID)
+  apple:
+    client-ids: ${APPLE_CLIENT_IDS}  # 콤마 구분(여러 클라이언트 ID 지원 시)
+    team-id: ${APPLE_TEAM_ID}
+    key-id: ${APPLE_KEY_ID}
+    private-key: ${APPLE_PRIVATE_KEY}
+
+# [임시] 탈퇴 후 재가입 90일 제한 해제 — 동일 SNS 계정으로 탈퇴·재가입 테스트를 반복하기 위함.
+# 탈퇴 기록(해시+TTL)은 계속 쌓이므로, 아래 줄을 지우거나 true로 되돌리면 남은 기간만큼 제한이 되살아난다.
+# prod는 application.yaml의 restriction-enabled: true(90일 제한)를 그대로 따른다.
+account:
+  withdrawal:
+    restriction-enabled: false
 
 logging:
   level:
