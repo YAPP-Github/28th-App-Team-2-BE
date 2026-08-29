@@ -2,8 +2,10 @@ package com.yapp.todakun.config
 
 import com.ninjasquad.springmockk.MockkBean
 import com.yapp.todakun.common.cache.CacheNames
+import com.yapp.todakun.dailyfortune.exception.DailyFortuneGenerationInProgressException
 import com.yapp.todakun.dailyfortune.fixture.DailyFortuneFixture
 import com.yapp.todakun.dailyfortune.port.inbound.GetTodayFortuneUseCase
+import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneStatus
 import com.yapp.todakun.dailyfortune.repository.DailyFortuneRepository
 import com.yapp.todakun.luck.fixture.LuckActionFixture
 import com.yapp.todakun.luck.port.inbound.GetLuckActionsUseCase
@@ -23,6 +25,7 @@ import com.yapp.todakun.saju.fixture.SajuFixture
 import com.yapp.todakun.saju.port.inbound.GetMySajuUseCase
 import com.yapp.todakun.saju.port.outbound.MemberSajuLinkRepository
 import com.yapp.todakun.saju.port.outbound.SajuChartRepository
+import com.yapp.todakun.shared.CreateDailyFortunePort
 import com.yapp.todakun.shared.GetSajuChartPort
 import com.yapp.todakun.shared.ReplaceSelfSajuChartPort
 import com.yapp.todakun.terms.Terms
@@ -36,6 +39,7 @@ import com.yapp.todakun.yearfortune.port.outbound.GeneratedYearSelectionFortune
 import com.yapp.todakun.yearfortune.port.outbound.YearSelectionFortuneAiPort
 import com.yapp.todakun.yearfortune.repository.YearSelectionFortuneRepository
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
@@ -103,6 +107,9 @@ class RedisCacheIntegrationTest(
     @MockkBean
     private lateinit var memberRepository: MemberRepository
 
+    @MockkBean
+    private lateinit var createDailyFortunePort: CreateDailyFortunePort
+
     init {
         afterTest {
             clearMocks(
@@ -113,6 +120,7 @@ class RedisCacheIntegrationTest(
                 luckActionRepository,
                 yearSelectionFortuneRepository,
                 memberRepository,
+                createDailyFortunePort,
             )
         }
         beforeTest {
@@ -195,6 +203,30 @@ class RedisCacheIntegrationTest(
                     verify(exactly = 1) {
                         dailyFortuneRepository.findByMemberIdAndFortuneDate(dailyFortune.memberId, dailyFortune.fortuneDate)
                     }
+                }
+            }
+
+            context("생성 중(GENERATING) 결과를 반환하면") {
+                it("캐시하지 않아 생성 완료 후 재조회 시 최신 결과를 돌려준다") {
+                    val memberId = Uuid.generateV7().toJavaUuid()
+                    val fortuneDate = LocalDate.now()
+                    every { dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, any()) } returns null
+                    every { createDailyFortunePort.create(memberId, fortuneDate) } throws DailyFortuneGenerationInProgressException()
+
+                    val generatingResult = getTodayFortuneUseCase.getToday(memberId, fortuneDate)
+
+                    generatingResult.status shouldBe TodayFortuneStatus.GENERATING
+
+                    val dailyFortune = DailyFortuneFixture.create(memberId = memberId, fortuneDate = fortuneDate)
+                    val luckAction = LuckActionFixture.create(memberId = memberId, fortuneDate = fortuneDate)
+                    every { dailyFortuneRepository.findByMemberIdAndFortuneDate(memberId, fortuneDate) } returns dailyFortune
+                    every {
+                        luckActionRepository.findAllByMemberIdAndFortuneDate(memberId, fortuneDate)
+                    } returns listOf(luckAction)
+
+                    val completedResult = getTodayFortuneUseCase.getToday(memberId, fortuneDate)
+
+                    completedResult.status shouldBe TodayFortuneStatus.COMPLETED
                 }
             }
         }
