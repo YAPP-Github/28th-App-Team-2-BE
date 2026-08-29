@@ -7,7 +7,6 @@ import com.yapp.todakun.dailyfortune.exception.DailyFortuneNotFoundException
 import com.yapp.todakun.dailyfortune.port.inbound.GetTodayFortuneUseCase
 import com.yapp.todakun.dailyfortune.port.inbound.TodayFortuneResult
 import com.yapp.todakun.shared.CreateDailyFortunePort
-import com.yapp.todakun.shared.currentDate
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import java.time.LocalDate
@@ -37,7 +36,7 @@ class GetTodayFortuneService(
         // DailyFortuneGenerationLockPort가 막아 AI를 중복 호출하지 않는다(DailyFortuneGenerationInProgressException, 이슈 #90).
         log.info("오늘의 운세가 없어 조회 시점에 생성한다: memberId={}, fortuneDate={}", memberId, fortuneDate)
         try {
-            createDailyFortunePort.create(memberId, currentDate())
+            createDailyFortunePort.create(memberId, fortuneDate)
         } catch (e: DailyFortuneGenerationInProgressException) {
             // 다른 호출자가 이미 생성 중이라 시작조차 못 했다. AI 완료를 기다리지 않고 생성 중 상태로 응답한다(이슈 #90).
             // 그 사이 완료됐을 수도 있어 한 번 더 조회하고, 없으면 생성 중으로 알린다.

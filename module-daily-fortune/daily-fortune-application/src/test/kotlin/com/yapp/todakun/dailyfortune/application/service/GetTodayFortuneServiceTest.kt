@@ -51,13 +51,14 @@ class GetTodayFortuneServiceTest :
                 }
 
                 context("아직 생성되지 않았으면(가입 직후 AI 실패·배치 skip)") {
-                    it("조회 시점에 생성한 뒤 다시 조회해 완료 상태로 반환한다") {
+                    it("조회한 fortuneDate 그대로 생성한 뒤 다시 조회해 완료 상태로 반환한다") {
                         every { todayFortuneReader.find(memberId, fortuneDate) } returnsMany listOf(null, summary)
-                        every { createDailyFortunePort.create(memberId, any()) } returns summary.id
+                        every { createDailyFortunePort.create(memberId, fortuneDate) } returns summary.id
 
                         getTodayFortuneService.getToday(memberId, fortuneDate) shouldBe TodayFortuneResult.completed(summary)
 
-                        verify(exactly = 1) { createDailyFortunePort.create(memberId, any()) }
+                        // find와 다른 날짜로 생성하면(예: currentDate()) 자정~새벽 롤오버 구간에서 자가 치유가 영영 실패한다(이슈 #90).
+                        verify(exactly = 1) { createDailyFortunePort.create(memberId, fortuneDate) }
                     }
                 }
 
