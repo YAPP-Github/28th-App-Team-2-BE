@@ -1,12 +1,13 @@
 name: Deploy (prod)
 
-# main 푸시 또는 수동 실행 시:
+# vX.Y.Z 태그 푸시 또는 수동 실행 시:
 #   build: 테스트(check) → bootJar → 이미지 GHCR 푸시 (태그 = 시맨틱 버전)
 #   deploy: Ansible로 VM 프로비저닝(멱등, target_group=todakun_prod) + Blue/Green 전환(prod 프로필)
 # ⚠️ 기존 VM을 prod로 전환하는 배포다(신규 VM 아님). 상세 설계: docs/oke-migration-guide.md 10.2절.
+# 태그 푸시 자체가 릴리즈이므로 "태그를 먼저 달고 main에 push"하는 순서 의존이 없다.
 on:
   push:
-    branches: ["main"]
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       version:
@@ -44,10 +45,10 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - name: Set up Gradle (main push에서만 캐시 쓰기 — 그 외엔 읽기 전용)
+      - name: Set up Gradle (릴리즈 태그 push에서만 캐시 쓰기 — 그 외엔 읽기 전용)
         uses: gradle/actions/setup-gradle@v6
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
       - name: Verify (ktlint · architecture-test · test)
         run: ./gradlew check
