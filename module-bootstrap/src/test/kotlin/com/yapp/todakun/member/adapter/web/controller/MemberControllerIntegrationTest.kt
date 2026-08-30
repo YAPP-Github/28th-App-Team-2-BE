@@ -150,7 +150,8 @@ class MemberControllerIntegrationTest(
 
                     commandSlot.captured.memberId shouldBe MEMBER_ID
                     commandSlot.captured.reason.name shouldBe "LOW_USAGE"
-                    commandSlot.captured.accessToken shouldBe ACCESS_TOKEN
+                    commandSlot.captured.jti shouldBe "test-jti"
+                    commandSlot.captured.remainingSeconds shouldBe 300L
                 }
             }
 

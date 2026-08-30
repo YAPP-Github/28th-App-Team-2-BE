@@ -4,7 +4,7 @@ import com.yapp.todakun.member.adapter.web.dto.request.UpdateMemberRequest
 import com.yapp.todakun.member.adapter.web.dto.request.WithdrawMemberRequest
 import com.yapp.todakun.member.adapter.web.dto.response.GetMyProfileResponse
 import com.yapp.todakun.web.response.CommonResponse
-import com.yapp.todakun.web.security.annotation.BearerToken
+import com.yapp.todakun.web.security.AccessTokenAttributes
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -14,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.RequestBody
 import java.util.UUID
 
@@ -51,7 +52,9 @@ interface MemberApi {
         @Parameter(hidden = true)
         @AuthenticationPrincipal memberId: UUID,
         @Parameter(hidden = true)
-        @BearerToken accessToken: String,
+        @RequestAttribute(AccessTokenAttributes.JTI) jti: String,
+        @Parameter(hidden = true)
+        @RequestAttribute(AccessTokenAttributes.REMAINING_SECONDS) remainingSeconds: Long,
         @RequestBody @Valid request: WithdrawMemberRequest,
     ): ResponseEntity<CommonResponse<Unit>>
 }
