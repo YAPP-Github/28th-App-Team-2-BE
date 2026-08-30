@@ -1,5 +1,9 @@
 package com.yapp.todakun.auth.port.inbound
 
+import java.util.UUID
+
 data class LogoutCommand(
-    val accessToken: String,
+    val memberId: UUID,
+    val jti: String,
+    val remainingSeconds: Long,
 )
