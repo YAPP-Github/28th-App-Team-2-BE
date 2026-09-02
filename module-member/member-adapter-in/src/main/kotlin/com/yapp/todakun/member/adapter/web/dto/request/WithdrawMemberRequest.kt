@@ -45,11 +45,13 @@ data class WithdrawMemberRequest(
 
     fun toCommand(
         memberId: UUID,
-        accessToken: String,
+        jti: String,
+        remainingSeconds: Long,
     ) = WithdrawMemberCommand(
         memberId = memberId,
         reason = reason.toMemberEnum<WithdrawalReason>(),
         detail = detail?.takeIf { it.isNotBlank() },
-        accessToken = accessToken,
+        jti = jti,
+        remainingSeconds = remainingSeconds,
     )
 }

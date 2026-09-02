@@ -8,14 +8,17 @@ import com.yapp.todakun.auth.adapter.web.dto.response.RefreshResponse
 import com.yapp.todakun.auth.adapter.web.dto.response.SignupResponse
 import com.yapp.todakun.web.openapi.annotation.DisableSwaggerSecurity
 import com.yapp.todakun.web.response.CommonResponse
-import com.yapp.todakun.web.security.annotation.BearerToken
+import com.yapp.todakun.web.security.AccessTokenAttributes
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.RequestBody
+import java.util.UUID
 
 @Tag(name = "Auth", description = "인증 API")
 interface AuthApi {
@@ -46,7 +49,11 @@ interface AuthApi {
     @PostMapping("api/v1/auth/logout")
     fun logout(
         @Parameter(hidden = true)
-        @BearerToken accessToken: String,
+        @AuthenticationPrincipal memberId: UUID,
+        @Parameter(hidden = true)
+        @RequestAttribute(AccessTokenAttributes.JTI) jti: String,
+        @Parameter(hidden = true)
+        @RequestAttribute(AccessTokenAttributes.REMAINING_SECONDS) remainingSeconds: Long,
     ): ResponseEntity<CommonResponse<Unit>>
 
     @Operation(

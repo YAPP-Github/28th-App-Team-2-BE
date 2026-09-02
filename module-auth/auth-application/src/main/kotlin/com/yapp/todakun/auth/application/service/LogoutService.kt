@@ -2,21 +2,18 @@ package com.yapp.todakun.auth.application.service
 
 import com.yapp.todakun.auth.port.inbound.LogoutCommand
 import com.yapp.todakun.auth.port.inbound.LogoutUseCase
-import com.yapp.todakun.auth.port.outbound.AccessTokenPort
 import com.yapp.todakun.auth.port.outbound.BlacklistTokenPort
 import com.yapp.todakun.auth.port.outbound.RefreshTokenPort
-import com.yapp.todakun.common.annotation.CommandService
+import org.springframework.stereotype.Service
 
-@CommandService
+// 사용하는 포트가 모두 Redis이고 RDB 트랜잭션이 필요 없어 @CommandService(트랜잭션) 대신 @Service를 사용한다.
+@Service
 class LogoutService(
-    private val accessTokenPort: AccessTokenPort,
     private val refreshTokenPort: RefreshTokenPort,
     private val blacklistTokenPort: BlacklistTokenPort,
 ) : LogoutUseCase {
     override fun logout(command: LogoutCommand) {
-        val claims = accessTokenPort.parse(command.accessToken)
-
-        refreshTokenPort.revokeAll(claims.memberId)
-        blacklistTokenPort.blacklist(claims.jti, claims.remainingSeconds)
+        refreshTokenPort.revokeAll(command.memberId)
+        blacklistTokenPort.blacklist(command.jti, command.remainingSeconds)
     }
 }

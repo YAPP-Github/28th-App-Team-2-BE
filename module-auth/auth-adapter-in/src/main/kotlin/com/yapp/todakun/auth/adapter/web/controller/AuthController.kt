@@ -15,6 +15,7 @@ import com.yapp.todakun.auth.port.inbound.SignupUseCase
 import com.yapp.todakun.web.response.CommonResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 class AuthController(
@@ -35,8 +36,12 @@ class AuthController(
         return CommonResponse.created(SignupResponse.from(result))
     }
 
-    override fun logout(accessToken: String): ResponseEntity<CommonResponse<Unit>> {
-        logoutUseCase.logout(LogoutCommand(accessToken))
+    override fun logout(
+        memberId: UUID,
+        jti: String,
+        remainingSeconds: Long,
+    ): ResponseEntity<CommonResponse<Unit>> {
+        logoutUseCase.logout(LogoutCommand(memberId = memberId, jti = jti, remainingSeconds = remainingSeconds))
 
         return CommonResponse.deleted()
     }

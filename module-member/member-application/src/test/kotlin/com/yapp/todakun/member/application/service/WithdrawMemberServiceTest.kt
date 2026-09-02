@@ -27,8 +27,14 @@ class WithdrawMemberServiceTest : DescribeSpec({
         clearMocks(withdrawMemberTransactionService, revokeOauthTokenPort)
     }
 
-    val accessToken = "test-access-token"
-    val command = WithdrawMemberCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null, accessToken = accessToken)
+    val command =
+        WithdrawMemberCommand(
+            MemberFixture.MEMBER_ID,
+            WithdrawalReason.LOW_USAGE,
+            detail = null,
+            jti = "test-jti",
+            remainingSeconds = 3600L,
+        )
 
     describe("withdraw") {
         context("트랜잭션 처리가 성공하고 revoke할 OAuth 자격증명이 있으면") {
