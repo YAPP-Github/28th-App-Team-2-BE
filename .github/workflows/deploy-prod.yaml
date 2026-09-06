@@ -147,4 +147,15 @@ jobs:
             exit 0
           fi
           git commit -am "chore: prod 이미지 태그 갱신 (${VERSION})"
-          git push origin main
+          # 앱 리포의 concurrency는 이 워크플로 실행만 직렬화한다 — 체크아웃 이후 GitOps 리포
+          # main에 다른 커밋(사람·다른 파이프라인)이 들어오면 push가 non-fast-forward로 실패한다.
+          # rebase 후 최대 3회 재시도(태그 커밋은 rebase로 보존).
+          for attempt in 1 2 3; do
+            if git push origin main; then
+              exit 0
+            fi
+            echo "push 실패 — rebase 후 재시도 (${attempt}/3)"
+            git pull --rebase origin main
+          done
+          echo "::error::GitOps 리포 main push를 3회 재시도했으나 실패했습니다."
+          exit 1
