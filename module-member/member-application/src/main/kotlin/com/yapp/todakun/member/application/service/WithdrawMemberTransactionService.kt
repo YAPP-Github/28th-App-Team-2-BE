@@ -40,7 +40,7 @@ class WithdrawMemberTransactionService(
             MemberWithdrawalLog.create(reason = command.reason, detail = command.detail),
         )
         deleteMemberSajusPort.deleteByMemberId(member.id)
-        revokeMemberTokensPort.revokeAll(member.id, command.accessToken)
+        revokeMemberTokensPort.revokeAll(member.id, command.jti, command.remainingSeconds)
         registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
         val oauthRevokeCredential = revokeOauthTokenPort.prepareRevoke(member.oauthProvider, member.providerId)
         memberRepository.deleteById(member.id)

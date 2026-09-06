@@ -10,8 +10,9 @@ import java.time.LocalDate
 import java.util.UUID
 
 private const val OAUTH_ACCESS_TOKEN = "test-oauth-access-token"
-private const val ACCESS_TOKEN = "test-access-token"
 private const val REFRESH_TOKEN = "test-refresh-token"
+private const val JTI = "test-jti"
+private const val REMAINING_SECONDS = 3600L
 private const val PROVIDER_ID = "1234567890"
 private const val EMAIL = "test@todakun.com"
 private const val ONBOARDING_TOKEN = "test-onboarding-token"
@@ -57,7 +58,11 @@ object AuthFixture {
             relationshipStatus = relationshipStatus,
         )
 
-    fun logoutCommand(accessToken: String = ACCESS_TOKEN): LogoutCommand = LogoutCommand(accessToken = accessToken)
+    fun logoutCommand(
+        memberId: UUID = MEMBER_ID,
+        jti: String = JTI,
+        remainingSeconds: Long = REMAINING_SECONDS,
+    ): LogoutCommand = LogoutCommand(memberId = memberId, jti = jti, remainingSeconds = remainingSeconds)
 
     fun refreshCommand(refreshToken: String = REFRESH_TOKEN): RefreshCommand = RefreshCommand(refreshToken = refreshToken)
 

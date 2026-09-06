@@ -52,8 +52,16 @@ class WithdrawMemberTransactionServiceTest : DescribeSpec({
         )
     }
 
-    val accessToken = "test-access-token"
-    val command = WithdrawMemberCommand(MemberFixture.MEMBER_ID, WithdrawalReason.LOW_USAGE, detail = null, accessToken = accessToken)
+    val jti = "test-jti"
+    val remainingSeconds = 3600L
+    val command =
+        WithdrawMemberCommand(
+            MemberFixture.MEMBER_ID,
+            WithdrawalReason.LOW_USAGE,
+            detail = null,
+            jti = jti,
+            remainingSeconds = remainingSeconds,
+        )
 
     describe("withdraw") {
         context("회원이 존재하면") {
@@ -63,7 +71,7 @@ class WithdrawMemberTransactionServiceTest : DescribeSpec({
                 every { memberRepository.findById(MemberFixture.MEMBER_ID) } returns member
                 every { memberWithdrawalLogRepository.save(any()) } answers { firstArg() }
                 every { deleteMemberSajusPort.deleteByMemberId(MemberFixture.MEMBER_ID) } just Runs
-                every { revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, accessToken) } just Runs
+                every { revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, jti, remainingSeconds) } just Runs
                 every { registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId) } just Runs
                 every { revokeOauthTokenPort.prepareRevoke(member.oauthProvider, member.providerId) } returns oauthRevokeCredential
                 every { memberRepository.deleteById(MemberFixture.MEMBER_ID) } just Runs
@@ -74,7 +82,7 @@ class WithdrawMemberTransactionServiceTest : DescribeSpec({
                 verifyOrder {
                     memberWithdrawalLogRepository.save(any())
                     deleteMemberSajusPort.deleteByMemberId(MemberFixture.MEMBER_ID)
-                    revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, accessToken)
+                    revokeMemberTokensPort.revokeAll(MemberFixture.MEMBER_ID, jti, remainingSeconds)
                     registerWithdrawnAccountPort.register(member.oauthProvider, member.providerId)
                     revokeOauthTokenPort.prepareRevoke(member.oauthProvider, member.providerId)
                     memberRepository.deleteById(MemberFixture.MEMBER_ID)

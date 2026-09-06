@@ -6,6 +6,7 @@ import com.yapp.todakun.auth.port.outbound.AccessTokenPort
 import com.yapp.todakun.auth.port.outbound.BlacklistTokenPort
 import com.yapp.todakun.common.exception.BusinessException
 import com.yapp.todakun.common.exception.UnauthorizedException
+import com.yapp.todakun.web.security.AccessTokenAttributes
 import com.yapp.todakun.web.security.extractBearerToken
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -32,7 +33,7 @@ class JwtAuthenticationFilter(
     ) {
         resolveToken(request)?.let {
             try {
-                authenticate(parseClaims(it))
+                authenticate(request, parseClaims(it))
             } catch (e: BusinessException) {
                 SecurityContextHolder.clearContext()
                 AuthenticationFailureHolder.set(request, e)
@@ -57,9 +58,15 @@ class JwtAuthenticationFilter(
         return claims
     }
 
-    private fun authenticate(claims: AccessTokenClaims) {
+    // jti·remainingSeconds는 토큰 폐기(로그아웃/탈퇴)에 재사용되는데, 원본 토큰을 다시 파싱하지 않도록
+    // 여기서 이미 검증된 값을 요청 속성으로 노출해 둔다(다른 도메인 컨트롤러도 도메인 결합 없이 사용 가능).
+    private fun authenticate(
+        request: HttpServletRequest,
+        claims: AccessTokenClaims,
+    ) {
         val authorities = if (claims.isAdmin) listOf(SimpleGrantedAuthority("ROLE_ADMIN")) else emptyList()
-        SecurityContextHolder.getContext().authentication =
-            UsernamePasswordAuthenticationToken(claims.memberId, null, authorities)
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken(claims.memberId, null, authorities)
+        request.setAttribute(AccessTokenAttributes.JTI, claims.jti)
+        request.setAttribute(AccessTokenAttributes.REMAINING_SECONDS, claims.remainingSeconds)
     }
 }

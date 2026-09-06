@@ -32,10 +32,11 @@ class MemberController(
 
     override fun withdraw(
         memberId: UUID,
-        accessToken: String,
+        jti: String,
+        remainingSeconds: Long,
         request: WithdrawMemberRequest,
     ): ResponseEntity<CommonResponse<Unit>> {
-        withdrawMemberUseCase.withdraw(request.toCommand(memberId, accessToken))
+        withdrawMemberUseCase.withdraw(request.toCommand(memberId, jti, remainingSeconds))
 
         return CommonResponse.deleted()
     }
