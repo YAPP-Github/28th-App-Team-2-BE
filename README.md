@@ -67,5 +67,5 @@ cp .env.example .env
 
 배포 및 클러스터 아키텍처 관련 상세 내용은 [**`deploy/README.md`**](deploy/README.md)를 참고하세요.
 
-- **CI/CD**: GitHub Actions 워크플로 (`deploy-dev.yaml`, `deploy-prod.yaml`)를 통해 GHCR 이미지 빌드 및 GitOps 저장소([`Todakun/Todakun-GitOps`](https://github.com/Todakun/Todakun-GitOps)) 태그 갱신
+- **CI/CD**: GitHub Actions 워크플로 (`deploy-dev.yaml`, `deploy-prod.yaml`)를 통해 GHCR 이미지 빌드 및 GitOps 저장소 매니페스트 태그 갱신
 - **CD**: Argo CD가 GitOps 저장소의 선언적 매니페스트(Kustomize)를 OKE 클러스터에 자동 동기화

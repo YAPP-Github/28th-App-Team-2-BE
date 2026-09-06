@@ -18,10 +18,9 @@
    │
    ├──────────────────────────────┬──────────────────────────────┐
    ▼                              ▼                              ▼
-[GHCR (이미지 레지스트리)]   [GitOps Repo (Kustomize)]       [Discord / Sentry]
-ghcr.io/<owner>/todakun-app   Todakun/Todakun-GitOps         실시간 에러 알림 / APM
-(dev-${SHA}, vX.Y.Z)          (overlays/dev, overlays/prod)
-                                  │
+[GHCR (이미지 레지스트리)]       [GitOps 저장소 (Kustomize)]       [Discord / Sentry]
+ghcr.io/<owner>/todakun-app   (overlays/dev, overlays/prod)  실시간 에러 알림 / APM
+(dev-${SHA}, vX.Y.Z)              │
                                   │ Argo CD GitOps Sync (자동/수동)
                                   ▼
                          [OKE Cluster (aarch64)]
@@ -33,7 +32,7 @@ ghcr.io/<owner>/todakun-app   Todakun/Todakun-GitOps         실시간 에러 �
 ```
 
 - **앱 저장소 (`28th-App-Team-2-BE`)**: 애플리케이션 소스 코드, 단위/아키텍처 테스트, `Dockerfile`, GitHub Actions 워크플로 관리.
-- **GitOps 저장소 ([`Todakun/Todakun-GitOps`](https://github.com/Todakun/Todakun-GitOps))**: 환경별(`dev`, `prod`) Kubernetes 매니페스트(Kustomize), Sealed Secrets, Ingress, Argo CD Application 설정 관리.
+- **GitOps 저장소**: 환경별(`dev`, `prod`) Kubernetes 매니페스트(Kustomize), Sealed Secrets, Ingress, Argo CD Application 설정 관리.
 - **컨테이너 레지스트리 (GHCR)**: `ghcr.io/<owner>/todakun-app`에 arm64 네이티브 컨테이너 이미지 저장.
 - **배포 오케스트레이션 (Argo CD)**: GitOps 저장소의 선언적 매니페스트를 OKE 클러스터에 반영. 롤백은 GitOps 저장소 커밋 revert (`git revert`)로 수행.
 
@@ -64,7 +63,7 @@ deploy/
      - `./gradlew :bootstrap:bootJar` 실행 jar 빌드
      - arm64 Docker 이미지 빌드 및 GHCR 푸시 (`dev-${GITHUB_SHA}`, `dev-latest`)
   2. **`bump-manifest` 잡** (`ubuntu-latest` 러너):
-     - `Todakun/Todakun-GitOps` 저장소의 `develop` 브랜치 체크아웃 (`GITOPS_REPO_TOKEN` 시크릿 사용)
+     - GitOps 저장소의 `develop` 브랜치 체크아웃 (`GITOPS_REPO_TOKEN` 시크릿 사용)
      - `kustomize edit set image`로 `overlays/dev`의 `todakun-app` 이미지 태그 갱신
      - 매니페스트 커밋 및 푸시 (충돌 시 rebase 최대 3회 재시도)
      - Argo CD가 OKE `dev` 네임스페이스로 변경 사항 자동 반영
@@ -78,7 +77,7 @@ deploy/
      - `./gradlew check` 검증 및 bootJar 빌드
      - arm64 Docker 이미지 빌드 및 GHCR 푸시 (`vX.Y.Z`, `prod-latest`)
   2. **`bump-manifest` 잡** (`ubuntu-latest` 러너):
-     - `Todakun/Todakun-GitOps` 저장소의 `main` 브랜치 체크아웃 (`GITOPS_REPO_TOKEN` 시크릿 사용)
+     - GitOps 저장소의 `main` 브랜치 체크아웃 (`GITOPS_REPO_TOKEN` 시크릿 사용)
      - `overlays/prod`의 `todakun-app` 이미지 태그 갱신
      - 매니페스트 커밋 및 푸시 (충돌 시 rebase 최대 3회 재시도)
      - Argo CD가 OKE `prod` 네임스페이스로 변경 사항 반영
@@ -89,9 +88,9 @@ deploy/
 
 | 설정 항목 | 구분 | 설명 |
 |-----------|------|------|
-| `GITOPS_REPO_TOKEN` | Repository Secret | `Todakun/Todakun-GitOps` 저장소에 `contents: write` 권한을 가진 fine-grained PAT 또는 GitHub App 토큰 (`GITHUB_TOKEN`은 크로스 리포 쓰기 불가) |
+| `GITOPS_REPO_TOKEN` | Repository Secret | GitOps 저장소에 `contents: write` 권한을 가진 fine-grained PAT 또는 GitHub App 토큰 (`GITHUB_TOKEN`은 크로스 리포 쓰기 불가) |
 | `GITHUB_TOKEN` | Actions 자동 제공 | `packages: write` 권한으로 GHCR에 이미지 푸시 |
-| 브랜치 보호 규칙 | GitOps Repo 설정 | `Todakun/Todakun-GitOps`의 `develop` 및 `main` 브랜치 보호 규칙에서 CI 봇의 매니페스트 푸시 허용(Bypass) 필요 |
+| 브랜치 보호 규칙 | GitOps Repo 설정 | GitOps 저장소의 `develop` 및 `main` 브랜치 보호 규칙에서 CI 봇의 매니페스트 푸시 허용(Bypass) 필요 |
 
 ---
 
