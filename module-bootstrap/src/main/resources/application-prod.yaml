@@ -28,13 +28,13 @@ batch:
   schema:
     initialization-mode: never
 
-# GCP Cloud Storage (raw 클라이언트). VM 서비스 계정 ADC로 인증 → 자격증명 env 불필요.
+# GCP Cloud Storage (raw 클라이언트). ADC(Application Default Credentials)로 인증 → 자격증명 env 불필요.
 gcp:
   project-id: ${GCP_PROJECT_ID}
   storage:
     bucket: ${GCS_BUCKET}
 
-# FCM 푸시 알림(Firebase Admin SDK). VM 서비스 계정 ADC로 인증 → 키 파일 불필요.
+# FCM 푸시 알림(Firebase Admin SDK). ADC로 인증 → 키 파일 불필요.
 fcm:
   enabled: ${FCM_ENABLED:true}    # false면 Firebase 빈 미생성(no-op)
   project-id: ${GCP_PROJECT_ID}   # Firebase 프로젝트 = GCP 프로젝트
@@ -74,7 +74,7 @@ discord:
   webhook-url: ${DISCORD_WEBHOOK_URL:}
 
 logging:
-  # 구조화 로그(JSON) → stdout → Alloy가 level 파싱 → Loki(조회·대시보드용).
+  # 구조화 로그(JSON) → stdout → 클러스터 로그 수집기(Loki/Vector 등)가 수집(조회·대시보드용).
   # ERROR 알림은 이 경로가 아니라 위 discord.webhook-url(앱이 직접 발송)이 담당한다.
   structured:
     format:
