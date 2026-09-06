@@ -4,6 +4,12 @@
 > **dev/prod 배포는 OKE + Argo CD GitOps로 전환되었다** (`.github/workflows/deploy-{dev,prod}.yaml`).
 > CI는 arm64 이미지를 빌드해 GHCR에 올리고 GitOps 리포(`Todakun/Todakun-GitOps`)의
 > `overlays/<env>` 이미지 태그를 갱신하며, 클러스터 반영은 Argo CD가 수행한다. 롤백은 `git revert`.
+>
+> **사전 설정(없으면 매 배포가 `bump-manifest`에서 실패)**:
+> - 앱 리포 Actions secret `GITOPS_REPO_TOKEN` — `Todakun/Todakun-GitOps`에 `contents: write` 권한을 가진
+>   fine-grained PAT 또는 GitHub App 토큰 (`GITHUB_TOKEN`은 크로스 리포 쓰기 불가).
+> - GitOps 리포 `develop`·`main` 브랜치 보호 규칙에서 위 토큰 신원(Actions bot)의 매니페스트 push 허용(bypass).
+>
 > 아래 GCP VM(Caddy + Compose Blue/Green) 스택은 **OKE 컷오버 안정화 전까지 롤백 경로로 유지**하며,
 > 이후 별도 이슈에서 제거한다.
 
