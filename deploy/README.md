@@ -1,5 +1,12 @@
 # deploy — GCP VM 배포 (Caddy + Docker Compose Blue/Green)
 
+> [!NOTE]
+> **dev/prod 배포는 OKE + Argo CD GitOps로 전환되었다** (`.github/workflows/deploy-{dev,prod}.yaml`).
+> CI는 arm64 이미지를 빌드해 GHCR에 올리고 GitOps 리포(`Todakun/Todakun-GitOps`)의
+> `overlays/<env>` 이미지 태그를 갱신하며, 클러스터 반영은 Argo CD가 수행한다. 롤백은 `git revert`.
+> 아래 GCP VM(Caddy + Compose Blue/Green) 스택은 **OKE 컷오버 안정화 전까지 롤백 경로로 유지**하며,
+> 이후 별도 이슈에서 제거한다.
+
 `todakun-instance`(단일 GCP VM) 위에서 **컨테이너 레벨 Blue/Green**으로 무중단 앱 배포를 한다.
 DB는 Cloud SQL(`todakun-database`, 외부), 파일은 Cloud Storage(`todakun-bucket`), Redis는 VM 내부 컨테이너.
 
