@@ -1,14 +1,15 @@
 name: Deploy (dev)
 
 # develop 푸시 또는 수동 실행 시:
-#   build: 테스트(check) → bootJar → 이미지 GHCR 푸시
-#   deploy: Ansible로 VM 프로비저닝(멱등) + Blue/Green 전환
+#   build:         테스트(check) → bootJar → arm64 이미지 GHCR 푸시
+#   bump-manifest: GitOps 리포(Todakun/Todakun-GitOps) overlays/dev 이미지 태그 갱신
+# 클러스터에는 접속하지 않는다 — 반영은 Argo CD가 Git을 당겨와 수행한다.
 on:
   push:
     branches: ["develop"]
   workflow_dispatch:
 
-# 같은 VM 배포가 겹치지 않도록 직렬화(진행 중이면 대기, 취소하지 않음 → 배포 유실 방지).
+# 같은 환경 배포가 겹치지 않도록 직렬화(진행 중이면 대기, 취소하지 않음).
 concurrency:
   group: deploy-dev
   cancel-in-progress: false
@@ -19,7 +20,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # OKE 노드가 aarch64 — x86 러너로 만든 amd64 이미지는 Pod에서 exec format error.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 25
     environment: dev
     outputs:
@@ -60,7 +62,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push image
+      - name: Build & push image (arm64 네이티브)
         run: |
           docker build -f deploy/Dockerfile \
             -t "${{ steps.meta.outputs.image }}" \
@@ -68,62 +70,47 @@ jobs:
           docker push "${{ steps.meta.outputs.image }}"
           docker push "${{ steps.meta.outputs.latest }}"
 
-  deploy:
+  bump-manifest:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     environment: dev
     steps:
-      - uses: actions/checkout@v7
+      # ★ 이 리포가 아니라 GitOps 리포를 체크아웃한다.
+      #   GITHUB_TOKEN은 크로스 리포 쓰기가 안 되므로 전용 토큰이 필요하다.
+      - name: Checkout GitOps repo (develop)
+        uses: actions/checkout@v7
         with:
-          persist-credentials: false
+          repository: Todakun/Todakun-GitOps
+          ref: develop
+          token: ${{ secrets.GITOPS_REPO_TOKEN }}
+          persist-credentials: true
 
-      - name: Set up SSH key for Ansible
+      - name: Install kustomize (체크섬 검증)
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          # 호스트 키 검증 비활성화(HOST_KEY_CHECKING=False) 대신 known_hosts를 사전에 채워 MITM 방지.
-          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
-          chmod 600 ~/.ssh/known_hosts
+          KUSTOMIZE_VERSION=v5.8.1
+          base="https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}"
+          curl -fsSL -o kustomize.tar.gz "${base}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o checksums.txt "${base}/checksums.txt"
+          grep "kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" checksums.txt | awk '{print $1"  kustomize.tar.gz"}' | sha256sum -c -
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          rm -f kustomize kustomize.tar.gz checksums.txt
 
-      - name: Render Ansible inventory
-        working-directory: deploy/ansible
-        run: |
-          mkdir -p inventory/dev
-          cat > inventory/dev/hosts.ini <<EOF
-          [todakun_dev]
-          ${{ secrets.VM_HOST }} ansible_user=${{ secrets.VM_USER }}
-
-          [todakun_dev:vars]
-          ansible_ssh_private_key_file=~/.ssh/id_deploy
-          ansible_python_interpreter=/usr/bin/python3
-          EOF
-
-      - name: Install Ansible, collections & SOPS
-        working-directory: deploy/ansible
-        run: |
-          pipx install --include-deps ansible
-          ansible-galaxy collection install -r collections/requirements.yaml
-          SOPS_VERSION=v3.9.1
-          base="https://github.com/getsops/sops/releases/download/${SOPS_VERSION}"
-          curl -fsSL -o sops "${base}/sops-${SOPS_VERSION}.linux.amd64"
-          curl -fsSL -o sops.checksums.txt "${base}/sops-${SOPS_VERSION}.checksums.txt"
-          # 릴리스 자산 변조/공급망 위험 방지 — 공식 체크섬과 대조 후에만 설치.
-          expected=$(grep "sops-${SOPS_VERSION}.linux.amd64" sops.checksums.txt | awk '{print $1}')
-          echo "${expected}  sops" | sha256sum -c -
-          sudo install -m 0755 sops /usr/local/bin/sops
-          rm -f sops sops.checksums.txt
-
-      - name: Provision VM (idempotent)
-        working-directory: deploy/ansible
+      - name: Bump dev image tag
         env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/dev/hosts.ini playbook.yaml
+          IMAGE: ${{ needs.build.outputs.image }}
+        run: |
+          cd overlays/dev
+          kustomize edit set image "todakun-app=${IMAGE}"
 
-      - name: Deploy (Blue/Green switch)
-        working-directory: deploy/ansible
-        env:
-          APP_IMAGE: ${{ needs.build.outputs.image }}
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/dev/hosts.ini deploy.yaml
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "매니페스트 변경 없음 — 스킵"
+            exit 0
+          fi
+          git commit -am "chore: dev 이미지 태그 갱신 (${GITHUB_SHA:0:7})"
+          git push origin develop
