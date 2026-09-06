@@ -12,7 +12,7 @@ Use **Firebase Admin SDK** to send push notifications through **FCM (Firebase Cl
 | Item | Decision |
 |------|----------|
 | SDK | Firebase Admin SDK (`com.google.firebase:firebase-admin`, version-managed in `libs.versions.toml`) |
-| Auth | **ADC** (Application Default Credentials) — same as GCS. VM auto-authenticates via the instance service account; locally use `gcloud auth application-default login`. No key file / secret needed. |
+| Auth | **ADC** (Application Default Credentials) — same as GCS. Server auto-authenticates via ADC (GCP SA key / Workload Identity); locally use `gcloud auth application-default login`. |
 | Firebase project | The Firebase project **is** the GCP project → reuse `GCP_PROJECT_ID` |
 | Enable/disable | `fcm.enabled` flag. When `false` the Firebase beans are not created (no-op), so local runs need no Firebase setup (same spirit as Sentry DSN-empty → no-op). |
 | Client SDK token | The client (AOS/iOS) obtains the FCM registration token and registers it with the server; the server stores it and targets it when sending. |
@@ -201,7 +201,7 @@ fcm:
 | `FCM_ENABLED` | `true`로 켤 때만 Firebase 초기화. 로컬은 `false` 권장(푸시 불필요 시). |
 | `GCP_PROJECT_ID` | GCP/Firebase 프로젝트 ID (기존 GCS 설정과 공유) |
 
-- Auth uses **ADC** — no `GOOGLE_APPLICATION_CREDENTIALS` needed on the VM (instance service account). Locally, run `gcloud auth application-default login`. The service account needs the **Firebase Cloud Messaging API** enabled and a role that grants `cloudmessaging.messages.create` (e.g. `roles/firebase.admin` or a custom role).
+- Auth uses **ADC** — server environments authenticate automatically via ADC (GCP SA key / Workload Identity). Locally, run `gcloud auth application-default login`. The service account needs the **Firebase Cloud Messaging API** enabled and a role that grants `cloudmessaging.messages.create` (e.g. `roles/firebase.admin` or a custom role).
 - Gradle: add the dependency to `{domain}-adapter-out`'s `build.gradle.kts` only (`implementation(libs.firebase.admin)`). Never add Firebase to domain/application modules.
 
 ---
