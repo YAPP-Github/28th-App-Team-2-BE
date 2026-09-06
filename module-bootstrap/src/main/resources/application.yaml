@@ -1,5 +1,5 @@
 server:
-  # 리버스 프록시(Cloudflare→Caddy) 뒤에서 X-Forwarded-Proto/Host를 반영한다.
+  # 리버스 프록시(Cloudflare→Ingress) 뒤에서 X-Forwarded-Proto/Host를 반영한다.
   # 미설정 시 서블릿이 뒷단 http 스킴만 보고 springdoc이 servers를 http://로 생성 →
   # https Swagger 페이지에서 mixed-content/CORS 차단. 프록시 없는 local은 헤더가 없어 no-op.
   forward-headers-strategy: framework
@@ -12,7 +12,7 @@ spring:
     name: todakun
   lifecycle:
     # chat 스트리밍 워커의 최대 소요 시간(60s+30s) + executor 종료 대기(30s) + 여유.
-    # docker-compose.app.yaml의 stop_grace_period(150s)보다 짧게 잡아, Spring이 그레이스풀 종료를 끝낸 뒤 Docker가 SIGKILL을 보내도록 함.
+    # Pod terminationGracePeriodSeconds(150s)보다 짧게 잡아, Spring이 그레이스풀 종료를 끝낸 뒤 컨테이너가 종료되도록 함.
     timeout-per-shutdown-phase: 130s
   jpa:
     # OSIV 비활성화 — 지연 로딩은 application 계층 트랜잭션 안에서 끝낸다.
@@ -34,7 +34,7 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-# 헬스 체크(Blue/Green) + Prometheus 메트릭 노출(/actuator/prometheus, CircuitBreaker 상태는 TaggedCircuitBreakerMetrics로 포함).
+# 헬스 체크(Kubernetes Probes) + Prometheus 메트릭 노출(/actuator/prometheus, CircuitBreaker 상태는 TaggedCircuitBreakerMetrics로 포함).
 management:
   endpoints:
     web:
