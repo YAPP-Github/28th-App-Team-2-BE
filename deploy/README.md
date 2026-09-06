@@ -6,7 +6,7 @@
 
 ## 🏗 아키텍처 개요
 
-```
+```text
 [개발자 / CI]
    │
    ├─ push (develop / v*.*.* tag)
@@ -20,7 +20,7 @@
    ▼                              ▼                              ▼
 [GHCR (이미지 레지스트리)]       [GitOps 저장소 (Kustomize)]       [Discord / Sentry]
 ghcr.io/<owner>/todakun-app   (overlays/dev, overlays/prod)  실시간 에러 알림 / APM
-(dev-${SHA}, vX.Y.Z)              │
+(dev-${SHA}, X.Y.Z)               │
                                   │ Argo CD GitOps Sync (자동/수동)
                                   ▼
                          [OKE Cluster (aarch64)]
@@ -40,7 +40,7 @@ ghcr.io/<owner>/todakun-app   (overlays/dev, overlays/prod)  실시간 에러 �
 
 ## 📁 디렉터리 구성
 
-```
+```text
 deploy/
 ├── Dockerfile                         # JRE 25 런타임 컨테이너 이미지 (arm64 네이티브)
 ├── .dockerignore                      # 빌드 컨텍스트 최적화 (bootJar만 포함)
@@ -75,7 +75,7 @@ deploy/
   1. **`build` 잡** (`ubuntu-24.04-arm` 러너):
      - 태그 또는 수동 입력에서 시맨틱 버전(`X.Y.Z`) 추출 및 형식 검증
      - `./gradlew check` 검증 및 bootJar 빌드
-     - arm64 Docker 이미지 빌드 및 GHCR 푸시 (`vX.Y.Z`, `prod-latest`)
+     - arm64 Docker 이미지 빌드 및 GHCR 푸시 (`X.Y.Z`, `prod-latest`)
   2. **`bump-manifest` 잡** (`ubuntu-latest` 러너):
      - GitOps 저장소의 `main` 브랜치 체크아웃 (`GITOPS_REPO_TOKEN` 시크릿 사용)
      - `overlays/prod`의 `todakun-app` 이미지 태그 갱신

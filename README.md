@@ -21,7 +21,7 @@ YAPP 28기 App 2팀 백엔드 애플리케이션 서버입니다. (AOS / iOS 클
 
 ## 📁 모듈 구조
 
-```
+```text
 todakun/
 ├── module-bootstrap/                 # (:bootstrap) Spring Boot 엔트리포인트, Security/로깅 설정
 ├── module-common/                    # (:common) AppException, ResponseCode, @CommandService/@QueryService
