@@ -1,9 +1,9 @@
 name: Deploy (prod)
 
 # vX.Y.Z 태그 푸시 또는 수동 실행 시:
-#   build: 테스트(check) → bootJar → 이미지 GHCR 푸시 (태그 = 시맨틱 버전)
-#   deploy: Ansible로 VM 프로비저닝(멱등, target_group=todakun_prod) + Blue/Green 전환(prod 프로필)
-# ⚠️ 기존 VM을 prod로 전환하는 배포다(신규 VM 아님). 상세 설계: docs/oke-migration-guide.md 10.2절.
+#   build:         테스트(check) → bootJar → arm64 이미지 GHCR 푸시 (태그 = 시맨틱 버전)
+#   bump-manifest: GitOps 리포(Todakun/Todakun-GitOps) overlays/prod 이미지 태그 갱신
+# 클러스터에는 접속하지 않는다 — Argo CD가 overlays/prod(main 브랜치)를 추적해 반영한다.
 # 태그 푸시 자체가 릴리즈이므로 "태그를 먼저 달고 main에 push"하는 순서 의존이 없다.
 on:
   push:
@@ -14,7 +14,7 @@ on:
         description: "배포 이미지의 시맨틱 버전 (예: 1.0.0). 비우면 HEAD에 달린 git 태그(vX.Y.Z)에서 추출합니다."
         required: false
 
-# 같은 VM 배포가 겹치지 않도록 직렬화(진행 중이면 대기, 취소하지 않음 → 배포 유실 방지).
+# 같은 환경 배포가 겹치지 않도록 직렬화(진행 중이면 대기, 취소하지 않음 → 배포 유실 방지).
 concurrency:
   group: deploy-prod
   cancel-in-progress: false
@@ -25,7 +25,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # OKE 노드가 aarch64 — x86 러너로 만든 amd64 이미지는 Pod에서 exec format error.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 25
     environment: prod
     permissions:
@@ -33,6 +34,7 @@ jobs:
       packages: write # GHCR 푸시 (GITHUB_TOKEN)
     outputs:
       image: ${{ steps.meta.outputs.image }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -92,7 +94,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push image
+      - name: Build & push image (arm64 네이티브)
         run: |
           docker build -f deploy/Dockerfile \
             -t "${{ steps.meta.outputs.image }}" \
@@ -100,71 +102,60 @@ jobs:
           docker push "${{ steps.meta.outputs.image }}"
           docker push "${{ steps.meta.outputs.latest }}"
 
-  deploy:
+  bump-manifest:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     environment: prod
     steps:
-      - uses: actions/checkout@v7
+      # ★ 이 리포가 아니라 GitOps 리포를 체크아웃한다.
+      #   GITHUB_TOKEN은 크로스 리포 쓰기가 안 되므로 전용 토큰이 필요하다.
+      - name: Checkout GitOps repo (main)
+        uses: actions/checkout@v7
         with:
-          persist-credentials: false
+          repository: Todakun/Todakun-GitOps
+          ref: main
+          token: ${{ secrets.GITOPS_REPO_TOKEN }}
+          persist-credentials: true
 
-      - name: Set up SSH key for Ansible
-        # ssh-keyscan은 받은 키의 소유자를 검증하지 않는다 — 네트워크 공격자가 응답을 바꾸면
-        # runner가 공격자 키를 신뢰하고 prod 배포 시크릿을 그쪽으로 보낼 수 있다.
-        # 그래서 사전에 검증해 둔 호스트 키를 VM_KNOWN_HOSTS 시크릿에서 그대로 주입한다.
-        env:
-          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          VM_KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
+      - name: Install kustomize (체크섬 검증)
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$VM_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          if [ -z "$VM_KNOWN_HOSTS" ]; then
-            echo "::error::VM_KNOWN_HOSTS 시크릿이 비어 있습니다 — VM의 검증된 호스트 키를 등록해 주세요."
-            exit 1
+          KUSTOMIZE_VERSION=v5.8.1
+          base="https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}"
+          curl -fsSL -o kustomize.tar.gz "${base}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o checksums.txt "${base}/checksums.txt"
+          grep "kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" checksums.txt | awk '{print $1"  kustomize.tar.gz"}' | sha256sum -c -
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          rm -f kustomize kustomize.tar.gz checksums.txt
+
+      - name: Bump prod image tag
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+        run: |
+          cd overlays/prod
+          kustomize edit set image "todakun-app=${IMAGE}"
+
+      - name: Commit & push
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "매니페스트 변경 없음 — 스킵"
+            exit 0
           fi
-          printf '%s\n' "$VM_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-
-      - name: Render Ansible inventory
-        working-directory: deploy/ansible
-        run: |
-          mkdir -p inventory/prod
-          cat > inventory/prod/hosts.ini <<EOF
-          [todakun_prod]
-          ${{ secrets.VM_HOST }} ansible_user=${{ secrets.VM_USER }}
-
-          [todakun_prod:vars]
-          ansible_ssh_private_key_file=~/.ssh/id_deploy
-          ansible_python_interpreter=/usr/bin/python3
-          EOF
-
-      - name: Install Ansible, collections & SOPS
-        working-directory: deploy/ansible
-        run: |
-          pipx install --include-deps ansible
-          ansible-galaxy collection install -r collections/requirements.yaml
-          SOPS_VERSION=v3.9.1
-          base="https://github.com/getsops/sops/releases/download/${SOPS_VERSION}"
-          curl -fsSL -o sops "${base}/sops-${SOPS_VERSION}.linux.amd64"
-          curl -fsSL -o sops.checksums.txt "${base}/sops-${SOPS_VERSION}.checksums.txt"
-          # 릴리스 자산 변조/공급망 위험 방지 — 공식 체크섬과 대조 후에만 설치.
-          expected=$(grep "sops-${SOPS_VERSION}.linux.amd64" sops.checksums.txt | awk '{print $1}')
-          echo "${expected}  sops" | sha256sum -c -
-          sudo install -m 0755 sops /usr/local/bin/sops
-          rm -f sops sops.checksums.txt
-
-      - name: Provision VM (idempotent)
-        working-directory: deploy/ansible
-        env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/prod/hosts.ini playbook.yaml -e target_group=todakun_prod
-
-      - name: Deploy (Blue/Green switch)
-        working-directory: deploy/ansible
-        env:
-          APP_IMAGE: ${{ needs.build.outputs.image }}
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ansible-playbook -i inventory/prod/hosts.ini deploy.yaml -e target_group=todakun_prod -e spring_profile=prod
+          git commit -am "chore: prod 이미지 태그 갱신 (${VERSION})"
+          # 앱 리포의 concurrency는 이 워크플로 실행만 직렬화한다 — 체크아웃 이후 GitOps 리포
+          # main에 다른 커밋(사람·다른 파이프라인)이 들어오면 push가 non-fast-forward로 실패한다.
+          # rebase 후 최대 3회 재시도(태그 커밋은 rebase로 보존).
+          for attempt in 1 2 3; do
+            if git push origin main; then
+              exit 0
+            fi
+            echo "push 실패 — rebase 후 재시도 (${attempt}/3)"
+            git pull --rebase origin main
+          done
+          echo "::error::GitOps 리포 main push를 3회 재시도했으나 실패했습니다."
+          exit 1
