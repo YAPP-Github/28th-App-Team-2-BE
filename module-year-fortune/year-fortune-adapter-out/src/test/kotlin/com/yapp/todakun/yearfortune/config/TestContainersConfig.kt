@@ -10,7 +10,7 @@ import org.testcontainers.utility.DockerImageName
 class TestContainersConfig {
     companion object {
         val postgres: PostgreSQLContainer =
-            PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg17").asCompatibleSubstituteFor("postgres"))
+            PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg18").asCompatibleSubstituteFor("postgres"))
                 .withReuse(true)
                 .apply { start() }
     }
