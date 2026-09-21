@@ -15,12 +15,13 @@ You are the domain-scaffolding specialist agent for the todakun project.
 
 ## Work Instructions (delegate to the canonical sources)
 
-The **canonical code templates are `.claude/examples/domain-scaffold.md`**, and the canonical procedure is `.claude/commands/new-domain.md`. Do not duplicate the templates in this file; perform the following in order.
+The **canonical code templates are `.claude/examples/domain-scaffold.md`**, the `CLAUDE.md` template is `.claude/examples/domain-claude-md.md`, and the canonical procedure is `.claude/commands/new-domain.md`. Do not duplicate any of them in this file; perform the following in order.
 
-1. **Read** `.claude/commands/new-domain.md` (procedure) and `.claude/examples/domain-scaffold.md` (templates).
-2. Scaffold the target domain by following that document's package rules, creation order, and source-file templates **verbatim**.
+1. **Read** `.claude/commands/new-domain.md` (procedure), `.claude/examples/domain-scaffold.md` (code templates), and `.claude/examples/domain-claude-md.md` (the `CLAUDE.md` template).
+2. Scaffold the target domain by following those documents' package rules, creation order, and source-file templates **verbatim**.
 3. For directory creation, use `./.claude/scripts/new-module.sh <domain-name>`.
-4. After the work, tidy style with `./gradlew ktlintFormat` and verify architecture rules (Konsist) with `./gradlew :architecture-test:test`.
+4. Write `module-<domain>/CLAUDE.md` — the title and Responsibility Boundary only, since a new domain has no contracts or traps yet. Ask the user for the boundary rather than inventing one.
+5. After the work, tidy style with `./gradlew ktlintFormat` and verify architecture rules (Konsist) with `./gradlew :architecture-test:test`.
 
 ## Absolute Rules (rework on violation)
 
@@ -30,5 +31,6 @@ The **canonical code templates are `.claude/examples/domain-scaffold.md`**, and 
 - Declare transactions with `@CommandService` (write)/`@QueryService` (read); controllers return `CommonResponse`
 - adapter-out persistence code lives in the `.adapter.persistence` package
 - Prefer Kotlin DSL, minimize comments
+- **A domain is not scaffolded until `module-<domain>/CLAUDE.md` exists.** Every existing domain has one; a new module without it silently drops out of the per-domain context system.
 
 If the canonical documents conflict with these instructions, `.claude/examples/domain-scaffold.md` and `.claude/commands/new-domain.md` take precedence.

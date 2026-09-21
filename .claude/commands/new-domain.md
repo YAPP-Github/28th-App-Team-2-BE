@@ -7,8 +7,8 @@ description: Scaffold a new domain across the 4 modules of the nested hexagonal 
 
 Scaffold the new domain '$ARGUMENTS' per the nested hexagonal architecture rules.
 
-> **The canonical code templates are in [`.claude/examples/domain-scaffold.md`](../examples/domain-scaffold.md).**
-> Follow that document verbatim for package rules, build.gradle, source-file templates, and core rules. The `domain-scaffolder` agent references the same document.
+> **The canonical code templates are in [`.claude/examples/domain-scaffold.md`](../examples/domain-scaffold.md)**, and the `module-{domain}/CLAUDE.md` template is in [`.claude/examples/domain-claude-md.md`](../examples/domain-claude-md.md).
+> Follow those documents verbatim for package rules, build.gradle, source-file templates, and core rules. The `domain-scaffolder` agent references the same documents.
 
 ## Procedure
 
@@ -32,6 +32,11 @@ Scaffold the new domain '$ARGUMENTS' per the nested hexagonal architecture rules
 4. **Add `testImplementation` for the 4 modules to `architecture-test/build.gradle.kts`.**
 5. **Create directories** — make all 4 module directories at once with `./.claude/scripts/new-module.sh {domain}`.
 6. **Create initial source files** — generate them by substituting the domain name into the per-module templates in `domain-scaffold.md` (entity · port · ErrorCode · exception · UseCase · Service · JpaEntity · Adapter · Api · Controller · DTO).
-7. **Verify** — `./gradlew ktlintFormat` → `./gradlew :architecture-test:test`.
+7. **Create `module-{domain}/CLAUDE.md`** — follow `.claude/examples/domain-claude-md.md`. A brand-new domain has no history yet, so write only what is already true:
+   - the title line and **Responsibility Boundary**, filled from what the user said this domain is for. The "Does not own" column matters most — name the domain that owns each adjacent concept, since that is what stops the new module from absorbing its neighbours' work.
+   - **omit Cross-Domain Contracts and Decisions & Traps** when there are none. The template is explicit that an empty section is worse than a missing one; both get added as real ports and real scars appear.
+
+   Ask the user for the boundary if the domain's purpose is not clear from `$ARGUMENTS` — do not invent one. A wrong boundary written down is worse than no file.
+8. **Verify** — `./gradlew ktlintFormat` → `./gradlew :architecture-test:test`.
 
 Domain name: $ARGUMENTS

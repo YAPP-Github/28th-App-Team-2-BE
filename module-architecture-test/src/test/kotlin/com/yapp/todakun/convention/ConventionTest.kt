@@ -22,6 +22,18 @@ class ConventionTest : DescribeSpec({
             }
         }
     }
+
+    describe("도메인 모듈") {
+        it("각자 CLAUDE.md를 가진다") {
+            val missing = domainModuleDirs().filterNot { File(it, "CLAUDE.md").isFile }
+
+            check(missing.isEmpty()) {
+                "다음 도메인 모듈에 CLAUDE.md가 없습니다. " +
+                    "도메인 맥락은 루트가 아니라 각 모듈이 갖는다(작성 규칙: .claude/examples/domain-claude-md.md):\n" +
+                    missing.joinToString("\n") { it.name }
+            }
+        }
+    }
 })
 
 private val projectRoot: File
@@ -35,6 +47,17 @@ private val projectRoot: File
 
 private val binaryExtensions =
     setOf("jar", "png", "jpg", "jpeg", "gif", "ico", "svg", "woff", "woff2", "ttf", "class", "keystore", "p12")
+
+/**
+ * 도메인 모듈 디렉터리. `module-{domain}/` 중 중첩 레이어 모듈(`{domain}-domain/`)을 가진 것만 도메인으로 본다
+ * — `module-common` 같은 최상위 모듈은 제외된다.
+ */
+private fun domainModuleDirs(): List<File> =
+    projectRoot
+        .listFiles { file -> file.isDirectory && file.name.startsWith("module-") }
+        .orEmpty()
+        .filter { dir -> File(dir, "${dir.name.removePrefix("module-")}-domain").isDirectory }
+        .sortedBy { it.name }
 
 private fun trackedTextFiles(): List<File> {
     val process =
