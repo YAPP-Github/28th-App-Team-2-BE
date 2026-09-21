@@ -21,8 +21,13 @@ enum class NotificationType(
 }
 
 /**
- * notification.md 1절 분류. SERVICE는 야간에도 무조건 발송 가능하고, MARKETING만 야간 발송 시
- * 별도 동의([com.yapp.todakun.shared.GetPushConsentPort])가 필요하다.
+ * 알림의 성격 분류. 모든 알림은 발송 시 반드시 둘 중 하나로 태깅한다.
+ *
+ * - [SERVICE]: 이용자가 신청·기대한 기능 알림. 마케팅 동의가 필요 없고 야간에도 무조건 발송 가능하다.
+ * - [MARKETING]: 광고성(이벤트·혜택·프로모션). 마케팅 동의가 필요하고, 야간 발송에는
+ *   별도 동의([GetPushConsentPort])가 추가로 필요하다.
+ *
+ * 새 알림을 정의할 때 분류가 모호하면 보수적으로 [MARKETING]으로 취급한다.
  */
 enum class NotificationClassification {
     SERVICE,

@@ -92,12 +92,13 @@ class SendNotificationService(
 
     private fun shouldPush(command: SendNotificationCommand): Boolean {
         val setting = notificationSettingRepository.findByMemberId(command.memberId)
-        // OS 알림 권한이 꺼진 것으로 동기화돼 있으면 발송 전 스킵(notification.md 6절). null(미동기화)이면 통과.
+        // OS 알림 권한이 꺼져 있으면 발송해도 단말에 도달하지 않으므로 발송 전에 스킵한다.
+        // null은 클라이언트가 아직 권한 상태를 동기화한 적이 없다는 뜻이라 사전 스킵의 근거가 없다 — 통과시키고 실패 응답으로 처리한다.
         if (setting?.osPushPermission == false) return false
         // 설정 미저장 회원: 공지(NOTICE)만 기본 수신, 나머지는 미수신.
         val enabledBySetting = setting?.isPushEnabledFor(command.type) ?: (command.type == NotificationType.NOTICE)
         if (!enabledBySetting) return false
-        // SERVICE는 야간에도 무조건 발송(notification.md 4절) — 야간 동의는 MARKETING에만 적용.
+        // SERVICE는 이용자가 신청·기대한 기능 알림이라 야간에도 무조건 발송한다. 야간 동의 확인은 광고성(MARKETING)에만 적용된다.
         if (command.type.classification != NotificationClassification.MARKETING) return true
         if (isNight() && pushConsentPort.getIfAvailable()?.isNightPushAllowed(command.memberId) == false) return false
         return true

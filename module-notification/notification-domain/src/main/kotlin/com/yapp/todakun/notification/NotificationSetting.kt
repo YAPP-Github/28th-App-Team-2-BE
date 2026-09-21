@@ -21,7 +21,8 @@ data class NotificationSetting(
     val morningReportTime: LocalTime,
     val todakiEnabled: Boolean,
     val luckyActionReminderEnabled: Boolean,
-    // 클라이언트가 동기화한 OS 알림 권한 상태. null = 미동기화(사전 스킵 불가 — notification.md 6절).
+    // 클라이언트가 주기적으로 동기화하는 OS 알림 권한 상태.
+    // null이면 아직 한 번도 동기화된 적이 없다는 뜻이라, 발송 전 사전 스킵의 근거로 쓸 수 없다.
     val osPushPermission: Boolean? = null,
 ) {
     fun update(

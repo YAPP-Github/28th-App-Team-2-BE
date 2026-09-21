@@ -3,7 +3,7 @@ package com.yapp.todakun.notification.policy
 import java.time.Duration
 
 /**
- * 알림 발송 재시도 정책(`notification.md` 7절): 최대 3회, 1분→5분→30분 지수 백오프.
+ * 알림 발송 재시도 정책: 네트워크·FCM 일시 오류에 한해 최대 3회, 1분→5분→30분 지수 백오프로 재시도한다.
  * 무효 토큰(UNREGISTERED 등)은 이 정책 대상이 아니다 — 재시도 없이 즉시 토큰을 정리한다.
  */
 object NotificationRetryPolicy {
