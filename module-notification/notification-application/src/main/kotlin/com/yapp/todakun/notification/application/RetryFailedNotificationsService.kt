@@ -26,7 +26,7 @@ private const val RETRY_LOCK_KEY = 8_412_037_603L
  * 재시도 대상은 [NotificationDeliveryFailure.failedTokens](일시 실패한 토큰만)와 재시도 시점의 최신
  * 디바이스 토큰의 교집합이다 — 이미 성공한 토큰을 다시 발송하지 않고, 로그아웃 등으로 사라진 토큰도 걸러낸다.
  * 대상 건별 처리는 코루틴(`async`/`awaitAll`)으로 병렬 실행하고([notificationDispatchDispatcher] 상한 4, [NotificationDispatchService]와 동일 인스턴스 공유),
- * `try`/`catch`로 예외를 먼저 격리한 뒤 `async`에 넘기므로(#81) 한 건의 실패가 `awaitAll()`을 통해 나머지 형제 코루틴을 취소시키거나 다른 건의 재시도를 중단시키지 않는다.
+ * `async` 안에서 `try`/`catch`로 예외를 직접 잡으므로(#81) 예외가 `awaitAll()`까지 전파되지 않고, 한 건의 실패가 나머지 형제 코루틴을 취소시키거나 다른 건의 재시도를 중단시키지 않는다.
  * Blue/Green 배포 전환 구간의 중복 실행은 [dispatchLockPort]로 인스턴스 간 직렬화한다.
  */
 @Service

@@ -41,7 +41,7 @@ private const val NOTICE_LOCK_KEY = 8_412_037_604L
  * 콘텐츠 확장 포트([dailyFortunePort]/[luckyActionPort])는 옵셔널 주입 — 구현 빈이 없거나 콘텐츠가 없으면(null)
  * 해당 회원 발송을 스킵한다.
  * 대상 회원별 발송은 코루틴(`async`/`awaitAll`)으로 병렬 실행하고([notificationDispatchDispatcher] 상한 4),
- * 각 회원의 발송은 `try`/`catch`로 예외를 먼저 격리한 뒤 `async`에 넘기므로(#81) 한 명의 실패가 `awaitAll()`을 통해 나머지 형제 코루틴을 취소시키지 않는다.
+ * 각 회원의 발송은 `async` 안에서 `try`/`catch`로 예외를 직접 잡으므로(#81) 예외가 `awaitAll()`까지 전파되지 않고, 한 명의 실패가 나머지 형제 코루틴을 취소시키지 않는다.
  * day-fortune-application의 취소 전파 계약과 달리 별도 취소 처리가 불필요하다.
  * OutOfMemoryError 등 복구 불가능한 [Error]는 격리 대상이 아니므로 [Exception]만 명시적으로 잡아 전파시킨다.
  * 공지([publish])는 관리자 API로도 호출 가능해져(더 이상 운영 스크립트 단독 진입점이 아님) 이중 방어로 멱등성을 보장한다:

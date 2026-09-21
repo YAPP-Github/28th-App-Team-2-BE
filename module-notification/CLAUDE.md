@@ -32,7 +32,7 @@ Three schedules, all Asia/Seoul: morning reports every 30 minutes (`0 0,30 * * *
 
 - **None of the dispatch path is transactional.** `NotificationDispatchService` and `RetryFailedNotificationsService` hold no transaction, so per-member sends commit independently and FCM I/O stays outside the database — the same principle as the orchestrator split (→ `architecture` skill).
 - **Total concurrency is capped at 4 by one shared dispatcher.** Both services deliberately share `notificationDispatchDispatcher`; separate caps would sum and could exceed the Hikari pool, which also serves web requests. Do not give either service a dispatcher of its own.
-- **Exceptions are isolated before `async`, not inside it** (#81) — catching inside the coroutine would let `awaitAll()` cancel sibling sends. This is the **opposite** arrangement from `day-fortune`, which relies on a cancellation-propagation contract. Do not carry that pattern across.
+- **Every send catches its own exceptions inside its coroutine** (#81), so nothing escapes to `awaitAll()` and one member's failure cannot cancel its siblings. Only an *uncaught* exception would propagate. `day-fortune` instead relies on a cancellation-propagation contract — do not carry that pattern across, and do not move this `try`/`catch` outward on the assumption the two domains work alike.
 - **Retry is bounded**: 3 attempts, 1m → 5m → 30m backoff. The retry set is the intersection of the transiently-failed tokens with the member's *current* device tokens, so tokens lost to logout drop out and already-delivered ones are never resent.
 
 ## Decisions & Traps

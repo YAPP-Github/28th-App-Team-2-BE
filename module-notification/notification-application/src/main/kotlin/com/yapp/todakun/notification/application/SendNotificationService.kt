@@ -93,7 +93,7 @@ class SendNotificationService(
     private fun shouldPush(command: SendNotificationCommand): Boolean {
         val setting = notificationSettingRepository.findByMemberId(command.memberId)
         // OS 알림 권한이 꺼져 있으면 발송해도 단말에 도달하지 않으므로 발송 전에 스킵한다.
-        // null은 클라이언트가 아직 권한 상태를 동기화한 적이 없다는 뜻이라 사전 스킵의 근거가 없다 — 통과시키고 실패 응답으로 처리한다.
+        // null은 클라이언트가 아직 권한 상태를 동기화한 적이 없다는 뜻이라 사전 스킵의 근거가 없다 — 일단 발송하고 FCM 결과에 따라 성공/실패로 처리한다.
         if (setting?.osPushPermission == false) return false
         // 설정 미저장 회원: 공지(NOTICE)만 기본 수신, 나머지는 미수신.
         val enabledBySetting = setting?.isPushEnabledFor(command.type) ?: (command.type == NotificationType.NOTICE)

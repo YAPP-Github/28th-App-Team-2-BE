@@ -79,7 +79,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | `*Controller` implements the `*Api` interface (Swagger on `*Api`; use `@DisableSwaggerSecurity` for unauthenticated APIs) | Konsist-enforced rule |
 | JPA entities in Java (`*JpaEntity`), domain entities in Kotlin | Immutability/proxy compatibility |
 | Commit messages `[#issue-number] type: description` (in Korean) | Convention (`git-workflow`) |
-| Prefix top-level module **directories** with `module-{module-name}`; for a nested domain, prefix only the outer wrapper (`module-{domain}/`), keep inner layer dirs plain. Gradle project name drops the `module-` prefix; a **domain**'s layer modules are **nested Gradle projects** under a `:{domain}` container with just the layer name as leaf (`:auth:domain`, `:auth:adapter-in`), mapped via `projectDir` in `settings.gradle.kts` | Keeps module folders grouped at the repo root (prevents dispersion) + mirrors the domain boundary in the Gradle project graph |
+| Follow the module directory ↔ Gradle path naming rules (`architecture` skill, "Module directory naming") — `module-` prefix on directories, nested `:{domain}:{layer}` projects mapped via `projectDir` | Keeps module folders grouped at the repo root (prevents dispersion) + mirrors the domain boundary in the Gradle project graph |
 | Register the 4 modules under the `:{domain}` container in `settings.gradle.kts` when adding a new domain (`include("{domain}:domain")`, …) | Prevents missing modules |
 | Manage all versions in `gradle/libs.versions.toml`, reference via `libs.*` | Single source of truth (SSOT) for versions |
 
