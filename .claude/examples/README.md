@@ -7,5 +7,6 @@ Skills keep only the rules (prose); long code blocks are referenced from here. N
 |------|----------|---------------|
 | [domain-scaffold.md](domain-scaffold.md) | Templates for scaffolding a new domain's 4 modules (build.gradle · entity · port · use case · adapter · controller · DTO) | `/new-domain`, the `domain-scaffolder` agent |
 | [testing-patterns.md](testing-patterns.md) | Per-layer `DescribeSpec` examples, `TestContainersConfig`, `*Fixture`, `KotestProjectConfig` | the `testing` and `spring-ai` skills, the `test-writer` agent |
+| [domain-claude-md.md](domain-claude-md.md) | Template for `module-{domain}/CLAUDE.md` — bounded-context boundary, cross-domain port contracts, per-domain decisions, plus what must *not* be duplicated there | authoring a domain's `CLAUDE.md`; `/new-domain` and the `domain-scaffolder` agent (wiring pending) |
 
 > Keep short illustrative snippets (3–8 lines) inline in each skill; collect only compilable, full templates here.
