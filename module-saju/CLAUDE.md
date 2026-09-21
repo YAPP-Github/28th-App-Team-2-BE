@@ -25,7 +25,7 @@ On the port channel this domain is a **pure provider**: it implements eight `sha
 | `GetSajuChartsForCompatibilityPort`, `GetSajuChartNamePort` | `compatibility` | reads both charts and their labels to score a pair |
 | `DeleteMemberSajusPort`, `ReplaceSelfSajuChartPort` | `member` | withdrawal cleanup; re-registering the member's own chart |
 
-**All eight are implemented by services in `saju-application`, not in `saju-adapter-out`.** This differs from the root `CLAUDE.md` example (`GetMemberPort` ← `member-adapter-out`): here each cross-domain entry point *is* a use case — calculate-and-store, or a role-filtered read — rather than a row fetch. When adding a port, decide by whether use-case logic is involved; a pure row fetch still belongs in `adapter-out`.
+**All eight are implemented by services in `saju-application`, not in `saju-adapter-out`** — the opposite of `member`, whose five ports all sit in `member-adapter-out`. The difference is not style: here each cross-domain entry point *is* a use case (calculate-and-store, or a role-filtered read), whereas `member`'s are row fetches. When adding a port, decide by whether use-case logic is involved; a pure row read or write still belongs in `adapter-out`.
 
 There is a **second channel that is not a port**. `ReplaceSelfSajuChartService` and `DeleteMemberSajusService` publish `shared.event.SajuChartChangedEvent`; it is consumed by this domain's own `SajuChartCacheEvictListener` and by `year-fortune`'s `SajuChartChangedEventListener` (`@TransactionalEventListener(AFTER_COMMIT)`), both to evict caches that a changed chart invalidates.
 

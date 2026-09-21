@@ -22,7 +22,7 @@ Provides — and **all five are implemented in `member-adapter-out`**, not in `m
 | `GetMemberIdsPort` | `daily-fortune` (batch enumeration) |
 | `GetMemberFortuneProfilePort` | `daily-fortune`, `day-fortune`, `year-fortune` |
 
-They sit in `adapter-out` because each is a row read or write with no use-case logic — the pattern the root `CLAUDE.md` describes. `saju` deliberately does the opposite for its ports; see its `CLAUDE.md` for when that is right.
+They sit in `adapter-out` because each is a row read or write with no use-case logic. That is the deciding test, and `saju` lands on the other side of it — all eight of its ports live in `saju-application` because each is a real use case. Neither placement is the default; the question is always whether use-case logic is involved.
 
 Consumes `DeleteMemberSajusPort` and `ReplaceSelfSajuChartPort` (`saju`), and `RevokeMemberTokensPort`, `RevokeOauthTokenPort`, `RegisterWithdrawnAccountPort` (`auth`).
 

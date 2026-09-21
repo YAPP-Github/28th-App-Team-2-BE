@@ -32,6 +32,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 
 | Task type | Load |
 |-----------|------|
+| **Working inside any `module-{domain}/`** | that domain's `CLAUDE.md` (auto-loaded) — read before changing its code |
 | Architecture/module design, ports & adapters, transaction boundaries, DTO mapping, response format, Swagger | `architecture` |
 | Writing Kotlin code, naming/formatting, ktlint | `code-style` |
 | Writing tests (Kotest/MockK/TestContainer) | `testing` |
@@ -60,7 +61,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 |------------|--------|
 | Importing `org.springframework.*` / `jakarta.persistence.*` in domain entities | Pollutes the pure domain, violates hexagonal architecture |
 | Importing the `.adapter.` package from `*-application` | Inverts the dependency direction |
-| Direct references between domain entities | Forces going through ports such as `shared.UserAuthPort` |
+| Direct references between domain entities | Must go through a `shared` port instead (e.g. `shared.GetMemberIdPort`) |
 | Throwing `RuntimeException` directly | Use only subclasses of `AppException` (+ `ResponseCode`) (`error-handling`) |
 | `UUID.randomUUID()` (v4) / `UUID.ofVersion7()` (a fake API) | PKs use `Uuid.generateV7().toJavaUuid()` (time-based v7) |
 | Depending on spring-web in `common` | Web-common code belongs in the `common-web` module (`common` only has spring-tx/context) |
@@ -95,29 +96,29 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 
 ## Project Structure
 
-Each domain module maintains a bounded-context boundary so it can be extracted as an independent service (detailed package rules in the `architecture` and `code-style` skills).
-
-> **Module directory naming**: top-level module **directories** use the `module-{module-name}` prefix (`module-common`, `module-bootstrap`, …). For a **nested domain**, only the outer wrapper directory gets the prefix (`module-{domain}/`); the inner layer modules keep their plain names (`{domain}-domain`, `{domain}-adapter-in`, …). The Gradle **project path** drops the `module-` prefix. Top-level modules stay flat (`:common`, `:bootstrap`); a **domain**'s layer modules are **nested** under a `:{domain}` container project with only the layer name as leaf (`:auth:domain`, `:auth:adapter-in`, …), and the container (`:auth`) is a source-less group project pointing at `module-{domain}/`. `settings.gradle.kts` maps each project path to its directory via `projectDir` (the leaf `:auth:domain` maps to the `module-auth/auth-domain` dir). The prefix keeps module folders grouped at the repo root so they don't scatter among config dirs (`build`, `gradle`, `buildSrc`, …), and the nested Gradle graph mirrors the domain boundary.
+Each domain module keeps a bounded-context boundary so it can later be extracted as an independent service. Directory ↔ Gradle-path naming, per-module roles, and package rules all live in the `architecture` skill.
 
 ```
-todakun/                              # top-level module dirs carry the `module-` prefix (Gradle names mapped via projectDir)
-├── module-bootstrap/                 # (:bootstrap) Spring Boot entry point, Security config (jwt/gateway modes)
-├── module-common/                    # (:common) AppException, ResponseCode, @CommandService/@QueryService (spring-tx/context only)
-├── module-common-web/                # (:common-web) CommonResponse, GlobalExceptionHandler, @DisableSwaggerSecurity (com.yapp.todakun.web)
-├── module-shared/                    # (:shared) Cross-domain sharing (UserId, OAuthProvider, UserAuthPort)
-├── module-{domain}/                  # (:{domain} container) auth, user, ... outer wrapper only is prefixed; each domain = 4 nested modules
-│   ├── {domain}-domain/              # (:{domain}:domain) Pure Kotlin entities & ports — dir keeps `{domain}-` prefix, Gradle leaf drops it
-│   ├── {domain}-application/         # (:{domain}:application) UseCase services (@CommandService/@QueryService)
-│   ├── {domain}-adapter-in/          # (:{domain}:adapter-in) REST Controller, DTO, Swagger Api
-│   └── {domain}-adapter-out/         # (:{domain}:adapter-out) JPA(Java), OAuth, JWT, Redis adapters
-└── module-architecture-test/         # (:architecture-test) Konsist architecture-rule verification
+todakun/
+├── module-bootstrap/           # (:bootstrap) Spring Boot entry point, Security config (jwt/gateway modes)
+├── module-common/              # (:common) AppException, ResponseCode, @CommandService/@QueryService
+├── module-common-web/          # (:common-web) CommonResponse, GlobalExceptionHandler, @DisableSwaggerSecurity
+├── module-common-persistence/  # (:common-persistence) BaseEntity (JPA, Java)
+├── module-common-logging/      # (:common-logging) @Loggable + its KSP processor
+├── module-shared/              # (:shared) cross-domain ports, domain events, shared value types
+├── module-{domain}/            # (:{domain}) one per bounded context; each is 4 nested modules
+│   ├── {domain}-domain/        # (:{domain}:domain) pure Kotlin entities & ports
+│   ├── {domain}-application/   # (:{domain}:application) UseCase services (@CommandService/@QueryService)
+│   ├── {domain}-adapter-in/    # (:{domain}:adapter-in) REST controller, DTO, Swagger Api
+│   └── {domain}-adapter-out/   # (:{domain}:adapter-out) JPA(Java), OAuth, JWT, Redis adapters
+└── module-architecture-test/   # (:architecture-test) Konsist architecture-rule verification
 ```
 
-**Dependency direction:** `adapter-in`/`adapter-out` → `application` → `domain`; all modules → `common`/`shared`; `bootstrap` → integrates everything.
-**Cross-domain references:** 다른 도메인 데이터를 그냥 조회하는 게 아니라, 그 데이터로 자기 도메인이 분기/실행해야 할 때만 `shared` 포트를 거친다.
-- 예: `LoginService`는 로그인 시 "이미 가입한 회원인지"에 따라 토큰 발급/온보딩 발급을 분기해야 하므로 `shared.GetMemberPort` ← `member-adapter-out`(`GetMemberAdapter`)를 거친다.
-- 지금(모놀리식)은 `GetMemberAdapter`가 JPA로 `MemberRepository`를 조회하지만, MSA로 `member`가 분리되면 같은 `GetMemberPort`를 HTTP 어댑터로 구현체만 교체하면 되고 `auth-application`의 코드는 바뀌지 않는다 — 포트가 안정적인 계약 역할을 하기 때문.
-- 반례: 단순히 "내 프로필 화면에 회원 정보를 보여준다"는 auth가 알 필요 없는 member 자신의 조회이므로, member의 `*UseCase`를 클라이언트가 직접 호출하면 됨 — 크로스 도메인 포트 불필요.
+**Dependency direction:** `adapter-in`/`adapter-out` → `application` → `domain`; all modules → `common`/`shared`; `bootstrap` integrates everything.
+
+**Every domain carries its own `module-{domain}/CLAUDE.md`** — that context's boundary, its cross-domain contracts, and the traps specific to it. It loads automatically when working inside the module, so read it before changing anything there rather than inferring the boundary from code. Template and authoring rules: `.claude/examples/domain-claude-md.md`.
+
+**Cross-domain references:** 다른 도메인의 데이터를 단순 조회하는 게 아니라, 그 데이터로 **자기 도메인이 분기·실행**해야 할 때만 `shared` 포트를 거친다. 단순 조회라면 포트를 만들지 말고 상대 도메인의 `*UseCase`를 클라이언트가 직접 호출한다. 포트 구현을 `-application`에 둘지 `-adapter-out`에 둘지는 **유스케이스 로직의 유무**로 갈리며, 양쪽 실례와 판단 기준은 `module-saju/CLAUDE.md`(application 쪽)와 `module-member/CLAUDE.md`(adapter-out 쪽)에 있다.
 
 ## Core Development Principles (decisions not covered by skills)
 
