@@ -232,6 +232,29 @@ class GetUserService(...) : GetUserUseCase { ... }
 - These annotations need a `@Transactional` proxy (CGLIB all-open), so apply the **`todakun.spring` convention plugin** (which includes `kotlin-spring`) to `*-application` modules.
 - Since OSIV is off, **always finish lazy loading inside the transaction (application layer)**.
 
+### Long External Calls (AI) — Orchestrator + TransactionalStore
+
+An AI call takes seconds. Holding a transaction — and any row lock inside it — for that long exhausts the connection pool and serialises concurrent requests for the same key. Generation use cases therefore split across **two beans**:
+
+| Bean | Stereotype | Transaction | Role |
+|------|-----------|-------------|------|
+| `Create{Aggregate}Service` (orchestrator) | **`@Service`** | none | sequences steps; calls the AI **between** transactions |
+| `{Aggregate}TransactionalStore` | `@CommandService` | one per method | short lock-and-read, lock-and-save transactions |
+
+```
+findExistingWithLock()   ← short tx: take lock, read; lock released at commit
+        ↓
+    AI call              ← no transaction, no lock, no connection held
+        ↓
+saveIfAbsent()           ← short tx: retake lock, re-read, save only if still absent
+```
+
+Both store methods take the lock and re-read before writing, so a concurrent request that generated first is **detected rather than colliding** with the unique constraint. Idempotency comes from the re-read in `saveIfAbsent`, not from the lock.
+
+> **The orchestrator must NOT carry `@CommandService` or `@Transactional`.** Under `REQUIRED` propagation the store's methods would join the orchestrator's transaction instead of opening their own, and the split silently collapses into one long transaction holding the lock across the AI call — the exact failure this pattern exists to prevent. Nothing fails loudly when this regresses; it shows up as pool exhaustion under load.
+
+Used by `daily-fortune`, `day-fortune`, `year-fortune`, `compatibility`, and `notification`. A domain's own `CLAUDE.md` should not restate this pattern — only what is specific to it (which key the lock is taken on, what else shares the save transaction).
+
 ## DTO ↔ Domain Mapping
 
 - Mapping happens **only in the adapter layer**. The domain knows nothing of `*Request`/`*Response` (no importing them in `*-domain`/`*-application`) — but it does own the UseCase's own input/output models (`*Command`/`*Result` in `port.inbound`), since those are the port's contract, not adapter DTOs.
