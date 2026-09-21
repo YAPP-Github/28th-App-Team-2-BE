@@ -8,10 +8,15 @@ Owns notification **delivery and the in-app inbox** — push transport, device t
 |------|--------------|
 | Push transport, device tokens, delivery-failure records | FCM mechanics — init, token cleanup, error classification → `fcm` skill |
 | The in-app inbox (`Notification`) and read state | Notification **content** → pulled from `daily-fortune` and `luck` through optional ports |
-| Per-member notification settings, OS permission sync | **Push consent → `terms`** |
+| Per-member notification settings, OS permission sync | **Night-push consent (`NIGHT_PUSH`) → `terms`** |
 | Dispatch scheduling, retry, notice publication | Member enumeration → `member` |
 
-Push consent living in `terms` is the boundary most often gotten wrong. Consent is an agreement, so `terms` owns it and this domain only reads it through `GetPushConsentPort`. A notification setting ("do I want morning reports") is this domain's; consent ("may we push you at all") is not.
+Consent living in `terms` is the boundary most often gotten wrong. A notification **setting** ("do I want morning reports") is this domain's; an **agreement** is not — `terms` owns `NIGHT_PUSH` and this domain only reads it through `GetPushConsentPort`.
+
+Two rules decide what actually goes out, and they are easy to conflate:
+
+- **The in-app inbox always gets the record.** Only the FCM push is gated — by the member's setting toggle and, at night, by consent.
+- **Night consent applies to `MARKETING` only.** `SERVICE` notifications send at night regardless. So "the member declined night push" never means "suppress everything after hours".
 
 ## Cross-Domain Contracts
 
