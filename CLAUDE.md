@@ -4,9 +4,9 @@ Backend server for YAPP 28th App Team 2 (targeting AOS/iOS clients). Domain-orie
 
 > **Language**: All user-facing responses MUST be written in Korean, without exception (code, identifiers, logs, etc. are excluded).
 
-## Agent Harness Design (Software 3.0)
+## Agent Harness Design
 
-This `.claude/` config is the team's **harness** — an *executable* single source of truth that programs the agent's behavior, not mere documentation. Treat it like source code: layered, single-responsibility, reviewed. It raises the team's floor — every member runs the top performer's workflow via one command. (Refs: [Toss — 팀 생산성을 위한 하네스](https://toss.tech/article/harness-for-team-productivity), [Toss — Software 3.0 시대의 에이전트 개발](https://toss.tech/article/software-3-0-era).)
+This `.claude/` config is the team's **harness** — an *executable* single source of truth that programs the agent's behavior, not mere documentation. Treat it like source code: layered, single-responsibility, reviewed. It raises the team's floor — every member runs the top performer's workflow via one command.
 
 **Component → layered-architecture mapping** (design each artifact like the layer it maps to):
 
@@ -46,8 +46,11 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | Scaffolding a new domain | `/new-domain` (+ `examples/domain-scaffold.md`) |
 | Adding a feature to an existing domain | `/new-feature` |
 | Full pre-PR verification | `/run-checks` |
+| Using an external skill suite (gstack / superpowers / compound-engineering / mattpocock) | `external-harness` |
 
 > Diagnosing failing tests (without fixing) is delegated to the `test-validator` agent, code review to `code-reviewer`, test writing to `test-writer`, and domain scaffolding to the `domain-scaffolder` agent.
+>
+> **External suites are user-scoped** — `git clone` does not bring them. `external-harness` is the single routing authority over them: it decides which external skill runs in each phase and which are banned because our own harness already owns that phase.
 
 ## Critical Constraints
 
