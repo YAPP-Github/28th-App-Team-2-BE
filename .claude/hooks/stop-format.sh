@@ -24,16 +24,21 @@ git ls-files -z | perl -0ne '
     # 바이너리 확장자 제외 (ConventionTest의 binaryExtensions와 동일하게 유지할 것)
     next if $path =~ /\.(jar|png|jpe?g|gif|ico|svg|woff2?|ttf|class|keystore|p12)$/i;
 
-    open(my $fh, "+<", $path) or next;
+    # 검사는 읽기 전용으로 연다. "+<"로 열면 읽기 단계부터 쓰기 권한을 요구해,
+    # 읽기 전용 파일은 조용히 건너뛰고 훅은 성공한 채 ConventionTest만 나중에 실패한다.
+    open(my $fh, "<", $path) or do { warn "EOF 검사 실패(열기): $path: $!\n"; next };
     binmode $fh;
-    seek($fh, -1, 2) or do { close $fh; next };
+    seek($fh, -1, 2) or do { warn "EOF 검사 실패(seek): $path: $!\n"; close $fh; next };
     read($fh, my $last, 1);
-    if ($last ne "\n") {
-        seek($fh, 0, 2);
-        print $fh "\n";
-        print "개행 문자 추가: $path\n";
-    }
     close $fh;
+    next if $last eq "\n";
+
+    # 개행이 없을 때만 append 모드로 다시 연다. 실패는 숨기지 않고 알린다.
+    open(my $out, ">>", $path) or do { warn "개행 문자 추가 실패(열기): $path: $!\n"; next };
+    binmode $out;
+    print $out "\n" or warn "개행 문자 추가 실패(쓰기): $path: $!\n";
+    close $out or warn "개행 문자 추가 실패(닫기): $path: $!\n";
+    print "개행 문자 추가: $path\n";
 '
 
 exit 0

@@ -37,6 +37,8 @@ git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git \
   ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
 ```
 
+> **These commands execute third-party code with your user permissions.** The plugin installs resolve a pinned version through the marketplace, but the gstack line clones a mutable default branch and runs `./setup` immediately — no commit pin, signature, or checksum is verified. `./setup` writes to `~/.claude/settings.json` (it registers a Stop hook). Read the upstream `setup` script before running it, or pin a reviewed revision with `--branch <tag-or-sha>` instead of the default branch. Treat a gstack upgrade the same way.
+
 Until a teammate does this, every external skill below is simply unavailable to them — our own harness must remain sufficient on its own.
 
 ### Session token cost
@@ -142,7 +144,7 @@ Do **not** invoke these, and do not let them auto-trigger.
 
 ### Suppressing auto-triggers
 
-gstack's 51 unused skills are suppressed **mechanically**, not by instruction:
+gstack's 49 unused skills are suppressed **mechanically**, not by instruction:
 
 ```bash
 gstack-config set proactive false   # already applied
@@ -160,7 +162,7 @@ That leaves them governed by instruction alone: when one activates outside the r
 
 `PostToolUse(Edit|Write)` runs `ktlintFormat` on **every single edit**. Two consequences for superpowers TDD:
 
-- Each RED→GREEN step pays a Gradle invocation — **~0.95s**, of which ~1.0s is Gradle's configuration floor. The hook resolves the edited file's Gradle project from its path and formats only that module; formatting all 51 modules took ~2.7s. Unresolvable paths (e.g. `buildSrc/`) fall back to a root format.
+- Each RED→GREEN step pays a Gradle invocation — **~1s**, against ~2.7s before. The hook resolves the edited file's Gradle project from its path and formats only that module instead of all 51. Most of what remains is Gradle's own startup and configuration (a bare `gradlew help` measures ~1.0s here), so this is close to the floor — the remedy is fewer invocations, not a faster task. Unresolvable paths (e.g. `buildSrc/`) fall back to a root format.
 - **An edit that adds only an `import` gets it deleted** — ktlint sees it unused. Always put the import and its first usage in the **same** edit. Module scoping narrows the blast radius but does not remove this; it is inherent to formatting mid-edit.
 
 ### 2. iCloud `' 2'` duplicates break the build
@@ -168,8 +170,8 @@ That leaves them governed by instruction alone: when one activates outside the r
 This repo lives under `~/Documents` (iCloud-synced). Before any external skill runs a build:
 
 ```bash
-find . -name "* 2.*" -o -name "* 2"        # inspect the list FIRST
-find . -name "* 2.*" -o -name "* 2" -exec rm -rf {} +
+find . \( -name "* 2.*" -o -name "* 2" \)        # inspect the list FIRST
+find . \( -name "* 2.*" -o -name "* 2" \) -exec rm -rf {} +
 ```
 
 ### 3. The Iron Law needs exceptions here
