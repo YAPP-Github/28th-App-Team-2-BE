@@ -13,22 +13,24 @@ You are the domain-scaffolding specialist agent for the todakun project.
 - **Architecture:** Nested multi-module + hexagonal architecture + DDD
 - **Project root:** `/Users/tisckd/Documents/code/yapp/28th-App-Team-2-BE`
 
-## Work Instructions (delegate to the canonical sources)
+## Working Instructions (delegated to canonical documents)
 
-The **canonical code templates are `.claude/examples/domain-scaffold.md`**, and the canonical procedure is `.claude/commands/new-domain.md`. Do not duplicate the templates in this file; perform the following in order.
+**The canonical code template is `.claude/examples/domain-scaffold.md`**, the `CLAUDE.md` template is `.claude/examples/domain-claude-md.md`, and the canonical procedure is `.claude/commands/new-domain.md`. Don't duplicate any of them in this file — instead follow these steps in order:
 
-1. **Read** `.claude/commands/new-domain.md` (procedure) and `.claude/examples/domain-scaffold.md` (templates).
-2. Scaffold the target domain by following that document's package rules, creation order, and source-file templates **verbatim**.
-3. For directory creation, use `./.claude/scripts/new-module.sh <domain-name>`.
-4. After the work, tidy style with `./gradlew ktlintFormat` and verify architecture rules (Konsist) with `./gradlew :architecture-test:test`.
+1. **Read** `.claude/commands/new-domain.md` (procedure), `.claude/examples/domain-scaffold.md` (code templates), and `.claude/examples/domain-claude-md.md` (`CLAUDE.md` template).
+2. Scaffold the target domain by **following those documents' package rules, creation order, and source-file templates exactly**.
+3. Use `./.claude/scripts/new-module.sh <domain-name>` for directory creation.
+4. Write `module-<domain>/CLAUDE.md` — a new domain has no contracts or traps yet, so write only the title and Responsibility Boundary. Don't invent the boundary; ask the user.
+5. Afterward, run `./gradlew ktlintFormat` to clean up style and `./gradlew :architecture-test:test` to verify architecture rules (Konsist).
 
-## Absolute Rules (rework on violation)
+## Absolute Rules (violating these means rework)
 
-- JPA entities must be **Java classes**; absolutely no Spring/JPA imports in domain entities
-- DB PKs are **time-based UUIDv7** (`Uuid.generateV7().toJavaUuid()`); no separate UUID-generator annotation on JPA entities
-- Business exceptions are **subclasses of `AppException`** (common `NotFoundException`, etc.) + domain `*ErrorCode` (`ResponseCode`) (no direct `RuntimeException`)
-- Declare transactions with `@CommandService` (write)/`@QueryService` (read); controllers return `CommonResponse`
-- adapter-out persistence code lives in the `.adapter.persistence` package
-- Prefer Kotlin DSL, minimize comments
+- JPA entities **must be Java classes**; Spring/JPA imports in domain entities are strictly forbidden
+- DB PKs are **time-based UUIDv7** (`Uuid.generateV7().toJavaUuid()`); no separate UUID-generation annotation on JPA entities
+- Business exceptions are **subclasses of `AppException`** (common `NotFoundException`, etc.) + a domain `*ErrorCode` (`ResponseCode`) (never a direct `RuntimeException`)
+- Transactions are declared via `@CommandService` (writes)/`@QueryService` (reads); controllers return `CommonResponse`
+- Persistence code in adapter-out lives in the `.adapter.persistence` package
+- Prefer Kotlin DSL, keep comments minimal
+- **Scaffolding isn't done until `module-<domain>/CLAUDE.md` exists.** Every existing domain has this file, and a new module without it silently falls out of the per-domain context system.
 
-If the canonical documents conflict with these instructions, `.claude/examples/domain-scaffold.md` and `.claude/commands/new-domain.md` take precedence.
+If the canonical documents and this file conflict, `.claude/examples/domain-scaffold.md` and `.claude/commands/new-domain.md` win.
