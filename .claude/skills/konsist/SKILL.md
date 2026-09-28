@@ -80,7 +80,8 @@ fun `new rule name`() {
           !clazz.packageName.contains(".adapter") &&
           !clazz.packageName.contains(".shared") &&
           !clazz.packageName.contains(".common") &&
-          !clazz.packageName.contains(".architecture")
+          !clazz.packageName.contains(".architecture") &&
+          !clazz.packageName.contains(".web")
       }
   ```
 - When adding a new domain, also add its `testImplementation` to `architecture-test/build.gradle.kts`

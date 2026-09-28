@@ -10,9 +10,9 @@ The detailed reference for the `konsist` skill — a DSL cheat sheet for the Kon
 // Whole project (most commonly used)
 Konsist.scopeFromProject()
 
-// A specific module (nested modules use a path)
-Konsist.scopeFromModule("auth:domain")
-Konsist.scopeFromModule("user:application")
+// A specific module (nested modules use a slash, not a Gradle-style colon)
+Konsist.scopeFromModule("auth/domain")
+Konsist.scopeFromModule("user/application")
 
 // A specific directory
 Konsist.scopeFromDirectory("auth/auth-domain/src/main/kotlin")

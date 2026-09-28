@@ -37,7 +37,7 @@ git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git \
   ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
 ```
 
-> **These commands run third-party code under your user account.** Plugin installs pull a pinned version through the marketplace, but the gstack line clones a mutable default branch and runs `./setup` immediately — no commit pinning, signing, or checksum verification at all. `./setup` writes to `~/.claude/settings.json` (it registers a Stop hook). Before running it, either read the upstream `setup` script, or pin a reviewed revision with `--branch <tag-or-sha>` instead of the default branch. Treat a gstack upgrade the same way.
+> **These commands run third-party code under your user account.** Plugin installs pull a pinned version through the marketplace, but the gstack line clones a mutable default branch and runs `./setup` immediately — no commit pinning, signing, or checksum verification at all. `./setup` writes to `~/.claude/settings.json` (it registers a Stop hook). Before running it, either read the upstream `setup` script, or pin a reviewed revision instead of the default branch: use `--branch <tag>` for a tag (`--branch` doesn't accept an arbitrary commit SHA), or `git clone`, then `git fetch origin <sha> && git checkout <sha>` (detached HEAD) to pin an exact commit. Treat a gstack upgrade the same way.
 
 Until a teammate does this, none of the external skills below are available to them — our own harness needs to be self-sufficient on its own.
 
@@ -173,6 +173,8 @@ This repo lives under `~/Documents`, which syncs via iCloud. Before an external 
 find . \( -name "* 2.*" -o -name "* 2" \)        # list first
 find . \( -name "* 2.*" -o -name "* 2" \) -exec rm -rf {} +
 ```
+
+Deletion is hard to undo — before running the second command, eyeball the first command's output for anything that isn't actually a stale iCloud duplicate.
 
 ### 3. The Iron Law needs an exception here
 

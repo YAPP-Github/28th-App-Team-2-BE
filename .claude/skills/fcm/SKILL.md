@@ -31,8 +31,8 @@ FCM is an external system, so it's treated as an **outbound adapter**. The domai
 
 | Type | Naming | Location (package) |
 |------|--------|--------------------|
-| Outbound port (send) | `PushNotificationPort` | `com.yapp.todakun.{domain}.port` (domain) |
-| Outbound port (token storage) | `DeviceTokenPort` | `com.yapp.todakun.{domain}.port` (domain) |
+| Outbound port (send) | `PushNotificationPort` | `com.yapp.todakun.{domain}.port.outbound` (domain) |
+| Outbound port (token storage) | `DeviceTokenPort` | `com.yapp.todakun.{domain}.port.outbound` (domain) |
 | Send domain types | `PushNotification`, `PushResult` | `com.yapp.todakun.{domain}` (domain) |
 | Firebase adapter | `FcmPushNotificationAdapter` | `com.yapp.todakun.{domain}.adapter.fcm` |
 | Token JPA adapter | `DeviceTokenAdapter` (+ Java `*JpaEntity`) | `com.yapp.todakun.{domain}.adapter.persistence` |
@@ -201,7 +201,7 @@ fcm:
 | `FCM_ENABLED` | Only initializes Firebase when `true`. Recommend `false` locally if push isn't needed. |
 | `GCP_PROJECT_ID` | GCP/Firebase project ID (shared with the existing GCS config) |
 
-- Auth uses **ADC** — server environments authenticate automatically via ADC (GCP SA key / Workload Identity). Locally, run `gcloud auth application-default login`. The service account needs the **Firebase Cloud Messaging API** enabled and a role granting `cloudmessaging.messages.create` (e.g. `roles/firebase.admin` or a custom role).
+- Auth uses **ADC** — server environments authenticate automatically via ADC (GCP SA key / Workload Identity). Locally, run `gcloud auth application-default login`. The service account needs the **Firebase Cloud Messaging API** enabled and a custom role containing only `cloudmessaging.messages.create`. Use `roles/firebase.admin` only when broader Firebase permissions are required.
 - Gradle: add the dependency only to `{domain}-adapter-out`'s `build.gradle.kts` (`implementation(libs.firebase.admin)`). Never add Firebase to the domain/application modules.
 
 ---
@@ -248,7 +248,7 @@ class FcmPushNotificationAdapterTest : DescribeSpec({
 Compatible with the `konsist` skill's rules. Additionally guarantees:
 
 - `com.google.firebase..` imports are only allowed in `.adapter` packages (forbidden in domain/application).
-- `PushNotificationPort` / `DeviceTokenPort` interfaces only exist in the `*-domain` package (`..{domain}.port`).
+- `PushNotificationPort` / `DeviceTokenPort` interfaces only exist in the `*-domain` package (`..{domain}.port.outbound`).
 - `Fcm*Adapter` only exists in the `.adapter.fcm` package.
 
 Add new rules as a `@Test` in `architecture-test/ArchitectureTest.kt` (see the `konsist` skill for how to add a rule).
