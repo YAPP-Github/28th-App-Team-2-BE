@@ -2,6 +2,34 @@
 
 Owns the member record, its profile fields, and withdrawal.
 
+## Overview
+
+Member is the ownership axis for essentially all domain data this service touches (명식, fortunes, conversations, etc.). This domain owns the member record itself (profile, role) and the procedure for when a member leaves the service (withdrawal) — there's an asymmetry where creating an account (signup) is `auth`'s job, while destroying one (withdrawal) is this domain's.
+
+- **Withdrawal**: an immediate, final hard-delete policy (v1.0, no recovery grace period). See "Withdrawal — the ordering is the design" below.
+- **De-identification**: removing anything that could identify the member (e.g. member ID) from the withdrawal reason log — VOC analysis stays possible, but who withdrew cannot be traced back.
+
+## Module Structure
+
+**Packages**
+- `member-domain`: entities, use cases, value objects at the root — representative: `Member`, `MemberWithdrawalLog`
+- `member-application`: `*Service` at the root — representative: `WithdrawMemberService`, `WithdrawMemberTransactionService`
+- `member-adapter-in`: controller, DTOs — representative: `MemberController`, `MemberApi`
+- `member-adapter-out`: JPA repository adapters, plus the 5 ports consumed by `auth`/`daily-fortune` — representative: `MemberRepositoryAdapter`, `MemberWithdrawalLogRepositoryAdapter`, `GetMemberIdAdapter`
+
+**Core Domain Model**
+```
+Member (profile + Role(MEMBER|ADMIN))
+    ──on withdrawal──→ MemberWithdrawalLog (reason only, no memberId — de-identified)
+    ──on withdrawal──→ calls saju.DeleteMemberSajusPort,
+                        calls auth.RevokeMemberTokensPort / RevokeOauthTokenPort / RegisterWithdrawnAccountPort
+```
+
+**Must-read files**
+- `Member.kt` — the member entity. `update` draws a clean line between the fields that can be edited (birth info, interests) and the ones that can't (name, role, social-login identifier)
+- `WithdrawMemberTransactionService.kt` — the actual order that bundles withdrawal's six steps into one transaction, the basis for "Withdrawal — the ordering is the design"
+- `WithdrawMemberService.kt` — the follow-up step that calls the Apple revoke API outside the transaction
+
 ## Responsibility Boundary
 
 | Owns | Does not own |

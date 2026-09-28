@@ -2,6 +2,35 @@
 
 Owns the terms catalogue and each member's agreements — including the one that gates night-time pushes.
 
+## Overview
+
+Manages the terms this service requires (terms of service / privacy / marketing / night-time promotional messaging) and whether each member has agreed to each one. It's both the basis for enforcing required-terms agreement during signup/onboarding, and the sole source `notification` consults to gate night-time marketing sends — without this domain, neither function has anything to stand on.
+
+Korean terms this domain defines (other domain docs reference this definition rather than redefining it):
+
+- **`TermsType`**: four values — `SERVICE` (terms of service, required), `PRIVACY` (personal-data collection/use, required), `MARKETING` (marketing opt-in, optional), `NIGHT_PUSH` (night-time promotional messaging, optional). A stable code for identifying a specific terms entry without hardcoding a UUID.
+
+## Module Structure
+
+**Packages**
+- `terms-domain`: entities/policy at the root — representative: `Terms`, `MemberTermsAgreement`, `TermsAgreementPolicy`
+- `terms-application`: `*Service` at the root — representative: `GetTermsService`, `SaveTermsAgreementService`
+- `terms-adapter-in`: `adapter.web` — representative: `TermsController`, `TermsApi`
+- `terms-adapter-out`: JPA + `shared`-port implementation — representative: `MemberTermsAgreementRepositoryAdapter`, `GetPushConsentAdapter`
+
+**Core Domain Model**
+```
+Terms (type: TermsType, required: Boolean) — a terms-catalogue entry
+    ↑ referenced by termsId
+MemberTermsAgreement (memberId + termsId + agreed) — per-member agreement/non-agreement record
+```
+`agreed = false` is stored explicitly too (distinct from no row at all) — that's what lets a later query accurately filter "members who declined marketing."
+
+**Must-Read Files** (layer-agnostic)
+- `Terms.kt` / `TermsType.kt` — the catalogue's 4 types and the `required` flag
+- `MemberTermsAgreement.kt` — its KDoc explains why non-agreement is recorded explicitly too
+- `TermsAgreementPolicy.kt` — where the three submission invariants are enforced (see "Decisions & Traps" below)
+
 ## Responsibility Boundary
 
 | Owns | Does not own |

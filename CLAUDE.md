@@ -116,7 +116,7 @@ todakun/
 
 **Dependency direction:** `adapter-in`/`adapter-out` → `application` → `domain`; all modules → `common`/`shared`; `bootstrap` integrates everything.
 
-**Every domain carries its own `module-{domain}/CLAUDE.md`** — that context's boundary, its cross-domain contracts, and the traps specific to it. It loads automatically when working inside the module, so read it before changing anything there rather than inferring the boundary from code. Template and authoring rules: `.claude/examples/domain-claude-md.md`.
+**Every domain carries its own `module-{domain}/CLAUDE.md`** — that context's overview, module structure, boundary, cross-domain contracts, and domain-specific decisions and traps. It loads automatically when working inside the module, so read it before changing anything there rather than inferring the boundary from code. Template and authoring rules: `.claude/examples/domain-claude-md.md`.
 
 **Cross-domain references:** 다른 도메인의 데이터를 단순 조회하는 게 아니라, 그 데이터로 **자기 도메인이 분기·실행**해야 할 때만 `shared` 포트를 거친다. 단순 조회라면 포트를 만들지 말고 상대 도메인의 `*UseCase`를 클라이언트가 직접 호출한다. 포트 구현을 `-application`에 둘지 `-adapter-out`에 둘지는 **유스케이스 로직의 유무**로 갈리며, 양쪽 실례와 판단 기준은 `module-saju/CLAUDE.md`(application 쪽)와 `module-member/CLAUDE.md`(adapter-out 쪽)에 있다.
 

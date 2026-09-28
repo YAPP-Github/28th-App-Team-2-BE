@@ -4,6 +4,35 @@ Owns 오늘의 운세 — one record per member per day, generated from that day
 
 Not to be confused with its siblings: `day-fortune` scores **a date the member picked** for a purpose (택일), `year-fortune` covers **a chosen year**. This is the only one of the three that generates on a schedule rather than on request.
 
+## Overview
+
+This is the first content a member sees when they open the app. Every member's 오늘의 운세 is pre-generated in a batch before dawn each day (so it can be shown the instant they open the app), and its score is set from the average of that day's 행운 액션 category scores managed by the `luck` domain — which is why `daily-fortune` and `luck` records are born together inside one transaction.
+
+Terms this domain uses:
+- **오늘의 운세**: `DailyFortune` — one append-only record per member/date combination, made of a title, body, 5 lucky/caution items each, and a score.
+
+The "orchestrator + TransactionalStore" generation pattern shared with `day-fortune`/`year-fortune`, and `luck`'s "service day (06:00 rollover)" concept, are already defined in each domain's own doc, so they aren't redefined here.
+
+## Module Structure
+
+**Packages**
+- `daily-fortune-domain`: entities, exceptions, use cases at the root — representative: `DailyFortune`, `DailyFortuneAiPort`, `DailyFortuneGenerationLockPort`
+- `daily-fortune-application`: `*Service`, Spring Batch components at the root — representative: `CreateDailyFortuneService`, `DailyFortuneTransactionalStore`, `GenerateDailyFortunesBatchService`, `GenerateDailyFortunesJobConfig`
+- `daily-fortune-adapter-in`: `adapter.web` — representative: `DailyFortuneController`
+- `daily-fortune-adapter-out`: JPA, Vertex AI, batch infrastructure — representative: `DailyFortuneRepositoryAdapter`
+
+**Core Domain Model**
+```
+DailyFortune (1 per memberId + fortuneDate combination, append-only)
+    score ← average of luck.LuckAction per-category scores (created together in the same transaction)
+```
+
+**Must-read files**
+- `DailyFortune.kt` — the append-only record's validation rules (title/body length, exactly 5 lucky/caution items each)
+- `DailyFortuneTransactionalStore.kt` — the actual point where the fortune and its `LuckAction`s are bundled into one transaction (see "Decisions & Traps" below)
+- `GenerateDailyFortunesJobConfig.kt` — the Spring Batch job definition. The basis for why the chunk size is pinned to 1
+- `GenerateDailyFortunesBatchService.kt` — the actual implementation of per-member failure isolation (retry/circuit/skip)
+
 ## Responsibility Boundary
 
 | Owns | Does not own |

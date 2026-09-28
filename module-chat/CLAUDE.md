@@ -2,6 +2,31 @@
 
 Owns the AI conversation — conversations, messages, suggestions, and the daily free-chat quota.
 
+## Overview
+
+Lets a member chat freely with the AI, asking questions and getting answers grounded in their own 명식 (`saju`) and profile (`member`). It's not unlimited — gated by a daily free quota — and answers are delivered via real-time streaming (SSE). These two constraints (quota, streaming) drive most of this domain's transaction shape.
+
+## Module Structure
+
+**Packages**
+- `chat-domain`: conversation/message entities at the root, `ChatAiPort`/`ChatQuotaPort` in `port.outbound` — representative: `ChatConversation`, `ChatMessage`, `ChatAiPort`
+- `chat-application`: `*Service` at the root — representative: `PrepareChatTurnService`, `StreamChatAnswerService`, `CompleteChatTurnService`, `FailChatTurnService`
+- `chat-adapter-in`: `adapter.web` (REST) + SSE stream adapter — representative: `ChatController`, `SseEmitterChatStreamListener`
+- `chat-adapter-out`: JPA (conversation/message), Redis (quota), Vertex AI — representative: `ChatConversationRepositoryAdapter`, `RedisChatQuotaAdapter`, `VertexAiChatAdapter`
+
+**Core Domain Model**
+```
+ChatConversation (memberId + title + unread + lastMessageAt)
+    └─ 1:N ── ChatMessage (role: USER|ASSISTANT, status: GENERATING|COMPLETED|FAILED)
+                   USER      → COMPLETED immediately on creation
+                   ASSISTANT → createAssistantPlaceholder(GENERATING) → complete() or fail()
+```
+
+**Must-Read Files** (layer-agnostic)
+- `ChatConversation.kt` — its KDoc explains why `unread`/`lastMessageAt` are managed directly via domain methods (`touch`, `markUnread`) instead of JPA auditing (an unchanged value means the UPDATE gets skipped, which would otherwise leave the sort order stale)
+- `ChatMessage.kt` — the ASSISTANT message's placeholder→`complete`/`fail` state transition. The data-model-level backing for "A Streaming Turn Is Three Transactions" below
+- `StreamChatAnswerService.kt` — where the three-way transaction split is actually implemented
+
 ## Responsibility Boundary
 
 | Owns | Does not own |

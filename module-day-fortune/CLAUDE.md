@@ -4,6 +4,33 @@ Owns 택일 — scoring candidate dates the member picked for a stated purpose. 
 
 Siblings: `daily-fortune` is today's fortune generated on a schedule; `year-fortune` covers a chosen year. This domain is the only one that fans out over **several dates in one request**.
 
+## Overview
+
+Used when a member has a concrete purpose — a wedding, a move, signing a contract — and wants to know "is this date okay," picking several candidate dates and getting them scored in one go. Unlike `daily-fortune`, these aren't pre-built on a schedule; only as many are generated as the member requests, at the moment they request them — which is why this is the only one of the three with a "one request → many results" fan-out shape.
+
+Terms this domain uses:
+- **택일**: `DaySelectionFortune` — one per member/purpose(`DaySelectionPurpose`)/date combination, made of star ratings (`FortuneCategoryStar`, 1–3) for 3 categories plus a score and body.
+- **Purpose (`DaySelectionPurpose`)**: an enum for why the member is picking a date (moving, marriage, etc.) — the same date can score differently depending on the purpose.
+
+## Module Structure
+
+**Packages**
+- `day-fortune-domain`: entities, exceptions at the root — representative: `DaySelectionFortune`, `DaySelectionPurpose`, `DaySelectionFortuneAiPort`
+- `day-fortune-application`: `*Service` at the root — representative: `CreateDaySelectionFortuneService` (orchestrator, fan-out), `CreateOneDaySelectionFortuneService` (handles one date), `DaySelectionFortuneTransactionalStore`
+- `day-fortune-adapter-in`: `adapter.web` — representative: `DaySelectionFortuneController`
+- `day-fortune-adapter-out`: JPA, Vertex AI — representative: `DaySelectionFortuneRepositoryAdapter`
+
+**Core Domain Model**
+```
+DaySelectionFortune (1 per memberId + purpose + targetDate combination)
+    fortuneCategories: exactly 3 FortuneCategoryStar, distinct categories, star rating 1–3
+```
+
+**Must-read files**
+- `DaySelectionFortune.kt` — creation-time validation rules: no past dates, no duplicate categories among the 3
+- `CreateDaySelectionFortuneService.kt` — the orchestrator that sorts and de-duplicates candidate dates before fanning them out via coroutines (see "Decisions & Traps" below)
+- `CreateOneDaySelectionFortuneService.kt` — the actual per-date unit that does lock-read / AI call / lock-save
+
 ## Responsibility Boundary
 
 | Owns | Does not own |

@@ -4,6 +4,32 @@ Owns 연간 운세 — one record per member per chosen year, generated from tha
 
 Siblings: `daily-fortune` is today's fortune on a schedule; `day-fortune` scores candidate dates for a purpose (택일).
 
+## Overview
+
+Used when a member wants to preview the fortune for a specific year (within ±5 years of the lookup time). Unlike its two siblings, the result stays valid for a long, year-scale period, which is why this is the only one of the three with a 90-day cache (`YEAR_FORTUNE`) and a `SajuChartChangedEvent` subscription — why only this domain needs the cache/event is covered under "Decisions & Traps" below.
+
+Terms this domain uses:
+- **연간 운세**: `YearSelectionFortune` — one per member/year combination, made of star ratings for 3 categories plus a score and body. Structurally the same as `day-fortune`'s `DaySelectionFortune`, but keyed by a single year instead of a date.
+
+## Module Structure
+
+**Packages**
+- `year-fortune-domain`: entities, exceptions at the root — representative: `YearSelectionFortune`, `YearSelectionFortuneAiPort`
+- `year-fortune-application`: `*Service`, event listener at the root — representative: `CreateYearSelectionFortuneService`, `YearSelectionFortuneTransactionalStore`, `SajuChartChangedEventListener`
+- `year-fortune-adapter-in`: `adapter.web` — representative: `YearSelectionFortuneController`
+- `year-fortune-adapter-out`: JPA, Vertex AI, cache — representative: `YearSelectionFortuneRepositoryAdapter`
+
+**Core Domain Model**
+```
+YearSelectionFortune (1 per memberId + year combination; re-validated within ±5 years even on lookup)
+    cache key: memberId:year (90-day TTL, manually evicted via SajuChartChangedEvent)
+```
+
+**Must-read files**
+- `YearSelectionFortune.kt` — the year-range validation (`validateYear`) applied at creation is reused as-is on lookup too
+- `SajuChartChangedEventListener.kt` — the actual implementation that individually evicts a member's cache keys at `AFTER_COMMIT` (see "Decisions & Traps" below for the design rationale)
+- `YearSelectionFortuneTransactionalStore.kt` — generation based on a `(memberId, year)` lock
+
 ## Responsibility Boundary
 
 | Owns | Does not own |

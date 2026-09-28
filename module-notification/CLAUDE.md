@@ -2,6 +2,36 @@
 
 Owns notification **delivery and the in-app inbox** — push transport, device tokens, the member's notification list, dispatch scheduling, and notices. It owns almost none of the content it sends.
 
+## Overview
+
+The single channel through which the various content this service generates (오늘의 운세, 행운 액션 reminders, AI chat-answer completion, admin notices) actually reaches a member. It doesn't produce content itself — it only decides "when, to whom, and via which channel (in-app vs. FCM push)" to send it. That's what lets the dispatch logic stay unified even though content providers differ by domain.
+
+Terms this domain uses:
+
+- **`NotificationType`** (`shared`): the kind of notification — `FORTUNE` (morning report), `AI_COMPLETE` (토닥이's answer is ready), `LUCKY_ACTION` (행운 액션 reminder), `NOTICE` (admin notice). `NotificationSetting.isPushEnabledFor(type)` gates push per type (`NOTICE` always sends regardless of any toggle).
+- **Setting vs. consent**: see the paragraph below — the boundary most often confused, precisely because the names sound alike.
+
+## Module Structure
+
+**Packages**
+- `notification-domain`: entities such as `Notification`/`DeviceToken`/`NotificationSetting`/`NoticeDispatchHistory` at the root, `PushNotificationPort`/`DispatchLockPort` in `port.outbound` — representative: `Notification`, `NotificationSetting`, `PushNotificationPort`
+- `notification-application`: `*Service` + dispatchers at the root — representative: `SendNotificationService`, `NotificationDispatchService`, `RetryFailedNotificationsService`
+- `notification-adapter-in`: 4 controllers (notifications/settings/device tokens/admin notices) + scheduler/runner — representative: `NotificationController`, `NotificationScheduler`, `AdminNoticeController`
+- `notification-adapter-out`: FCM adapters (real + `NoOp`), 5 JPA adapters, Postgres advisory lock — representative: `FcmPushNotificationAdapter`, `NoOpPushNotificationAdapter`, `PostgresDispatchLockAdapter`
+
+**Core Domain Model**
+```
+Notification (memberId + type + isRead) — the in-app inbox record, always written
+DeviceToken (memberId ↔ FCM token, reassign() re-binds a device)
+NotificationSetting (3 per-member toggles + osPushPermission; isPushEnabledFor(type) is the real gating logic)
+```
+The three entities reference nothing else, linked only by `memberId` — the logic deciding "who gets pushed" lives entirely in `NotificationSetting.isPushEnabledFor`.
+
+**Must-Read Files** (layer-agnostic)
+- `Notification.kt` — its KDoc explains why the originally planned schema (a separate `notification` + `member_notification`) was merged into one per-member record
+- `NotificationSetting.kt` — `isPushEnabledFor()` is what "setting" actually means. Note that only `NOTICE` is always `true` regardless of any toggle
+- `NotificationDispatchService.kt` — the actual implementation of the transaction-free dispatch path described under "Dispatch Design" below
+
 ## Responsibility Boundary
 
 | Owns | Does not own |
