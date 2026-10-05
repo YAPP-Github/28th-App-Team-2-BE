@@ -35,6 +35,6 @@ The condition has to be something whose satisfaction can be objectively declared
 
 ## Scope Limits
 
-- **Session-scoped.** It disappears on restart. Work spanning multiple sessions belongs to `/wayfinder` (phase 1b) instead of `/goal`; if you need that kind of persistent ledger, there's `omc ultragoal`, which layers on top of `/goal`.
+- **Session-scoped.** It disappears on restart, so work spanning multiple sessions belongs to `/wayfinder` (phase 1b) instead of `/goal` — that's what phase 1b is for.
 - **Works alongside our Stop hooks.** Both `stop-format.sh` (`ktlintFormat` + EOF-newline fixup) and gstack's timeline hook still run on every exit attempt — `/goal` doesn't replace them, it just adds a third gate.
 - **Phase 3 only.** Don't wrap TDD in `/goal`: superpowers already enforces RED-first, and phase 7's deterministic gate is `/run-checks`. Stacking another Stop hook onto a phase that already has a strong gate only makes it harder to escape a failure.

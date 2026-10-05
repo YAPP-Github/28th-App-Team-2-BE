@@ -53,12 +53,12 @@ Don't invoke these, and don't let them auto-trigger either.
 
 ### Suppressing Auto-Triggers
 
-This table is **half mechanism, half instruction** — know which half you're relying on:
+**Suppression is per-user, so this table is the shareable part.** The suites are user-scoped installs, which means a teammate's inventory differs from yours — plugin enablement and the per-skill switches therefore live in `.claude/settings.local.json` (per-user, not committed), and only repo-level facts go in `.claude/settings.json`. Each person applies the list below once on their own machine; `references/token-budget.md` has the exact switches and the measured cost of each suite.
 
-- **gstack: mechanized and repo-shared.** Its 48 unused skills are switched off through `skillOverrides` in `.claude/settings.json`, so the suppression is committed and applies to every teammate on clone. `gstack-config set proactive false` additionally stops gstack from auto-invoking or proactively suggesting a skill; an explicit `/plan-eng-review` still works exactly as before.
-- **The three plugin suites: instruction only.** `skillOverrides` **does not apply to plugin skills**, and `/skills` can't toggle them either, so superpowers `brainstorming` (*"MUST be used before any creative work"*) and the model-invoked `ce-*` skills stay loaded and can fire even mid-`/new-domain` or `/new-feature`.
+- **gstack: keep 6 of 54.** The rest are switched off per skill. `gstack-config set proactive false` additionally stops gstack from auto-invoking or proactively suggesting a skill; an explicit `/plan-eng-review` still works exactly as before.
+- **The three suites we route to can't be trimmed per skill.** `skillOverrides` **does not apply to plugin skills**, so superpowers, mattpocock-skills and compound-engineering are all-or-nothing — and we route to two skills in each, so they stay on. That means superpowers `brainstorming` (*"MUST be used before any creative work"*) and the model-invoked `ce-*` skills stay loaded and can fire even mid-`/new-domain` or `/new-feature`.
 
-So if a plugin skill activates outside the routing table above, **stop and follow the table instead** — the table is the authority, not the skill's own description. That instruction-only half is the weakest remaining link here; the gstack half used to be too, until the overrides moved into settings.
+So if one of those three activates a skill outside the routing table above, **stop and follow the table instead** — the table is the authority, not the skill's own description. That instruction is the only enforcement here, which is why it's in the body of this skill rather than a reference.
 
 ## Standard Feature-Development Flow
 

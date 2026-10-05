@@ -16,7 +16,7 @@ This `.claude/` config is the team's **harness** — an *executable* single sour
 | User-invoked skills (`/new-domain`, `/new-feature`, `/run-checks`) | Controller | Entry point for a user-triggered procedure. `disable-model-invocation: true` — only a human starts them. |
 | Sub-agents (`domain-scaffolder`, `code-reviewer`, `test-*`) | Service | Orchestrate multi-step work in an isolated context. |
 | `.claude/skills/<name>/SKILL.md` | SRP component | One knowledge domain = the single source for its rules. Body ≤ 100 lines; detail lives in its `references/`. |
-| MCP servers | Adapter / infra | Abstract external systems (GitHub, Notion, …). |
+| MCP servers | Adapter / infra | Abstract external systems (GitHub, the IDE, …). Enable only what this repo uses — see `external-harness` → `references/token-budget.md`. |
 | `.claude/scripts/*` (`check-all.sh`) | Deterministic core | Conventions/verification that must NOT vary — run as code, not LLM judgment. |
 
 **Operating principles** (derived from the layers above):
