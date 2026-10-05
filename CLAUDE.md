@@ -13,22 +13,23 @@ This `.claude/` config is the team's **harness** — an *executable* single sour
 | Harness artifact | Maps to | Responsibility |
 |------------------|---------|----------------|
 | `CLAUDE.md` | `package.json` / manifest | Small, stable **router**: what exists + when to load it — never the details. |
-| `.claude/commands/*` (`/new-domain`, `/run-checks`) | Controller | Entry point for a user-triggered procedure. |
+| User-invoked skills (`/new-domain`, `/new-feature`, `/run-checks`) | Controller | Entry point for a user-triggered procedure. `disable-model-invocation: true` — only a human starts them. |
 | Sub-agents (`domain-scaffolder`, `code-reviewer`, `test-*`) | Service | Orchestrate multi-step work in an isolated context. |
-| `.claude/skills/<name>/SKILL.md` | SRP component | One knowledge domain = the single source for its rules. |
+| `.claude/skills/<name>/SKILL.md` | SRP component | One knowledge domain = the single source for its rules. Body ≤ 100 lines; detail lives in its `references/`. |
 | MCP servers | Adapter / infra | Abstract external systems (GitHub, Notion, …). |
 | `.claude/scripts/*` (`check-all.sh`) | Deterministic core | Conventions/verification that must NOT vary — run as code, not LLM judgment. |
 
 **Operating principles** (derived from the layers above):
 
 - **필요성 원칙 — need-to-know / progressive disclosure**: load only the context the current task needs. The *Per-Task Loading* table below is the concrete enforcement — don't dump the whole rulebook up front.
-- **Facade**: `SKILL.md` is the entry point; push long detail into `references/`·`examples/` so the skill stays scannable. Avoid the *God Skill* / *Spaghetti CLAUDE.md* anti-patterns.
+- **Facade**: `SKILL.md` is the entry point and stays **≤ 100 lines** — judgment rules, a checklist, and an index of which `references/` file to open when. Tables, long code and edge cases go into `references/`·`examples/`, which cost nothing until opened. Avoid the *God Skill* / *Spaghetti CLAUDE.md* anti-patterns.
+- **Load only on the matching path**: a skill that applies to specific files declares `paths:` in its frontmatter, so it auto-loads only while those files are in play (`konsist` → `module-architecture-test/**`, `fcm` → `module-notification/**`, …). Workflow skills with side effects declare `disable-model-invocation: true` instead.
 - **Deterministic → script, judgment → LLM**: conventions (ktlint, EOF newline, layer rules) live in scripts/Konsist; only non-deterministic decisions are left to the agent.
 - **"Exception → Question"**: hard-to-reverse or outward-facing actions (delete, deploy, force-push, publish) get a confirmation, never a silent guess. A good agent knows *when to ask*.
 
 ## Per-Task Loading (Pre-Task)
 
-Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures in **commands** (`.claude/commands/`), and shared code templates in **examples** (`.claude/examples/`). When one of the tasks below is detected, the skill is **auto-loaded** (manual invocation: `/<name>`).
+Rules, procedures and their long-form detail all live in **skills** (`.claude/skills/<name>/SKILL.md` + its `references/`); code templates shared by several skills live in **examples** (`.claude/examples/`). A skill auto-loads when one of the tasks below is detected — and, for a path-scoped skill, only while its `paths:` match the files in play. Manual invocation: `/<name>`.
 
 | Task type | Load |
 |-----------|------|
@@ -79,7 +80,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | `*Controller` implements the `*Api` interface (Swagger on `*Api`; use `@DisableSwaggerSecurity` for unauthenticated APIs) | Konsist-enforced rule |
 | JPA entities in Java (`*JpaEntity`), domain entities in Kotlin | Immutability/proxy compatibility |
 | Commit messages `[#issue-number] type: description` (in Korean) | Convention (`git-workflow`) |
-| Follow the module directory ↔ Gradle path naming rules (`architecture` skill, "Module directory naming") — `module-` prefix on directories, nested `:{domain}:{layer}` projects mapped via `projectDir` | Keeps module folders grouped at the repo root (prevents dispersion) + mirrors the domain boundary in the Gradle project graph |
+| Follow the module directory ↔ Gradle path naming rules — the rule itself lives in the `architecture` skill (`references/module-layout.md`) | Keeps module folders grouped at the repo root (prevents dispersion) + mirrors the domain boundary in the Gradle project graph |
 | Register the 4 modules under the `:{domain}` container in `settings.gradle.kts` when adding a new domain (`include("{domain}:domain")`, …) | Prevents missing modules |
 | Manage all versions in `gradle/libs.versions.toml`, reference via `libs.*` | Single source of truth (SSOT) for versions |
 

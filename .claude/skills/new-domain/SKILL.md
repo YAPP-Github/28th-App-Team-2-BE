@@ -1,13 +1,15 @@
 ---
 name: new-domain
-description: Scaffold a new domain across the 4 modules of the nested hexagonal architecture
+description: Scaffold a new domain across the 4 modules of the nested hexagonal architecture. User-invoked only.
+argument-hint: "[domain]"
+disable-model-invocation: true
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
 
 Scaffold a new domain '$ARGUMENTS' following the nested hexagonal architecture rules.
 
-> **The canonical code template is [`.claude/examples/domain-scaffold.md`](../examples/domain-scaffold.md)**, and the `module-{domain}/CLAUDE.md` template is [`.claude/examples/domain-claude-md.md`](../examples/domain-claude-md.md).
+> **The canonical code template is [`.claude/examples/domain-scaffold.md`](../../examples/domain-scaffold.md)**, and the `module-{domain}/CLAUDE.md` template is [`.claude/examples/domain-claude-md.md`](../../examples/domain-claude-md.md).
 > Follow those documents exactly for package rules, build.gradle, source-file templates, and key rules. The `domain-scaffolder` agent references the same documents.
 
 ## Procedure

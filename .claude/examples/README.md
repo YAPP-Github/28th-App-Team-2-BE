@@ -1,6 +1,6 @@
 # Shared Code Examples (examples)
 
-The **single source of truth (SSOT) for large code templates** shared across multiple skills, commands, and agents.
+The **single source of truth (SSOT) for large code templates** shared across multiple skills and agents.
 Skills keep only rules (prose); long code blocks are referenced from here instead. No duplicate definitions.
 
 | File | Contents | Referenced by |

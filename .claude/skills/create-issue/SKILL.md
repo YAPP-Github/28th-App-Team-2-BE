@@ -1,6 +1,7 @@
 ---
 name: create-issue
 description: Load when creating a GitHub issue per the project ISSUE_TEMPLATE. Auto-applies per-type template mapping and title/label conventions.
+disable-model-invocation: true
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)

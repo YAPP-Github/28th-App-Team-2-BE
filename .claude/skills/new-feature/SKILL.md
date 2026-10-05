@@ -1,6 +1,8 @@
 ---
 name: new-feature
-description: Add a new feature (UseCase → Service → Api → Controller) to an existing domain
+description: Add a new feature (UseCase → Service → Api → Controller) to an existing domain. User-invoked only.
+argument-hint: "[domain] [feature description]"
+disable-model-invocation: true
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
@@ -9,7 +11,7 @@ Add a new feature to an existing domain.
 
 Feature description: $ARGUMENTS
 
-> Follow the code patterns in [`.claude/examples/domain-scaffold.md`](../examples/domain-scaffold.md) and the `architecture` skill.
+> Follow the code patterns in [`.claude/examples/domain-scaffold.md`](../../examples/domain-scaffold.md) and the `architecture` skill.
 
 ## Steps
 

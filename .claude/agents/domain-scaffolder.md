@@ -15,9 +15,9 @@ You are the domain-scaffolding specialist agent for the todakun project.
 
 ## Working Instructions (delegated to canonical documents)
 
-**The canonical code template is `.claude/examples/domain-scaffold.md`**, the `CLAUDE.md` template is `.claude/examples/domain-claude-md.md`, and the canonical procedure is `.claude/commands/new-domain.md`. Don't duplicate any of them in this file — instead follow these steps in order:
+**The canonical code template is `.claude/examples/domain-scaffold.md`**, the `CLAUDE.md` template is `.claude/examples/domain-claude-md.md`, and the canonical procedure is `.claude/skills/new-domain/SKILL.md`. Don't duplicate any of them in this file — instead follow these steps in order:
 
-1. **Read** `.claude/commands/new-domain.md` (procedure), `.claude/examples/domain-scaffold.md` (code templates), and `.claude/examples/domain-claude-md.md` (`CLAUDE.md` template).
+1. **Read** `.claude/skills/new-domain/SKILL.md` (procedure), `.claude/examples/domain-scaffold.md` (code templates), and `.claude/examples/domain-claude-md.md` (`CLAUDE.md` template).
 2. Scaffold the target domain by **following those documents' package rules, creation order, and source-file templates exactly**.
 3. Use `./.claude/scripts/new-module.sh <domain-name>` for directory creation.
 4. Write `module-<domain>/CLAUDE.md` — a new domain has no contracts or traps yet, so write only the title and Responsibility Boundary. Don't invent the boundary; ask the user.
@@ -33,4 +33,4 @@ You are the domain-scaffolding specialist agent for the todakun project.
 - Prefer Kotlin DSL, keep comments minimal
 - **Scaffolding isn't done until `module-<domain>/CLAUDE.md` exists.** Every existing domain has this file, and a new module without it silently falls out of the per-domain context system.
 
-If the canonical documents and this file conflict, `.claude/examples/domain-scaffold.md` and `.claude/commands/new-domain.md` win.
+If the canonical documents and this file conflict, `.claude/examples/domain-scaffold.md` and `.claude/skills/new-domain/SKILL.md` win.

@@ -1,6 +1,7 @@
 ---
 name: konsist
 description: Load when adding/modifying architecture rules (Konsist tests) or verifying layer boundaries. This project's current rules and how to add a new one. The Konsist library API itself lives in references/konsist-api.md.
+paths: "module-architecture-test/**"
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
@@ -72,16 +73,5 @@ fun `new rule name`() {
 
 - Write the test name in Korean so the rule's intent is clear
 - Reuse `scope` from `Konsist.scopeFromProject()` (`private val`)
-- Use the current `domainClasses` computed property for the domain-class filter:
-  ```kotlin
-  private val domainClasses
-      get() = scope.classes().filter { clazz ->
-          !clazz.packageName.contains(".application") &&
-          !clazz.packageName.contains(".adapter") &&
-          !clazz.packageName.contains(".shared") &&
-          !clazz.packageName.contains(".common") &&
-          !clazz.packageName.contains(".architecture") &&
-          !clazz.packageName.contains(".web")
-      }
-  ```
+- **Reuse the existing `domainClasses` computed property — read it, don't reproduce it.** It lives at the top of `ArchitectureTest.kt` and currently excludes the `.application`, `.adapter`, `.shared`, `.common`, `.architecture`, `.web` and `.config` packages plus anything annotated `@SpringBootApplication`. That exclusion set grows as the project does, so a copy pasted into a doc is wrong within a release or two — this file is the single source.
 - When adding a new domain, also add its `testImplementation` to `architecture-test/build.gradle.kts`

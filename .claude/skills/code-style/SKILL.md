@@ -1,6 +1,7 @@
 ---
 name: code-style
 description: Load when writing or modifying Kotlin code. Naming conventions, package structure, project-specific review points. Official Kotlin formatting/idiom details live in references/kotlin-conventions.md.
+paths: "**/*.kt"
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
@@ -44,31 +45,7 @@ These come up over and over in review, so apply them from the start.
 
 ## 2. Packages & Modules
 
-**Top-level modules**
-```
-com.yapp.todakun.common            # AppException, ResponseCode, @CommandService/@QueryService
-com.yapp.todakun.web               # common-web: CommonResponse, GlobalExceptionHandler, @DisableSwaggerSecurity
-com.yapp.todakun.shared            # UserId, UserAuthPort
-com.yapp.todakun.bootstrap         # AppApplication (entry point)
-```
-
-**Domain modules** (nested as `{domain}/{domain}-*`)
-```
-com.yapp.todakun.{domain}                    # {domain}-domain
-com.yapp.todakun.{domain}.application        # {domain}-application
-com.yapp.todakun.{domain}.adapter.web        # {domain}-adapter-in
-com.yapp.todakun.{domain}.adapter.{tech}     # {domain}-adapter-out
-```
-
-Example (the auth domain):
-```
-com.yapp.todakun.auth                  # auth-domain
-com.yapp.todakun.auth.application      # auth-application
-com.yapp.todakun.auth.adapter.web      # auth-adapter-in
-com.yapp.todakun.auth.adapter.jwt      # auth-adapter-out (JWT)
-com.yapp.todakun.auth.adapter.oauth    # auth-adapter-out (OAuth)
-com.yapp.todakun.auth.adapter.redis    # auth-adapter-out (Redis)
-```
+Which package a declaration belongs in is an architecture decision, not a style one — the package map and the module-directory ↔ Gradle-path rules live in the `architecture` skill (`references/module-layout.md`). Only the style rules are here:
 
 - Package names are always **lowercase**, no underscores
 - When adding a new domain, register its 4 modules in `settings.gradle.kts` together

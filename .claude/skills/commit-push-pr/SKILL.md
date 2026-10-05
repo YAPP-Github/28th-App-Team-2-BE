@@ -1,6 +1,7 @@
 ---
 name: commit-push-pr
 description: Load when committing per project conventions and (on request) pushing and creating a PR. Auto-applies commit message format, branch strategy, PR rules.
+disable-model-invocation: true
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)
