@@ -9,7 +9,7 @@ import kotlin.uuid.toJavaUuid
 
 /**
  * FCM 발송이 일시적으로 실패(무효 토큰이 아닌 네트워크·FCM 오류)한 건의 재시도 대기열.
- * `notification.md` 7절 재시도 정책([com.yapp.todakun.notification.policy.NotificationRetryPolicy] 참고)을 뒷받침한다.
+ * [com.yapp.todakun.notification.policy.NotificationRetryPolicy]의 재시도 정책(최대 3회, 1분→5분→30분)을 뒷받침한다.
  * [notificationId]는 이미 저장된 인앱 알림함 레코드를 가리킨다 — 재시도 시 동일한 딥링크 데이터로 푸시를 재구성하기 위함이다.
  */
 data class NotificationDeliveryFailure(

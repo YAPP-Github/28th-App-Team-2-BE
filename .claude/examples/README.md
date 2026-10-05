@@ -1,11 +1,12 @@
 # Shared Code Examples (examples)
 
-The **single source of truth for the large code templates** shared by multiple skills, commands, and agents.
-Skills keep only the rules (prose); long code blocks are referenced from here. No duplicate definitions.
+The **single source of truth (SSOT) for large code templates** shared across multiple skills and agents.
+Skills keep only rules (prose); long code blocks are referenced from here instead. No duplicate definitions.
 
 | File | Contents | Referenced by |
-|------|----------|---------------|
-| [domain-scaffold.md](domain-scaffold.md) | Templates for scaffolding a new domain's 4 modules (build.gradle · entity · port · use case · adapter · controller · DTO) | `/new-domain`, the `domain-scaffolder` agent |
-| [testing-patterns.md](testing-patterns.md) | Per-layer `DescribeSpec` examples, `TestContainersConfig`, `*Fixture`, `KotestProjectConfig` | the `testing` and `spring-ai` skills, the `test-writer` agent |
+|------|------|--------------|
+| [domain-scaffold.md](domain-scaffold.md) | Scaffolding templates for a new domain's 4 modules (build.gradle · entity · port · use case · adapter · controller · DTO) | `/new-domain`, `domain-scaffolder` agent |
+| [testing-patterns.md](testing-patterns.md) | Per-layer `DescribeSpec` examples, `TestContainersConfig`, `*Fixture`, `KotestProjectConfig` | `testing`·`spring-ai` skills, `test-writer` agent |
+| [domain-claude-md.md](domain-claude-md.md) | `module-{domain}/CLAUDE.md` template — overview, module structure, bounded-context boundary, cross-domain port contracts, domain-specific decisions and traps, and what must *not* be duplicated there | `/new-domain` (step 7), `domain-scaffolder` agent |
 
-> Keep short illustrative snippets (3–8 lines) inline in each skill; collect only compilable, full templates here.
+> Short, illustrative snippets (3–8 lines) stay inline inside each skill; only full, compilable templates are collected here.
