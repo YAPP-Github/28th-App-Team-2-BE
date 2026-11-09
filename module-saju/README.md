@@ -43,7 +43,7 @@ Ported from [`urstory/manseryeok-js`](https://github.com/urstory/manseryeok-js) 
 | Ohaeng / Sipseong distribution | Aggregated from the 4 pillars (`SajuCalculator`) |
 | Compatibility (합충형파해) | In-house (follow-up) |
 
-> **True solar time / historical standard time**: input is in 2-hour Sijin slots, so minute-level longitude correction is meaningless → **not adopted**. Pre-1912 historical standard-time changes (e.g. GMT+8:30 used 1908–1911) are likewise not reflected (see §5).
+> **True solar time / historical standard time**: input is in 2-hour Sijin slots, so minute-level longitude correction is meaningless → **not adopted**. Pre-1912 historical standard-time changes (e.g. GMT+8:30 used 1908–1911) are likewise not reflected (see 5).
 
 **Tables/code made unnecessary** — `solar_term`, `code_heavenly_stem`, `code_earthly_branch`, `code_ohaeng` (replaced by library `SIXTY_PILLARS` + domain enums); `code_sipseong`, `code_sibiunseong` (replaced by Kotlin enums; only a value-checking string column remains); `Partner` (replaced by `saju_chart.is_self`); `standard_time_period` (true-solar-time not adopted).
 

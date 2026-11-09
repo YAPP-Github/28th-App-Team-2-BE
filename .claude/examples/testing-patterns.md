@@ -1,13 +1,13 @@
-# Test-Pattern Templates (canonical)
+# Test Pattern Templates (canonical)
 
-The canonical per-layer `DescribeSpec` examples and the shared test infra (`TestContainersConfig` · `*Fixture` · `KotestProjectConfig`).
-Rules and principles follow the `testing` skill. This document holds **only the code you copy and use**.
+The canonical `DescribeSpec` example for each layer, plus shared test infrastructure (`TestContainersConfig` · `*Fixture` · `KotestProjectConfig`).
+Rules and principles follow the `testing` skill. This document holds **only copy-paste-ready code**.
 
-## Declaration/DSL-placement rule (summary)
+## Declaration/DSL Placement Rules (summary)
 
-- Constructor injection (`MockMvc`) and plain `mockk()` objects → `val`.
-- `@MockkBean` is field-injected by Spring *after* construction → a **class property + `lateinit var`** is required.
-- The DSL defaults to the constructor lambda `DescribeSpec({ ... })`. Use `DescribeSpec()` + `init { }` **only when `@MockkBean` is present**.
+- Constructor-injected values (`MockMvc`) and plain `mockk()` objects → `val`.
+- `@MockkBean` is field-injected by Spring *after* construction, so it needs → **a class property with `lateinit var`**.
+- The DSL defaults to the constructor lambda `DescribeSpec({ ... })`. Use `DescribeSpec()` + `init { }` **only** when `@MockkBean` is present.
 
 ## adapter-in — JWT authentication/authorization verification
 
@@ -50,7 +50,7 @@ class GetUserServiceTest : DescribeSpec({
     val userRepository = mockk<UserRepository>()
     val getUserService = GetUserService(userRepository)
 
-    afterTest { clearMocks(userRepository) }            // prevent state leakage (mandatory)
+    afterTest { clearMocks(userRepository) }            // prevents state leakage (required)
 
     describe("getById") {
         context("when the ID exists") {
@@ -81,7 +81,7 @@ class GetUserServiceTest : DescribeSpec({
 ```kotlin
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(TestContainersConfig::class)                   // inject container via composition (not inheritance)
+@Import(TestContainersConfig::class)                   // inject the container by composition, not inheritance
 class UserJpaAdapterTest(
     private val userJpaRepository: UserJpaRepository,   // constructor injection → val
 ) : DescribeSpec({
@@ -105,7 +105,7 @@ class UserJpaAdapterTest(
 
 ## TestContainersConfig (shared)
 
-`@ServiceConnection` + `@TestConfiguration` composition. Singleton + `withReuse(true)` for reuse across runs (no `stop()` call). PostgreSQL is `pgvector/pgvector:pg17` (superset-compatible with postgres) from the start, so plain JPA and VectorStore tests share it.
+Composes `@ServiceConnection` + `@TestConfiguration`. Uses a singleton + `withReuse(true)` for cross-run reuse (never calls `stop()`). PostgreSQL is `pgvector/pgvector:pg17` (upward-compatible with postgres) from the start, so plain JPA tests and VectorStore tests share it.
 
 ```kotlin
 @TestConfiguration(proxyBeanMethods = false)
@@ -131,11 +131,11 @@ class TestContainersConfig {
 }
 ```
 
-> Local reuse needs `testcontainers.reuse.enable=true` in `~/.testcontainers.properties`. **Reuse is disabled in CI.**
+> Local reuse requires `testcontainers.reuse.enable=true` in `~/.testcontainers.properties`. **Reuse is disabled in CI.**
 
 ## *Fixture (per-domain fixed data)
 
-Since PKs are UUIDv7, random values every time make assertions unstable → **fixed UUID** + default-value factory. Place it in the `fixture` package under `src/test`.
+Since PKs are UUIDv7, using a random value each time makes assertions flaky → use a **fixed UUID** + a default-value factory. Place it in the `fixture` package under `src/test`.
 
 ```kotlin
 object UserFixture {

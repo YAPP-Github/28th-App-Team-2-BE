@@ -11,14 +11,14 @@ description: Load when branching/committing/creating PRs. Branch strategy, commi
 
 | Branch | Purpose | PR target |
 |--------|---------|-----------|
-| `main` | Production deploy | — |
-| `develop` | Integration | `main` (release promotion PR only) |
+| `main` | Production deployment | — |
+| `develop` | Integration | `main` (release-promotion PRs only) |
 | `feat/#issue-number` | Feature development | `develop` |
 
-When starting a new feature: branch `feat/#issue-number` off the `develop` branch.
+When starting a new feature: cut a `feat/#issue-number` branch from `develop`.
 Always include the issue number in the branch name.
 
-> Day-to-day work PRs (feature/fix/chore/…) always target `develop`. The `develop → main` PR is reserved for release promotion.
+> Ordinary work PRs (feature/fix/chore/…) always target `develop`. A `develop → main` PR is release-promotion only.
 
 ## Commit Messages
 
@@ -26,54 +26,54 @@ Format: `[#issue-number] type: description`
 
 | type          | When to use |
 |---------------|-------------|
-| `feat`        | Adding a new feature |
+| `feat`        | Add a new feature |
 | `fix`         | Bug fix |
 | `refactor`    | Code improvement with no behavior change |
-| `chore`       | Config, dependency, build changes |
+| `chore`       | Config, dependency, or build changes |
 | `docs`        | Documentation changes |
-| `test`        | Adding/modifying test code |
+| `test`        | Add/modify test code |
 | `performance` | Performance improvement |
 
 Write commit messages in Korean.
-You must pass `./gradlew ktlintCheck` before committing.
+`./gradlew ktlintCheck` must pass before committing.
 
-## Commit Granularity (keep commits small & atomic)
+## Commit Granularity (keep them small and atomic)
 
-Prefer many small, single-purpose commits over one large mixed commit. Each commit must be **atomic**: one logical change, self-contained, buildable/passing on its own.
+Prefer several small, single-purpose commits over one large commit mixing several concerns. Each commit should be **atomic**: one logical change, complete on its own, and able to build/pass tests by itself.
 
-- **One concern per commit.** Never mix a feature, a refactor, a config change, and a formatting fix in one commit — split them by `type` (`feat`/`fix`/`refactor`/`chore`/`docs`/`test`).
-- **Split by module/layer.** In hexagonal work a domain change, its adapter, and its test often warrant separate commits (`domain` → `application` → `adapter-in`/`adapter-out`), unless a piece is too small to stand on its own.
-- **Stage partial changes** with `git add -p` when one file mixes concerns, so each hunk lands in the right commit.
-- **Each commit compiles and passes `ktlintCheck`** independently — never commit a broken intermediate state.
-- **Rule of thumb:** if the commit description needs "그리고"/"and" to cover everything, it's probably two commits.
+- **One concern per commit.** Don't mix a feature, a refactor, a config change, and a formatting fix into one commit — split by `type` (`feat`/`fix`/`refactor`/`chore`/`docs`/`test`).
+- **Split by module/layer.** In a hexagonal structure, it's usually better to split a domain change, its adapter, and its test into separate commits (`domain` → `application` → `adapter-in`/`adapter-out`), except for pieces too small to stand on their own.
+- When a single file mixes concerns, **stage it partially** with `git add -p` so each hunk lands in the right commit.
+- **Each commit must independently compile and pass `ktlintCheck`** — never commit a broken intermediate state.
+- **Rule of thumb:** if the commit description needs an "and," it probably should be two commits.
 
 ## PR Rules
 
-- A feature/fix/chore PR must target the `develop` branch (only the release-promotion PR targets `main`).
+- feature/fix/chore PRs must always target the `develop` branch (only release-promotion PRs target `main`).
 - PR title format: `[#issue-number] [Type] description` (description in Korean).
-  - **The `[Type] description` part is the working branch's issue title, verbatim.** Issue titles already follow `[Type] 한글 설명`, so the PR title is simply `[#issue-number] ` + the issue title. (e.g. issue `[Feature] Boilerplate 작성` → PR `[#1] [Feature] Boilerplate 작성`)
-  - Note: this differs from the commit message format — the PR title wraps the type in brackets as a capitalized full word (`[Feature]`), not `type:`.
-  - Type tags (capitalized full words):
+  - **The `[Type] description` part uses the working branch's issue title verbatim.** Since the issue title already follows the `[Type] Korean description` format, the PR title is simply `[#issue-number] ` + the issue title. (E.g. issue `[Feature] Boilerplate 작성` → PR `[#1] [Feature] Boilerplate 작성`)
+  - Note: this differs from the commit message format — the PR title's type is an uppercase word in brackets (`[Feature]`), not the `type:` form.
+  - Type tags (uppercase words):
 
     | Tag | Commit type | When to use |
     |-----|-------------|-------------|
-    | `[Feature]`     | `feat`        | Adding a new feature |
+    | `[Feature]`     | `feat`        | Add a new feature |
     | `[Fix]`         | `fix`         | Bug fix |
     | `[Refactor]`    | `refactor`    | Code improvement with no behavior change |
-    | `[Chore]`       | `chore`       | Config, dependency, build changes |
+    | `[Chore]`       | `chore`       | Config, dependency, or build changes |
     | `[Docs]`        | `docs`        | Documentation changes |
-    | `[Test]`        | `test`        | Adding/modifying test code |
+    | `[Test]`        | `test`        | Add/modify test code |
     | `[Performance]` | `performance` | Performance improvement |
 
   - Examples: `[#4] [Feature] JwtAuthenticationFilter 추가 및 Security 설정`, `[#3] [Chore] 개발 환경 CI/CD 파이프라인 구축`
-- Attach screenshots or test results (see the PR template).
-- Do not merge your own PR (code review required).
+- Attach a screenshot or test results (see the PR template).
+- Never merge your own PR (needs code review).
 
-## Git Rules When Working as Claude Code
+## Git Rules When Working with Claude Code
 
-- Tidy code style with `./gradlew ktlintFormat` before committing.
+- Run `./gradlew ktlintFormat` to clean up code style before committing.
 - Commit messages must follow the `[#issue-number] type: description` format.
-- Do not run `git push` until the user explicitly requests it.
+- Never run `git push` until the user explicitly asks for it.
 - Never run `git push --force`.
-- Never commit the `.env` file.
-- Do **not** add a `Co-Authored-By` (Claude) trailer to commit messages — the project commits with a single author. This overrides the default Claude Code instruction to append that trailer.
+- Never commit `.env` files.
+- **Do not** add a `Co-Authored-By` (Claude) trailer to commit messages — this project commits under a single author. This overrides Claude Code's default instruction to add that trailer.

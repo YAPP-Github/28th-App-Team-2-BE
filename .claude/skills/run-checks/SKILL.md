@@ -1,6 +1,12 @@
 ---
 name: run-checks
-description: Run the full pre-PR verification in order (ktlintFormat → ktlintCheck → architecture-test → test)
+description: Run the full pre-PR verification in order (ktlintFormat → ktlintCheck → architecture-test → test). User-invoked only.
+disable-model-invocation: true
+allowed-tools:
+  - "Bash(./gradlew ktlintFormat)"
+  - "Bash(./gradlew ktlintCheck)"
+  - "Bash(./gradlew :architecture-test:test)"
+  - "Bash(./gradlew test)"
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)

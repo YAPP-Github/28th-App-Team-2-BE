@@ -1,6 +1,11 @@
 ---
 name: error-handling
 description: Load when handling exceptions/errors. AppException + ResponseCode, common exceptions, global handler, CommonResponse error format, Bean Validation conversion.
+paths:
+  - "**/*Exception.kt"
+  - "**/*ErrorCode.kt"
+  - "**/*Service.kt"
+  - "**/exception/**"
 ---
 
 > **Language**: All user-facing responses for this task MUST be written in Korean. (Code, identifiers, logs, and other technical artifacts are excluded.)

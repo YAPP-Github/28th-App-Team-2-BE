@@ -1,0 +1,85 @@
+# saju
+
+Owns the calculation and storage of 사주 charts (명식), and the record of which member owns which chart.
+
+## Overview
+
+사주 is a traditional calendrical system that converts a birth date/time into four pillars (연주·월주·일주·시주) to derive a person's 명식. This domain owns that calculation itself (based on bundled 만세력 data) and who owns the resulting 명식 (the member themselves, or a partner they registered). Virtually every fortune/AI feature in this service — `chat`, `daily-fortune`, `day-fortune`, `year-fortune`, `compatibility` — takes a 명식 that saju calculated as input, so saju is the common foundation the rest of the domains build on.
+
+Korean terms this domain defines (other domain docs reference this definition rather than redefining it):
+
+- **명식**: the full result of calculating one person's 사주 from their birth date/time (`SajuChart`) — includes the 4 pillars, day master, and 오행/십성 distribution.
+- **사주/four pillars**: 연주(年柱)·월주(月柱)·일주(日柱)·시주(時柱), each a heavenly-stem + earthly-branch pair (`SajuPillar`, `GanjiPillar`).
+- **일진**: the ganji pillar corresponding to today (served by `GetDailyPillarPort`).
+- **연주 (port sense)**: the ganji pillar corresponding to a given year (served by `GetYearPillarPort`) — spelled the same in Korean as the 연주 in "four pillars" above, but refers to a different thing (a year-level pillar vs. one pillar inside a 명식).
+- **오행/십성**: distribution metrics derived from a 명식 — 오행 is the five elements (wood/fire/earth/metal/water), 십성 is the relationship type each other stem has to the day master.
+- **만세력**: bundled reference data for solar/lunar conversion and solar-term boundaries (`ManseryeokPort`/`ManseryeokAdapter`), the calculation input for this domain.
+
+## Module Structure
+
+**Packages**
+- `saju-domain`: 명식/ownership entities at the root, `ManseryeokPort`/`FourPillars` in `port.outbound` — representative: `SajuChart`, `MemberSajuLink`, `SajuCalculator`
+- `saju-application`: `*Service` at the root — representative: `CreateSajuChartService`, `GetSajuChartService`, `SajuChartCacheEvictListener`
+- `saju-adapter-in`: `adapter.web` — representative: `SajuController`, `SajuApi`
+- `saju-adapter-out`: `adapter.persistence` (5 JPA entities), 만세력 adapter — representative: `SajuChartRepositoryAdapter`, `ManseryeokAdapter`
+
+**Core Domain Model**
+```
+SajuChart (calculation result: 4 pillars + 오행/십성 distribution, doesn't know its owner)
+    ↑ linked via chartId
+MemberSajuLink (ownership: memberId + role(SELF|PARTNER) + relationshipType)
+    ↓ memberId (a plain UUID reference — not an entity reference)
+Member (another domain)
+```
+`SajuChart` holds only the pure calculation result and doesn't know whose it is; `MemberSajuLink` manages member↔chart ownership separately, distinguished by role — this separation is itself the background for the first item under "Decisions & Traps" below.
+
+**Must-read files**
+- `SajuChart.kt` — the 명식 aggregate. The distinction between `create` (fresh calculation) and `reconstitute` (restoring from persistence) shows this domain's calculate/store split directly
+- `MemberSajuLink.kt` — the ownership model. `SELF`/`PARTNER` roles, and the conditional presence of `relationshipType` (PARTNER only)
+- `SajuCalculator.kt` — the core logic that derives the day master and 오행/십성 distribution from the 만세력 four pillars
+- `ManseryeokAdapter.kt` — access to the bundled 만세력 data. The `lunar-index.txt` item under "Decisions & Traps" below explains this file's trap
+
+## Responsibility Boundary
+
+| Owns | Does not own |
+|------|--------------|
+| Chart calculation from bundled 만세력 data; chart persistence | Fortune interpretation text → `daily-fortune`, `day-fortune`, `year-fortune` |
+| Member↔chart ownership (`MemberSajuLink`, `SELF`/`PARTNER` roles) | Compatibility scoring → `compatibility` |
+| Pillar lookups (일진, 연주) served to other domains | Member profile and account lifecycle → `member` |
+
+Partner charts are this domain's own concern (register/update/delete a partner's 명식), but *what a partnership means* — relationship scoring, narrative — is not.
+
+## Cross-Domain Contracts
+
+On the port channel this domain is a **pure provider**: it implements eight `shared` ports and consumes none.
+
+| Port | Consumed by | What the consumer branches or acts on |
+|------|-------------|---------------------------------------|
+| `CreateSajuChartPort` | `auth` | creates the member's own chart inside the signup transaction |
+| `GetSajuChartPort` | `chat`, `daily-fortune`, `day-fortune`, `year-fortune` | reads the `SELF` chart summary to ground generation |
+| `GetDailyPillarPort` | `daily-fortune`, `day-fortune` | takes the day's pillar to interpret |
+| `GetYearPillarPort` | `year-fortune` | takes the year's pillar to interpret |
+| `GetSajuChartsForCompatibilityPort`, `GetSajuChartNamePort` | `compatibility` | reads both charts and their labels to score a pair |
+| `DeleteMemberSajusPort`, `ReplaceSelfSajuChartPort` | `member` | withdrawal cleanup; re-registering the member's own chart |
+
+**All eight are implemented by services in `saju-application`, not in `saju-adapter-out`** — the opposite of `member`, whose five ports all sit in `member-adapter-out`. The difference is not style: here each cross-domain entry point *is* a use case (calculate-and-store, or a role-filtered read), whereas `member`'s are row fetches. When adding a port, decide by whether use-case logic is involved; a pure row read or write still belongs in `adapter-out`.
+
+There is a **second channel that is not a port**. `ReplaceSelfSajuChartService` and `DeleteMemberSajusService` publish `shared.event.SajuChartChangedEvent`; it is consumed by this domain's own `SajuChartCacheEvictListener` and by `year-fortune`'s `SajuChartChangedEventListener` (`@TransactionalEventListener(AFTER_COMMIT)`), both to evict caches that a changed chart invalidates.
+
+Pick the channel by who needs to know:
+
+| | Port | Event |
+|---|------|-------|
+| Publisher knows the counterpart | yes — it calls the port | no — it must not |
+| Timing | synchronous, inside the caller's decision | after commit, fan-out |
+| Use for | the caller branches or acts on the result | consequences the publisher should not enumerate (cache eviction, notification) |
+
+Adding a new consumer of a chart change means **subscribing to the event**, not adding a port — otherwise saju grows a dependency on every downstream cache. The reasoning behind using an event here rather than cache `order` is recorded in `bootstrap`'s `RedisCacheConfig`.
+
+## Decisions & Traps
+
+- **`docs/data-model.md` 1.2 is superseded.** It pre-designed compatibility as an `is_self` flag on `saju_chart` plus a `saju_compatibility` table. What shipped instead splits ownership into `MemberSajuChartJpaEntity` carrying `SajuRole`, and compatibility became its own domain. Treat 1.1 as current and 1.2 as a historical sketch.
+- **`manseryeok/lunar-index.txt` is generated, not authored.** It was back-derived from a `solarToLunar` implementation to route around a `lunarToSolar` bug in the upstream library. Never hand-edit it — regenerate it.
+- **Supported years are `1900..2050`** (`SUPPORTED_YEARS`), bounded by the bundled 만세력 data rather than by product choice. Out-of-range input raises `SajuYearOutOfRangeException`; widening the range means shipping more data, not relaxing a check.
+
+> The chart-vs-ownership separation and its invariants are documented in `MemberSajuLink`'s KDoc. Not restated here — one source per rule.

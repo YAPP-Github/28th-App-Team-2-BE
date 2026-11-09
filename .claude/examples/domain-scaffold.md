@@ -1,24 +1,24 @@
-# Domain-Scaffolding Templates (canonical)
+# Domain Scaffolding Template (canonical)
 
-The code templates used when scaffolding a new domain across the 4 nested-hexagonal modules. Replace `{Domain}`/`{domain}`/`{DOMAIN}` with the domain name.
-The procedure (order, verification) follows the `/new-domain` command. This document holds **only the output templates**.
+Code template for scaffolding a new domain across its 4 nested hexagonal modules. Substitute `{Domain}`/`{domain}`/`{DOMAIN}` with the domain name.
+Procedure (order, verification) follows the `/new-domain` command. This document holds **only the output template**.
 
 ## Package Rules
 
 | Module | Package |
 |--------|---------|
-| `{domain}-domain` | `com.yapp.todakun.{domain}` (entities); `com.yapp.todakun.{domain}.port.inbound` (`*UseCase` + its command/result models); `com.yapp.todakun.{domain}.port.outbound` (`*Repository`/`*Port`) |
+| `{domain}-domain` | `com.yapp.todakun.{domain}` (entities); `com.yapp.todakun.{domain}.port.inbound` (`*UseCase` + command/result models); `com.yapp.todakun.{domain}.port.outbound` (`*Repository`/`*Port`) |
 | `{domain}-application` | `com.yapp.todakun.{domain}.application` (only `*Service` implementations of `port.inbound` interfaces — no port interfaces or command/result models here) |
 | `{domain}-adapter-in` | `com.yapp.todakun.{domain}.adapter.web` |
 | `{domain}-adapter-out` | `com.yapp.todakun.{domain}.adapter.{tech}` (JPA uses `.adapter.persistence`) |
 
-> `in`/`out` (not `inbound`/`outbound`) is the traditional hexagonal naming, but `in` is a hard keyword in Kotlin and a backtick-escaped `` port.`in` `` package also fails ktlint's `standard:package-name` rule — hence `port.inbound`/`port.outbound`.
+> `in`/`out` is used instead of the traditional hexagonal naming (`inbound`/`outbound`) is actually reversed here — `in` is a reserved keyword in Kotlin, and even a backtick-escaped `` port.`in` `` package fails ktlint's `standard:package-name` rule — so we use `port.inbound`/`port.outbound` instead.
 
 ## build.gradle.kts (per module)
 
-> Shared module config is applied via `buildSrc` convention plugins. Imperative `apply(plugin = ...)` is forbidden — apply a single convention plugin via the declarative `plugins {}` block (→ architecture skill, "Build Conventions").
+> Shared module configuration is applied via `buildSrc` convention plugins. Imperative `apply(plugin = ...)` is forbidden — apply exactly one convention plugin via a declarative `plugins {}` block (→ architecture skill, "Build Conventions").
 >
-> `:common` is **auto-injected by the `todakun.kotlin-common` convention plugin** (which every module applies, directly or via `todakun.spring`), so it is **not** declared per module below.
+> `:common` is **auto-injected by the `todakun.kotlin-common` convention plugin** (since every module applies that plugin either directly or via `todakun.spring`), so it is **not declared** in the per-module lists below.
 
 **{domain}-domain:** (pure Kotlin — base convention only)
 ```kotlin
@@ -30,7 +30,7 @@ dependencies {
 }
 ```
 
-**{domain}-application:** (apply `todakun.spring` (kotlin-spring) for the `@Transactional` proxy of `@CommandService`/`@QueryService`)
+**{domain}-application:** (applies `todakun.spring` (kotlin-spring) for the `@Transactional` proxy behind `@CommandService`/`@QueryService`)
 ```kotlin
 plugins {
     id("todakun.spring")
@@ -41,7 +41,7 @@ dependencies {
 }
 ```
 
-**{domain}-adapter-in:** (apply `todakun.adapter-web` — it bundles `common-web` + web/security/validation/springdoc; declare only your own project deps)
+**{domain}-adapter-in:** (applies `todakun.adapter-web` — bundles `common-web` + web/security/validation/springdoc; declare only your own project dependencies)
 ```kotlin
 plugins {
     id("todakun.adapter-web")
@@ -53,7 +53,7 @@ dependencies {
 }
 ```
 
-**{domain}-adapter-out:** (apply `todakun.adapter-persistence` — it bundles `common-persistence` + spring-data-jpa + Lombok + Testcontainers/postgresql. JPA entities are Java, so `kotlin-jpa` is unnecessary; the composed `todakun.spring` provides the Kotlin `@Repository` adapter proxy. Add domain-specific libs like `spring-ai`/`firebase-admin` here only.)
+**{domain}-adapter-out:** (applies `todakun.adapter-persistence` — bundles `common-persistence` + spring-data-jpa + Lombok + Testcontainers/postgresql. JPA entities are Java, so `kotlin-jpa` isn't needed; the composed `todakun.spring` provides Kotlin `@Repository` adapter proxying. Add only domain-specific libraries here, e.g. `spring-ai`/`firebase-admin`.)
 ```kotlin
 plugins {
     id("todakun.adapter-persistence")
@@ -66,7 +66,7 @@ dependencies {
 
 ## {domain}-domain (`com.yapp.todakun.{domain}`)
 
-`{Domain}.kt` — Kotlin data class (no Spring/JPA imports). PK is time-based UUIDv7:
+`{Domain}.kt` — Kotlin data class (no Spring/JPA imports). PK is a time-based UUIDv7:
 ```kotlin
 package com.yapp.todakun.{domain}
 
@@ -75,7 +75,7 @@ import java.util.UUID
         import kotlin.uuid.Uuid
         import kotlin.uuid.toJavaUuid
 
-        @ExperimentalUuidApi  // UUIDv7는 실험적 stdlib API → @OptIn이 아니라 전파형 @ExperimentalUuidApi 사용 (architecture 스킬 참고)
+        @ExperimentalUuidApi  // UUIDv7 is an experimental stdlib API → use the propagating @ExperimentalUuidApi, not @OptIn (see architecture skill)
         data class {Domain}(
 val id: UUID = Uuid.generateV7().toJavaUuid(),
 // domain fields
@@ -95,7 +95,7 @@ interface {Domain}Repository {
 }
 ```
 
-`{Domain}ErrorCode.kt` — domain response code (implements `ResponseCode`, `error-handling` skill):
+`{Domain}ErrorCode.kt` — domain response code (implements `ResponseCode`, see `error-handling` skill):
 ```kotlin
 package com.yapp.todakun.{domain}
 
@@ -121,7 +121,7 @@ class {Domain}NotFoundException : NotFoundException({Domain}ErrorCode.{DOMAIN}_N
 
 ## {domain}-domain — inbound ports (`com.yapp.todakun.{domain}.port.inbound`)
 
-`*UseCase` interfaces and their command/result models live together here (the port's contract), not in `{domain}-application`.
+`*UseCase` interfaces and their command/result models live together here (as the port's contract) — not in `{domain}-application`.
 
 `Create{Domain}UseCase.kt`:
 ```kotlin
@@ -150,7 +150,7 @@ interface Get{Domain}UseCase {
 
 ## {domain}-application (`com.yapp.todakun.{domain}.application`)
 
-Only `*Service` **implementations** of the `port.inbound` interfaces live here — no port interfaces, no command/result models. Split by responsibility — mutation: `@CommandService`, query: `@QueryService`. Do not attach `@Transactional` separately on methods. On retrieval failure, throw `{Domain}NotFoundException` (no direct `RuntimeException`).
+Only the `*Service` **implementations** of `port.inbound` interfaces live here — no port interfaces, no command/result models. Split by responsibility — mutations: `@CommandService`, reads: `@QueryService`. Do not attach `@Transactional` to individual methods. Throw `{Domain}NotFoundException` on a failed lookup (never throw `RuntimeException` directly).
 
 `Create{Domain}Service.kt`:
 ```kotlin
@@ -194,7 +194,7 @@ import com.yapp.todakun.{domain}.port.inbound.Get{Domain}UseCase
 
 ## {domain}-adapter-out (`com.yapp.todakun.{domain}.adapter.persistence`)
 
-`{Domain}JpaEntity.java` — Java class (Kotlin immutability/JPA compatibility issue). The id is generated as UUIDv7 in the domain and passed in, so no separate generator annotation is used:
+`{Domain}JpaEntity.java` — a Java class (Kotlin immutability/JPA compatibility issue). The id is generated as a UUIDv7 in the domain and passed in, so no separate generator annotation is used:
 ```java
 package com.yapp.todakun.{domain}.adapter.persistence;
 
@@ -261,7 +261,7 @@ import com.yapp.todakun.{domain}.port.outbound.{Domain}Repository
 
 ## {domain}-adapter-in (`com.yapp.todakun.{domain}.adapter.web`)
 
-`{Domain}Api.kt` — the interface dedicated to Swagger annotations. Document descriptions (`@Operation`) and parameters (`@Parameter`), and wrap responses in `CommonResponse` (success/failure responses are auto-documented by springdoc from the return type). Attach `@DisableSwaggerSecurity` to methods that need no authentication:
+`{Domain}Api.kt` — interface dedicated to Swagger annotations. Documents the description (`@Operation`) and parameters (`@Parameter`); responses are wrapped in `CommonResponse` (springdoc auto-documents success/failure responses from the return type). Attach `@DisableSwaggerSecurity` to methods that require no authentication:
 ```kotlin
 package com.yapp.todakun.{domain}.adapter.web
 
@@ -290,11 +290,11 @@ import com.yapp.todakun.web.openapi.annotation.DisableSwaggerSecurity
             @PathVariable id: UUID,
         ): ResponseEntity<CommonResponse<{Domain}Response>>
 
-    // Attach @DisableSwaggerSecurity to methods for public APIs that need no authentication.
+    // Attach @DisableSwaggerSecurity to any public API method that requires no authentication.
 }
 ```
 
-`{Domain}Controller.kt` — the `{Domain}Api` implementation (no Swagger annotations attached directly):
+`{Domain}Controller.kt` — implements `{Domain}Api` (does not attach Swagger annotations directly):
 ```kotlin
 package com.yapp.todakun.{domain}.adapter.web
 
@@ -322,7 +322,7 @@ private val get{Domain}UseCase: Get{Domain}UseCase,
 }
 ```
 
-`Create{Domain}Request.kt` — request DTO (domain conversion in the adapter layer):
+`Create{Domain}Request.kt` — request DTO (domain conversion happens in the adapter layer):
 ```kotlin
 package com.yapp.todakun.{domain}.adapter.web
 
@@ -335,7 +335,7 @@ import com.yapp.todakun.{domain}.port.inbound.Create{Domain}Command
 }
 ```
 
-`{Domain}Response.kt` — response DTO (`from(domain)` factory):
+`{Domain}Response.kt` — response DTO (with a `from(domain)` factory):
 ```kotlin
 package com.yapp.todakun.{domain}.adapter.web
 
@@ -351,13 +351,13 @@ val id: UUID,
 }
 ```
 
-## Core Rules
+## Key Rules
 
-- `*UseCase` interfaces (+ their command/result models) live in `{domain}-domain`'s `port.inbound`; `*Repository`/`*Port` interfaces live in `port.outbound`. `{domain}-application` holds only the `*Service` implementations — Konsist enforces both locations (`module-architecture-test/.../ArchitectureTest.kt`)
-- JPA entities must be **Java classes**; absolutely no Spring/JPA imports in domain entities
-- DB PKs are **time-based UUIDv7** (`Uuid.generateV7().toJavaUuid()`); no separate UUID-generator annotation on JPA entities
-- Response codes are domain `*ErrorCode` (implementing `ResponseCode`); exceptions are **subclasses of `AppException`** such as the common `NotFoundException` (no direct `RuntimeException`)
-- Declare transactions with `@CommandService` (write)/`@QueryService` (read) — no method-level `@Transactional`
-- All controller responses use the `CommonResponse` envelope (`ResponseEntity<CommonResponse<T>>`)
-- Unauthenticated APIs get `@DisableSwaggerSecurity`; Swagger on `*Api` has only descriptions/parameters (responses are auto-documented from the `CommonResponse<T>` return type — no hand-written `@ApiResponses`)
-- Prefer Kotlin DSL, minimize comments
+- `*UseCase` interfaces (+ command/result models) live in `{domain}-domain`'s `port.inbound`; `*Repository`/`*Port` interfaces live in `port.outbound`. `{domain}-application` holds only `*Service` implementations — both placements are enforced by Konsist (`module-architecture-test/.../ArchitectureTest.kt`)
+- JPA entities must be **Java classes**; domain entities must never import Spring/JPA
+- DB PKs are **time-based UUIDv7** (`Uuid.generateV7().toJavaUuid()`); no separate UUID generator annotation on JPA entities
+- Response codes are domain `*ErrorCode`s (implementing `ResponseCode`); exceptions must be **subclasses of `AppException`**, like the common `NotFoundException` (never throw `RuntimeException` directly)
+- Declare transactions via `@CommandService` (writes) / `@QueryService` (reads) — no method-level `@Transactional`
+- Every controller response uses the `CommonResponse` envelope (`ResponseEntity<CommonResponse<T>>`)
+- Attach `@DisableSwaggerSecurity` to APIs that require no authentication; `*Api`'s Swagger holds only the description/parameters (responses are auto-documented from the `CommonResponse<T>` return type — don't write `@ApiResponses` directly)
+- Prefer the Kotlin DSL, keep comments minimal
