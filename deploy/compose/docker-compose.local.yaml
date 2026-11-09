@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17.10
+    image: postgres:18
     container_name: todakun-postgres
     environment:
       POSTGRES_USER: ${DB_USERNAME}

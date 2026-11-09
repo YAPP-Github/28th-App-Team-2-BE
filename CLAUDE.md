@@ -84,7 +84,7 @@ Detailed rules live in **skills** (`.claude/skills/<name>/SKILL.md`), procedures
 | Area | Technology |
 |------|------------|
 | WAS | Spring Boot 4.1.0 / JDK 25 / Kotlin 2.3.21 / Gradle 9.5.1 |
-| DB / Cache | PostgreSQL 17.10 (JPA·Hibernate, pgvector extension) / Redis 7.2 |
+| DB / Cache | PostgreSQL 18 (JPA·Hibernate, pgvector extension) / Redis 7.2 |
 | AI | Spring AI / Google Vertex AI (Gemini) / pgvector |
 | Push | FCM (Firebase Cloud Messaging) / Firebase Admin SDK (ADC auth) |
 | Test & Lint | Kotest / MockK / TestContainer / Ktlint / Konsist |
